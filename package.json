@@ -1,0 +1,12 @@
+{
+  "name": "motion-room",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RGB webcam movement practice with MediaPipe",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/pose.test.mjs"
+  },
+  "engines": { "node": ">=20" }
+}
