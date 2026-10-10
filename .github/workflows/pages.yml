@@ -1,4 +1,4 @@
-name: Deploy Motion Room to GitHub Pages
+name: Deploy Just Judo to GitHub Pages
 
 on:
   push:

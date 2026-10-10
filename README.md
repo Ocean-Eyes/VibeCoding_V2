@@ -1,10 +1,10 @@
-# Motion Room
+# Just Judo
 
 PC/노트북 RGB 웹캠으로 동작하는 상체·손 동작 유도 연습 웹사이트입니다. 기존 Baseline과 독립적으로 구현했습니다. VR, MR, WebXR, 헤드셋, Depth 센서는 사용하지 않습니다.
 
 ## 웹사이트 접속
 
-**[Motion Room 열기](https://ocean-eyes.github.io/VibeCoding_V2/)**
+**[Just Judo 열기](https://ocean-eyes.github.io/VibeCoding_V2/)**
 
 설치나 실행 파일 없이 PC/노트북 브라우저에서 접속하고 카메라 권한을 허용하면 됩니다. HTTPS로 제공되어 웹캠을 바로 사용할 수 있습니다.
 
