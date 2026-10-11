@@ -114,16 +114,16 @@ function draw(now){
   for(const i of[15,16]){if((current[i]?.visibility??0)<.65)continue;const a=current[i],b=target[i];if(Math.hypot(a.x-b.x,a.y-b.y)>frame.scale*.16){line(ctx,a,b,orange,2,[6,5]);const theta=Math.atan2(b.y-a.y,b.x-a.x);for(const sign of[-1,1])line(ctx,b,{x:b.x-12*Math.cos(theta+sign*.5),y:b.y-12*Math.sin(theta+sign*.5)},orange,2)}}
   ctx.restore();
   $('tracking-label').textContent=mode==='demo'?'가상 데이터':armScore===null?'팔 인식 대기':handScore===null?'손 인식 대기':'추적 중';
-  $('feedback').textContent=mode==='demo'?'가상 동작으로 기능을 미리 보고 있어요. 실제 일치도가 아닙니다.':armScore===null?'팔꿈치와 손목이 가려지지 않도록 양팔을 보여 주세요.':handScore===null?'양손을 카메라에 보여 주세요. 손이 작게 보이면 조금 가까이 서 주세요.':score>=PASS_SCORE&&handScore>=50?'좋아요! 지금 자세를 유지해 주세요.':handScore<65?POSES[selected].gesture==='open'?'양손의 손가락을 조금 더 펼쳐 주세요.':'양손을 가볍게 쥐어 주먹을 만들어 주세요.':arm.errors[2]>arm.errors[3]?'왼쪽 손목을 주황색 화살표 방향으로 옮겨 주세요.':'오른쪽 손목을 주황색 화살표 방향으로 옮겨 주세요.';
+  $('feedback').textContent=mode==='demo'?'가상 동작으로 기능을 미리 보고 있어요. 실제 일치도가 아닙니다.':armScore===null?'팔꿈치와 손목이 가려지지 않도록 양팔을 보여 주세요.':handScore===null?'양손을 카메라에 보여 주세요. 손이 작게 보이면 조금 가까이 서 주세요.':score>=PASS_SCORE?'좋아요! 지금 자세를 유지해 주세요.':handScore<65?POSES[selected].gesture==='open'?'양손의 손가락을 조금 더 펼쳐 주세요.':'양손을 가볍게 쥐어 주먹을 만들어 주세요.':arm.errors[2]>arm.errors[3]?'왼쪽 손목을 주황색 화살표 방향으로 옮겨 주세요.':'오른쪽 손목을 주황색 화살표 방향으로 옮겨 주세요.';
 }
 function tick(now){
   const dt=Math.min((now-lastTick)/1000,.2);lastTick=now;
   if(mode==='live')void sendFrame(now);
   video.style.transform=$('mirror').checked?'scaleX(-1)':'none';draw(now);
   if(running&&countdown>0){countdown=Math.max(0,countdown-dt);$('countdown').textContent=Math.ceil(countdown)||'GO';$('countdown').hidden=countdown===0}
-  else if(running){elapsed+=dt;hold=advanceHold(hold,dt,score,true,handScore);if(hold>=3){const done=mode==='demo'?demoCompleted:completed;done.add(selected);if(done.size===POSES.length){running=false;hold=0;controls();updatePose();notify(mode==='demo'?'데모 루틴을 완료했습니다. 데모를 종료하고 카메라로 직접 연습해 보세요.':'4가지 동작을 모두 완료했어요! 원하는 동작을 선택해 다시 연습할 수 있습니다.')}else{choose(selected+1);notify(mode==='demo'?'데모: 다음 가상 동작을 보여드립니다.':'잘했어요! 다음 동작으로 이어갑니다.')}}}
+  else if(running){elapsed+=dt;hold=advanceHold(hold,dt,score,true);if(hold>=3){const done=mode==='demo'?demoCompleted:completed;done.add(selected);if(done.size===POSES.length){running=false;hold=0;controls();updatePose();notify(mode==='demo'?'데모 루틴을 완료했습니다. 데모를 종료하고 카메라로 직접 연습해 보세요.':'4가지 동작을 모두 완료했어요! 원하는 동작을 선택해 다시 연습할 수 있습니다.')}else{choose(selected+1);notify(mode==='demo'?'데모: 다음 가상 동작을 보여드립니다.':'잘했어요! 다음 동작으로 이어갑니다.')}}}
   $('score').textContent=score??'—';$('arm-score').textContent=armScore===null?'—':`${armScore}%`;$('hand-score').textContent=handScore===null?'—':`${handScore}%`;
-  $('score-verdict').textContent=mode==='demo'?'데모 · 실제 측정 아님':score===null?'측정 가능한 자세를 기다려요':score>=PASS_SCORE&&handScore>=50?'좋아요, 그대로 유지해요':score>=50?'조금만 더 맞춰볼까요':'목표를 천천히 따라가세요';
+  $('score-verdict').textContent=mode==='demo'?'데모 · 실제 측정 아님':score===null?'측정 가능한 자세를 기다려요':score>=PASS_SCORE?'좋아요, 그대로 유지해요':score>=35?'조금만 더 맞춰볼까요':'목표를 천천히 따라가세요';
   $('hold-text').textContent=`${hold.toFixed(1)} / 3.0초`;$('hold-progress').style.width=`${hold/3*100}%`;
   $('timer').textContent=`${String(Math.floor(elapsed/60)).padStart(2,'0')}:${String(Math.floor(elapsed%60)).padStart(2,'0')}`;$('fps').textContent=mode==='live'?`${Math.round(fps)} FPS · RGB CAMERA / 2D`:mode==='demo'?'SIMULATED MOVEMENT':'RGB CAMERA / 2D';
   $('stage-hint').textContent=mode==='demo'?'데모 미리보기 · 카메라를 사용하지 않습니다':stream&&canvas.dataset.aligned!=='true'?'참고 가이드 · 아직 몸에 정렬되지 않았습니다':mode==='live'?running?countdown?'준비하세요. 잠시 후 시작합니다':'민트색 가이드에 팔과 손 모양을 맞춰 주세요':'자세를 확인한 뒤 연습 시작을 눌러 주세요':'어깨와 양손이 화면에 들어오도록 서 주세요';requestAnimationFrame(tick);
@@ -132,7 +132,7 @@ $('start').onclick=start;
 $('retry-tracking').onclick=()=>{if(stream)connectTracker()};
 $('stop').onclick=()=>{stop();notify('연결을 종료했습니다. 카메라는 꺼져 있습니다.')};
 $('demo').onclick=()=>{stop();mode='demo';demoCompleted.clear();controls();updatePose();notify('가상 데이터로 표시되는 데모입니다. 연습 시작을 누르면 자동 진행을 확인할 수 있어요.')};
-$('play').onclick=()=>{running=!running;hold=0;if(running){const done=mode==='demo'?demoCompleted:completed;if(done.size===4){done.clear();updatePose()}countdown=3;$('countdown').hidden=false;notify(mode==='demo'?'데모 루틴을 재생합니다. 점수는 가상 데이터입니다.':'3초 뒤 시작합니다. 목표 자세를 70% 이상으로 3초 유지해 보세요.')}else{countdown=0;$('countdown').hidden=true;notify('일시 정지했습니다. 카메라 추적은 계속되며 유지 시간은 누적하지 않습니다.')}controls()};
+$('play').onclick=()=>{running=!running;hold=0;if(running){const done=mode==='demo'?demoCompleted:completed;if(done.size===4){done.clear();updatePose()}countdown=3;$('countdown').hidden=false;notify(mode==='demo'?'데모 루틴을 재생합니다. 점수는 가상 데이터입니다.':'3초 뒤 시작합니다. 목표 자세를 50% 이상으로 3초 유지해 보세요.')}else{countdown=0;$('countdown').hidden=true;notify('일시 정지했습니다. 카메라 추적은 계속되며 유지 시간은 누적하지 않습니다.')}controls()};
 $('reset').onclick=()=>{hold=0;elapsed=0;countdown=running?3:0;notify('현재 동작의 유지 시간과 연습 타이머를 초기화했습니다.')};
 $('previous').onclick=()=>choose(selected-1);$('next').onclick=()=>choose(selected+1);
 $('help').onclick=()=>$('guide').showModal();$('close-help').onclick=()=>$('guide').close();

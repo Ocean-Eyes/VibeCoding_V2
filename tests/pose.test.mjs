@@ -14,7 +14,7 @@ test('missing and low confidence joints never give a score',()=>{assert.equal(bo
 test('missing hands never imply a matching gesture',()=>{const p=targetPose(frame,POSES[0]);assert.equal(handMatch([],p,frame.scale,'open'),null)});
 function handAt(wrist,fold=false){const hand=Array.from({length:21},()=>({...wrist}));for(const start of[5,9,13,17])for(let i=0;i<4;i++)hand[start+i]={x:wrist.x+(start-11)*2,y:wrist.y-(fold?[10,20,15,11][i]:10+i*10)};return hand}
 test('hand matching uses wrist proximity and differentiates open/fist',()=>{const p=targetPose(frame,POSES[0]),open=[handAt(p[16]),handAt(p[15])],fist=[handAt(p[15],true),handAt(p[16],true)];assert.equal(handOpenness(open[0]),1);assert.equal(handMatch(open,p,frame.scale,'open'),100);assert.equal(handMatch(open,p,frame.scale,'fist'),0);assert.equal(handMatch(fist,p,frame.scale,'fist'),100);assert.equal(handMatch(fist,p,frame.scale,'open'),0);assert.equal(handMatch([handAt({x:0,y:0}),open[0]],p,frame.scale,'open'),null)});
-test('hold needs continuous valid observations and does not jump after a stalled frame',()=>{assert.equal(advanceHold(1,.1,69,true),0);assert.equal(advanceHold(1,.1,null,true),0);assert.equal(advanceHold(1,.1,100,false),0);assert.equal(advanceHold(1,20,100,true),1.2);assert.equal(advanceHold(2.9,.2,100,true),3)});
+test('hold needs continuous valid observations and does not jump after a stalled frame',()=>{assert.equal(advanceHold(1,.1,49,true),0);assert.equal(advanceHold(1,.1,null,true),0);assert.equal(advanceHold(1,.1,100,false),0);assert.equal(advanceHold(1,20,100,true),1.2);assert.equal(advanceHold(2.9,.2,100,true),3)});
 test('contain mapping letterboxes 16:9 camera in 4:3 viewport',()=>{assert.deepEqual(fitRect(800,600,1280,720),{x:0,y:75,width:800,height:450,scale:.625})});
 
 test('upper-body webcam crop still aligns targets when hips are not visible',()=>{
@@ -33,9 +33,9 @@ test('target adapts to longer arms without accepting a wrong direction',()=>{
   assert.equal(armMatch(p,targetPose(frame,POSES[0],p),frame.scale).score,100);
   assert.ok(armMatch(p,targetPose(frame,POSES[1],p),frame.scale).score<50);
 });
-test('70 percent passes but an incorrect hand gesture cannot pass on arm score alone',()=>{
-  assert.equal(advanceHold(1,.1,70,true,50),1.1);
-  assert.equal(advanceHold(1,.1,69,true,100),0);
-  assert.equal(advanceHold(1,.1,75,true,0),0);
-  assert.equal(advanceHold(1,.1,100,true,null),0);
+test('50 percent starts the hold; lower and missing scores do not',()=>{
+  assert.equal(advanceHold(1,.1,50,true),1.1);
+  assert.equal(advanceHold(1,.1,49,true),0);
+  assert.equal(advanceHold(1,.1,75,true),1.1);
+  assert.equal(advanceHold(1,.1,null,true),0);
 });

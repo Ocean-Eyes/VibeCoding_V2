@@ -1,5 +1,5 @@
 // All geometry uses image pixels, avoiding aspect-ratio distortion.
-export const PASS_SCORE = 70;
+export const PASS_SCORE = 50;
 export const POSES = [
   {name:'활짝 펼치기',short:'어깨 높이 · 손 펴기',description:'양팔을 어깨 높이로 벌리고 손바닥을 펼쳐 주세요.',angles:[0,0,Math.PI,Math.PI],gesture:'open'},
   {name:'머리 위로 V',short:'대각선 위 · 손 펴기',description:'양팔을 대각선 위로 올려 V자를 만들고 손을 펼쳐 주세요.',angles:[-Math.PI/3,-Math.PI/3,-2*Math.PI/3,-2*Math.PI/3],gesture:'open'},
@@ -56,5 +56,5 @@ export function handMatch(hands,points,scale,gesture){
   const values=assigned.map(i=>handOpenness(hands[i]));
   return Math.round(values.reduce((sum,v)=>sum+Math.max(0,Math.min(1,gesture==='open'?(v-.5)/.4:(.85-v)/.4)),0)*50);
 }
-export function advanceHold(hold,dt,score,running,handScore=100){return running && score!==null && score>=PASS_SCORE && handScore!==null && handScore>=50 ? Math.min(3,hold+Math.min(dt,.2)) : 0;}
+export function advanceHold(hold,dt,score,running){return running && score!==null && score>=PASS_SCORE ? Math.min(3,hold+Math.min(dt,.2)) : 0;}
 export function fitRect(width,height,videoWidth,videoHeight){const s=Math.min(width/videoWidth,height/videoHeight);return {x:(width-videoWidth*s)/2,y:(height-videoHeight*s)/2,width:videoWidth*s,height:videoHeight*s,scale:s};}
