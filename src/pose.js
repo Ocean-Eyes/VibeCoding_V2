@@ -10,12 +10,15 @@ export const HAND_BONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
 export function bodyFrame(points){
-  if(!points || [11,12,23,24].some(i=>!points[i] || (points[i].visibility??1)<.65))return null;
+  if(!points || [11,12].some(i=>!points[i] || (points[i].visibility??1)<.65))return null;
   const origin=mid(points[11],points[12]),scale=distance(points[11],points[12]);
   if(scale<30)return null;
   const x={x:(points[11].x-points[12].x)/scale,y:(points[11].y-points[12].y)/scale};
-  let y={x:-x.y,y:x.x};const hips=mid(points[23],points[24]);
-  if((hips.x-origin.x)*y.x+(hips.y-origin.y)*y.y<0)y={x:-y.x,y:-y.y};
+  let y={x:-x.y,y:x.x};
+  // Laptop webcams often crop the pelvis. Shoulders still define an upper-body frame.
+  const hasHips=[23,24].every(i=>points[i]&&(points[i].visibility??1)>=.65);
+  const down=hasHips?mid(points[23],points[24]):{x:origin.x,y:origin.y+scale};
+  if((down.x-origin.x)*y.x+(down.y-origin.y)*y.y<0)y={x:-y.x,y:-y.y};
   return {origin,scale,x,y};
 }
 export function targetPose(frame,pose){

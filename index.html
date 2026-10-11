@@ -31,6 +31,7 @@
         </div>
         <div class="transport"><div><button id="play" class="primary small" disabled>연습 시작 <span>▶</span></button><button id="reset" class="icon-button" title="현재 동작 다시 시작" aria-label="현재 동작 다시 시작" disabled>↺</button><span id="timer">00:00</span></div><div><label class="toggle"><input id="mirror" type="checkbox" checked /><span></span>거울 모드</label><button id="stop" class="quiet" disabled>카메라 끄기</button></div></div>
         <div class="notice" id="notice" role="status" aria-live="polite">카메라 연결 후 자세를 확인하고 연습을 시작하세요.</div>
+        <button id="retry-tracking" class="quiet retry-tracking" hidden>영상은 유지하고 자세 추적 다시 연결 ↻</button>
       </section>
       <aside class="panel">
         <section class="target-panel"><div class="section-title"><h2>지금 따라 할 동작</h2><span id="step-label">01 / 04</span></div><div class="target-preview"><canvas id="preview" width="380" height="220" aria-label="현재 목표 동작 미리보기"></canvas><span id="gesture-label">양손 펼치기</span></div><div class="target-name"><span id="pose-number">01</span><h3 id="pose-name">활짝 펼치기</h3><span class="level">BASIC</span></div><p id="pose-description">양팔을 어깨 높이로 벌리고 손바닥을 펼쳐 주세요.</p><div class="hold-row"><span>일치도 80% 이상 유지</span><strong id="hold-text">0.0 / 3.0초</strong></div><div class="progress"><div id="hold-progress"></div></div><div class="step-controls"><button id="previous" class="quiet">← 이전</button><span>내 몸을 기준으로 자동 정렬</span><button id="next" class="quiet">다음 →</button></div></section>

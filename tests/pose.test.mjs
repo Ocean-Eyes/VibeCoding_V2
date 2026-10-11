@@ -16,3 +16,10 @@ function handAt(wrist,fold=false){const hand=Array.from({length:21},()=>({...wri
 test('hand matching uses wrist proximity and differentiates open/fist',()=>{const p=targetPose(frame,POSES[0]),open=[handAt(p[16]),handAt(p[15])],fist=[handAt(p[15],true),handAt(p[16],true)];assert.equal(handOpenness(open[0]),1);assert.equal(handMatch(open,p,frame.scale,'open'),100);assert.equal(handMatch(open,p,frame.scale,'fist'),0);assert.equal(handMatch(fist,p,frame.scale,'fist'),100);assert.equal(handMatch(fist,p,frame.scale,'open'),0);assert.equal(handMatch([handAt({x:0,y:0}),open[0]],p,frame.scale,'open'),null)});
 test('hold needs continuous valid observations and does not jump after a stalled frame',()=>{assert.equal(advanceHold(1,.1,79,true),0);assert.equal(advanceHold(1,.1,null,true),0);assert.equal(advanceHold(1,.1,100,false),0);assert.equal(advanceHold(1,20,100,true),1.2);assert.equal(advanceHold(2.9,.2,100,true),3)});
 test('contain mapping letterboxes 16:9 camera in 4:3 viewport',()=>{assert.deepEqual(fitRect(800,600,1280,720),{x:0,y:75,width:800,height:450,scale:.625})});
+
+test('upper-body webcam crop still aligns targets when hips are not visible',()=>{
+  const points=targetPose(frame,POSES[0]);points[23].visibility=.1;points[24].visibility=.1;
+  const aligned=bodyFrame(points);assert.ok(aligned);
+  assert.equal(armMatch(points,targetPose(aligned,POSES[0]),aligned.scale).score,100);
+  points[23]=null;points[24]=null;assert.ok(bodyFrame(points));
+});
