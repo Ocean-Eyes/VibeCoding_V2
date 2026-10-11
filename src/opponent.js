@@ -6,7 +6,25 @@ export function crossedGrip(points, target, frame) {
     [15,16].every(i=>Math.hypot(points[i].x-target[i].x,points[i].y-target[i].y)<frame.scale*.45);
 }
 
-export function drawOpponent(ctx, frame, target, current, progress=0, tapTime=0, mirrored=false) {
+// Schematic grip viewed from above: palm-up exposes palm creases; palm-down exposes knuckles.
+export function drawGripHand(ctx, x, y, size, palmUp, left=false) {
+  ctx.save();ctx.translate(x,y);ctx.scale(left?-size:size,size);
+  ctx.lineJoin='round';ctx.lineCap='round';ctx.lineWidth=.035;
+  const path=(points,fill)=>{ctx.beginPath();points.forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle='#674b3b';ctx.stroke()};
+  // A contrasting strip of lapel runs through the grip.
+  path([[-.18,-.85],[.12,-.85],[.32,.66],[.02,.66]],'#faf7ee');
+  path([[-.24,.7],[-.28,.2],[-.4,-.08],[-.34,-.43],[.24,-.46],[.36,-.14],[.26,.28],[.2,.7]],palmUp?'#efd0b2':'#cfa482');
+  for(let i=0;i<4;i++){
+    ctx.beginPath();ctx.roundRect(-.35+i*.17,-.52,.17,.35,.07);ctx.fillStyle=palmUp?'#e6b995':'#d9b18e';ctx.fill();ctx.strokeStyle='#674b3b';ctx.stroke();
+  }
+  path([[-.3,.25],[-.53,-.03],[-.48,-.22],[-.34,-.2],[-.12,.04]],'#e3b38e');
+  ctx.beginPath();
+  if(palmUp){ctx.moveTo(-.16,-.02);ctx.quadraticCurveTo(.05,.11,.21,-.01);ctx.moveTo(-.16,.09);ctx.quadraticCurveTo(-.02,.15,-.1,.33)}
+  else{for(let i=0;i<3;i++){ctx.moveTo(-.17+i*.14,-.1);ctx.lineTo(-.15+i*.14,.18)}}
+  ctx.strokeStyle='#936b51';ctx.lineWidth=.025;ctx.stroke();ctx.restore();
+}
+
+export function drawOpponent(ctx, frame, target, current, progress=0, tapTime=0, mirrored=false, directions=['↓','↓']) {
   const {origin,scale,x,y}=frame;
   const visible=i=>current?.[i]&&(current[i].visibility??1)>=.65;
   const local=p=>({x:((p.x-origin.x)*x.x+(p.y-origin.y)*x.y)/scale,y:((p.x-origin.x)*y.x+(p.y-origin.y)*y.y)/scale});
@@ -36,9 +54,10 @@ export function drawOpponent(ctx, frame, target, current, progress=0, tapTime=0,
   if(tapTime>0){const t=(Math.sin(tapTime*19)+1)/2;shape([[.6,.75],[.38,.93],[.1+t*.1,.62],[.21+t*.1,.5],[.49,.64]],'#eeeae0');ellipse(.16+t*.1,.52,.11,.08,'#c9a387')}
   ctx.restore();
   for(const [n,i]of [15,16].entries()){
-    const p=local(target[i]);ctx.beginPath();ctx.arc(p.x,p.y,.115,0,Math.PI*2);ctx.fillStyle='#b3394544';ctx.fill();ctx.strokeStyle='#f5a0a7';ctx.lineWidth=.018;ctx.stroke();
+    const p=local(target[i]);ctx.beginPath();ctx.arc(p.x,p.y,.16,0,Math.PI*2);ctx.fillStyle='#b3394555';ctx.fill();ctx.strokeStyle='#f5a0a7';ctx.lineWidth=.012;ctx.stroke();
+    drawGripHand(ctx,p.x,p.y,.27,directions[n]==='↑',n===0);
     // Counter-transform text so labels remain readable with mirrored camera coordinates.
-    ctx.save();ctx.translate(p.x,p.y);ctx.transform(x.x,y.x,x.y,y.y,0,0);if(mirrored)ctx.scale(-1,1);ctx.font='.105px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.fillText(n?'R':'L',0,0);ctx.restore();
+    ctx.save();ctx.translate(p.x,p.y-.29);ctx.transform(x.x,y.x,x.y,y.y,0,0);if(mirrored)ctx.scale(-1,1);ctx.font='.09px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.fillText(n?'R':'L',0,0);ctx.restore();
     if(visible(i)){const q=local(current[i]);ellipse(q.x,q.y,.065,.08,'#80baff');ctx.beginPath();ctx.arc(q.x,q.y,.085,0,Math.PI*2);ctx.strokeStyle='#e5f4ff';ctx.lineWidth=.009;ctx.stroke()}
   }
   ctx.restore();

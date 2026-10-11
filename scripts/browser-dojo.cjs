@@ -14,23 +14,24 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
   await page.locator('[data-category="throws"]').click();assert.equal(await page.locator('.coming-panel').isVisible(),true);
   await page.locator('[data-category="katame"]').click();assert.equal(await page.locator('[data-lesson]').count(),3);
   for(const [i,id]of ['nami','gyaku','kata'].entries()){
-   await page.locator(`[data-lesson="${id}"]`).click();assert.equal(await page.locator('#enter-practice').isDisabled(),true);
-   await page.locator('.quiz-choice').nth((i+1)%3).click();assert.equal(await page.locator('#enter-practice').isDisabled(),true);
-   await page.locator('.quiz-choice').nth(i).click();assert.equal(await page.locator('#enter-practice').isEnabled(),true);
-   await page.locator('.quiz-choice').nth(i).click();await page.locator('#close-lesson').click();
+   await page.locator(`[data-lesson="${id}"]`).click();
+   assert.equal(await page.locator('#practice-screen').isVisible(),true);
+   assert.equal(await page.locator('dialog[open]').count(),0);
+   assert.equal(await page.locator('#lesson-title').innerText(),await page.locator('#practice-title').innerText());
+   assert.equal(await page.locator('.lesson-reference').isVisible(),true);
+   await page.locator('#back-menu').click();
   }
-  assert.equal(await page.locator('#xp').innerText(),'30 XP');await page.reload();assert.equal(await page.locator('#xp').innerText(),'30 XP');
-  await page.locator('[data-category="katame"]').click();await page.screenshot({path:'.test-output/dojo-courses.png',fullPage:true});
-  await page.locator('[data-lesson="gyaku"]').click();await page.screenshot({path:'.test-output/dojo-lesson.png'});
-  await page.locator('#enter-practice').click();assert.equal(await page.locator('#practice-title').innerText(),'역십자 조르기');
+  assert.equal(await page.locator('#xp').innerText(),'0 XP');
+  await page.locator('[data-lesson="gyaku"]').click();await page.screenshot({path:'.test-output/dojo-lesson.png',fullPage:true});
+  assert.equal(await page.locator('#practice-title').innerText(),'역십자 조르기');
   assert.equal(await page.locator('.pose-card').count(),3);
   assert.equal(await page.locator('#show-skeleton').isChecked(),false);
-  await page.locator('#kodokan-video').click();
+  await page.locator('#video-shortcut').click();
   assert.match(await page.locator('#kodokan-player').getAttribute('src'),/t3tQriIPdlI/);
   await page.locator('#close-video').click();assert.equal(await page.locator('#kodokan-player').getAttribute('src'),null);
   await page.locator('#back-menu').click();
   // Exercise real camera/model initialization, then menu navigation releases the stream.
-  await page.locator('[data-lesson="nami"]').click();await page.locator('#enter-practice').click();await page.locator('#start').click();
+  await page.locator('[data-lesson="nami"]').click();
   await page.waitForFunction(()=>document.querySelector('#status').textContent==='카메라 연결됨',{},{timeout:90000});
   await page.waitForFunction(()=>parseInt(document.querySelector('#fps').textContent)>0);
   await page.locator('#back-menu').click();assert.equal(await page.locator('#video').evaluate(v=>v.srcObject),null);
@@ -47,13 +48,13 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
         self.postMessage({type:'result',points,hands:[],time:data.time});
       }
     };`}));
-  await page.reload();await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();await page.locator('#enter-practice').click();await page.locator('#start').click();
-  await page.waitForFunction(()=>!document.querySelector('#play').disabled);await page.locator('#play').click();
+  await page.reload();await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();
+  await page.waitForFunction(()=>!document.querySelector('#play').disabled);
   await page.locator('#opponent-status[data-tap="true"]').waitFor({timeout:22000});await page.screenshot({path:'.test-output/opponent-tap.png',fullPage:true});
-  await page.locator('#result-dialog').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#xp').innerText(),'50 XP');
+  await page.locator('#result-dialog').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#xp').innerText(),'20 XP');
   await page.locator('#result-home').click();assert.equal(await page.locator('#completion-count').innerText(),'1 / 3');
-  await page.reload();assert.equal(await page.locator('#xp').innerText(),'50 XP');
+  await page.reload();assert.equal(await page.locator('#xp').innerText(),'20 XP');
   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'.test-output/dojo-mobile.png',fullPage:true});
-  assert.deepEqual(errors,[]);console.log('PASS: chapters, planned lessons, three grips, quiz, persistent XP, official video, skeleton hidden, avatar tap, real model initialization, camera cleanup, injected mission completion and mobile layout.');
+  assert.deepEqual(errors,[]);console.log('PASS: chapters, planned lessons, direct practice entry, sidebar descriptions, persistent XP, official video, skeleton hidden, avatar tap, real model initialization, camera cleanup, injected mission completion and mobile layout.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -17,3 +17,5 @@ test('tap requires visible crossed wrists close to both targets',()=>{
  const far=target.map(p=>p?{...p,y:p.y+200}:null);
  assert.equal(crossedGrip(far,target,frame),false);
 });
+
+test('practice completion counts without the retired quiz gate',()=>{assert.deepEqual(progressTotals({nami:{practice:true}}),{xp:20,completed:1})});

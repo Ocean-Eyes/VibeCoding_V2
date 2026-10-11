@@ -8,4 +8,4 @@ export const FOUNDATIONS=[{name:'도복 입는 법',label:'JUDOGI',description:'
 export function readProgress(storage){
   try{const raw=JSON.parse(storage.getItem('just-judo-progress-v1')||'{}');return Object.fromEntries(TECHNIQUES.map(t=>[t.id,{quiz:raw?.[t.id]?.quiz===true,practice:raw?.[t.id]?.practice===true}]))}catch{return {}}
 }
-export function progressTotals(progress){return TECHNIQUES.reduce((r,t)=>{const p=progress[t.id]||{};r.xp+=(p.quiz?10:0)+(p.practice?20:0);r.completed+=p.quiz&&p.practice?1:0;return r},{xp:0,completed:0})}
+export function progressTotals(progress){return TECHNIQUES.reduce((r,t)=>{const p=progress[t.id]||{};r.xp+=(p.quiz?10:0)+(p.practice?20:0);r.completed+=p.practice?1:0;return r},{xp:0,completed:0})}

@@ -1,5 +1,5 @@
 import './app.js';
-import {TECHNIQUES,FOUNDATIONS,QUIZ_CHOICES,readProgress,progressTotals} from './curriculum.js';
+import {TECHNIQUES,FOUNDATIONS,readProgress,progressTotals} from './curriculum.js';
 const $=id=>document.getElementById(id);
 let progress;try{progress=readProgress(localStorage)}catch{progress={}}
 let active=null,category='katame';
@@ -14,21 +14,21 @@ function renderCourses(){
   const items=category==='katame'?TECHNIQUES:FOUNDATIONS;
   for(const [i,t]of items.entries()){
     const card=document.createElement('article');card.className='lesson-card';
-    const done=progress[t.id]?.quiz&&progress[t.id]?.practice;
+    const done=progress[t.id]?.practice;
     card.innerHTML=`<span class="lesson-index">${['一','二','三'][i]}</span><div class="lesson-title-group"><small>${t.roman||t.label}</small><h3>${t.name}</h3><span class="tag">${category==='katame'?(done?'수련 기록 있음':'조르기 · 입문'):'준비 중'}</span></div><span class="lesson-kanji" lang="ja" aria-hidden="true">${category==='katame'?t.kanji:['衣','帯','受身'][i]}</span><p>${t.description}</p>`;
     const button=document.createElement('button');button.className='lesson-enter';button.disabled=category!=='katame';button.textContent=category==='katame'?(done?'다시 수련 →':'수련하기 →'):'콘텐츠 준비 중';if(category==='katame'){button.dataset.lesson=t.id;button.onclick=()=>openLesson(t)}card.append(button);$('course-grid').append(card);
   }
 }
 function openLesson(t){
-  active=t;$('lesson-characters').textContent=t.kanji;$('lesson-title').textContent=t.name;$('lesson-roman').textContent=t.roman;$('lesson-description').textContent=t.description;$('grip-note').textContent=t.detail;$('grip-left').textContent=t.directions[0];$('grip-right').textContent=t.directions[1];$('grip-caption').textContent=t.grip;
-  $('source-link').href=t.source;$('quiz-question').textContent=`${t.name}의 손바닥 방향은?`;$('quiz-feedback').textContent=progress[t.id]?.quiz?'이전에 확인한 그립입니다. 바로 손 위치 연습을 시작할 수 있어요.':'그립을 확인하면 손 위치 연습이 열립니다.';$('enter-practice').disabled=!progress[t.id]?.quiz;
-  $('quiz-choices').replaceChildren();QUIZ_CHOICES.forEach((text,i)=>{const b=document.createElement('button');b.className='quiz-choice';b.textContent=text;b.onclick=()=>{if(i!==t.answer){$('quiz-feedback').textContent='위의 그립 설명을 다시 살펴보세요.';b.classList.add('incorrect');return}progress[t.id]={...progress[t.id],quiz:true};save();$('quiz-feedback').textContent='정답! 그립 확인 완료 · 10 XP (최초 1회)';$('enter-practice').disabled=false;[...$('quiz-choices').children].forEach(c=>c.classList.remove('correct'));b.classList.add('correct')};$('quiz-choices').append(b)});
-  $('lesson-dialog').showModal();
+  active=t;
+  $('lesson-title').textContent=t.name;$('lesson-roman').textContent=t.roman;$('lesson-description').textContent=t.description;$('grip-note').textContent=t.detail;
+  $('grip-left').textContent=`왼손 · ${t.directions[0]==='↑'?'손바닥 ↑':'손등 ↑'}`;$('grip-right').textContent=`오른손 · ${t.directions[1]==='↑'?'손바닥 ↑':'손등 ↑'}`;$('grip-caption').textContent=t.grip;$('source-link').href=t.source;
+  $('home-screen').hidden=true;$('practice-screen').hidden=false;$('back-menu').hidden=false;
+  $('practice-title').textContent=t.name;$('practice-roman').textContent=t.roman;$('practice-grip').textContent=t.grip;
+  document.title=`${t.name} · Just Judo`;document.dispatchEvent(new CustomEvent('judo-lesson',{detail:t}));window.scrollTo(0,0);
 }
 function home(){document.dispatchEvent(new Event('judo-exit'));$('practice-screen').hidden=true;$('home-screen').hidden=false;$('back-menu').hidden=true;document.title='Just Judo — 나의 유도 도장';renderProgress();window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>selectCategory(b.dataset.category));
 $('featured-start').onclick=()=>selectCategory('katame');$('brand-home').onclick=e=>{e.preventDefault();home()};$('back-menu').onclick=home;
-$('close-lesson').onclick=()=>$('lesson-dialog').close();
-$('enter-practice').onclick=()=>{if(!active||!progress[active.id]?.quiz)return;$('lesson-dialog').close();$('home-screen').hidden=true;$('practice-screen').hidden=false;$('back-menu').hidden=false;$('practice-title').textContent=active.name;$('practice-roman').textContent=active.roman;$('practice-grip').textContent=active.grip;document.title=`${active.name} · Just Judo`;document.dispatchEvent(new CustomEvent('judo-lesson',{detail:active}));window.scrollTo(0,0)};
 document.addEventListener('judo-complete',event=>{const {demo}=event.detail;if(!active)return;if(!demo){progress[active.id]={...progress[active.id],practice:true};save()}$('result-title').textContent=demo?'데모 미리보기 완료':'TAP! 미션 완료!';$('result-copy').textContent=demo?'데모 점수는 XP와 완료 기록에 반영하지 않습니다.':`${active.name} · 손 위치 연습 20 XP (최초 1회). 실제 기술의 숙련도 인증은 아닙니다.`;$('result-dialog').showModal()});
 $('result-home').onclick=()=>{$('result-dialog').close();home()};$('result-again').onclick=()=>{$('result-dialog').close();document.dispatchEvent(new CustomEvent('judo-lesson',{detail:active}))};renderProgress();
