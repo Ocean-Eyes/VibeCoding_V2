@@ -1,4 +1,5 @@
 // All geometry uses image pixels, avoiding aspect-ratio distortion.
+export const PASS_SCORE = 70;
 export const POSES = [
   {name:'활짝 펼치기',short:'어깨 높이 · 손 펴기',description:'양팔을 어깨 높이로 벌리고 손바닥을 펼쳐 주세요.',angles:[0,0,Math.PI,Math.PI],gesture:'open'},
   {name:'머리 위로 V',short:'대각선 위 · 손 펴기',description:'양팔을 대각선 위로 올려 V자를 만들고 손을 펼쳐 주세요.',angles:[-Math.PI/3,-Math.PI/3,-2*Math.PI/3,-2*Math.PI/3],gesture:'open'},
@@ -21,10 +22,16 @@ export function bodyFrame(points){
   if((down.x-origin.x)*y.x+(down.y-origin.y)*y.y<0)y={x:-y.x,y:-y.y};
   return {origin,scale,x,y};
 }
-export function targetPose(frame,pose){
+export function targetPose(frame,pose,observed=null){
   const p=Array(33).fill(null);
   const project=(x,y)=>({x:frame.origin.x+frame.scale*(x*frame.x.x+y*frame.y.x),y:frame.origin.y+frame.scale*(x*frame.x.y+y*frame.y.y),visibility:1});
-  const putArm=(side,shoulder,elbow,wrist,a,b)=>{let x=side*.5,y=0;p[shoulder]=project(x,y);x+=Math.cos(a)*.68;y+=Math.sin(a)*.68;p[elbow]=project(x,y);x+=Math.cos(b)*.64;y+=Math.sin(b)*.64;p[wrist]=project(x,y)};
+  // Fit segment lengths to the visible user, while keeping the prescribed directions.
+  const length=(a,b,fallback)=>{
+    if(!observed||[a,b].some(i=>!observed[i]||(observed[i].visibility??1)<.65))return fallback;
+    const ratio=distance(observed[a],observed[b])/frame.scale;
+    return ratio>=.2&&ratio<=2?ratio:fallback;
+  };
+  const putArm=(side,shoulder,elbow,wrist,a,b)=>{let x=side*.5,y=0;p[shoulder]=project(x,y);const upper=length(shoulder,elbow,.68),lower=length(elbow,wrist,.64);x+=Math.cos(a)*upper;y+=Math.sin(a)*upper;p[elbow]=project(x,y);x+=Math.cos(b)*lower;y+=Math.sin(b)*lower;p[wrist]=project(x,y)};
   putArm(1,11,13,15,...pose.angles.slice(0,2));putArm(-1,12,14,16,...pose.angles.slice(2));
   p[23]=project(.39,1.2);p[24]=project(-.39,1.2);p[0]=project(0,-.58);return p;
 }
@@ -49,5 +56,5 @@ export function handMatch(hands,points,scale,gesture){
   const values=assigned.map(i=>handOpenness(hands[i]));
   return Math.round(values.reduce((sum,v)=>sum+Math.max(0,Math.min(1,gesture==='open'?(v-.5)/.4:(.85-v)/.4)),0)*50);
 }
-export function advanceHold(hold,dt,score,running){return running && score!==null && score>=80 ? Math.min(3,hold+Math.min(dt,.2)) : 0;}
+export function advanceHold(hold,dt,score,running,handScore=100){return running && score!==null && score>=PASS_SCORE && handScore!==null && handScore>=50 ? Math.min(3,hold+Math.min(dt,.2)) : 0;}
 export function fitRect(width,height,videoWidth,videoHeight){const s=Math.min(width/videoWidth,height/videoHeight);return {x:(width-videoWidth*s)/2,y:(height-videoHeight*s)/2,width:videoWidth*s,height:videoHeight*s,scale:s};}
