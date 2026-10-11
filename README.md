@@ -1,6 +1,6 @@
 # Just Judo
 
-[웹사이트 열기](https://ocean-eyes.github.io/VibeCoding_V2/)
+배포 대상: Vercel (GitHub 저장소 연동).
 
 설치 없이 PC/노트북 웹브라우저에서 이용하는 유도 학습 도장입니다. Yuji Boku 붓글씨 서체의 柔道·基本·固技·投技, 종이 질감, 먹선, 붉은 낙관을 사용한 두루마리 도장 UI입니다. 상품 카드 대신 과정 칸과 기술 목록을 사용합니다. 특정 단체의 공식 서비스는 아닙니다.
 
@@ -61,15 +61,21 @@ npm start
 npm test
 ```
 
-`main` 푸시 시 GitHub Actions가 테스트 후 HTML, dojo.css, src 모듈만 Pages에 배포합니다.
+Vercel에서 `Ocean-Eyes/VibeCoding_V2` 저장소를 Import하세요. Root Directory는 저장소 루트(`.`)이며, `vercel.json`이 Build Command `npm run build`, Output Directory `dist`, Framework Other를 설정합니다. 별도 환경 변수는 필요 없습니다. GitHub Pages 자동 배포는 중단했고 기존 워크플로는 수동 실행만 가능합니다.
+
+빌드는 HTML·CSS·모든 로컬 JS 모듈 및 Worker URL에 동일한 콘텐츠 버전을 붙여 이전 캐시와 새 파일이 섞이는 것을 방지합니다. Vercel 응답은 캐시 재검증을 사용합니다.
 
 Playwright 패키지가 있는 환경에서:
 
 ```sh
 node scripts/browser-dojo.cjs <Playwright 패키지 경로>
 node scripts/browser-regressions.cjs <Playwright 패키지 경로>
+npm run build
+node scripts/browser-entry.cjs <Playwright 패키지 경로>
 ```
 
 `SITE_URL` 환경 변수로 배포 사이트를 검사할 수 있습니다. 도장 검사에는 메뉴·즉시 연습 진입·기술별 설명·저장·중복 XP 방지·강도관 영상 연결·기본 관절 숨김·가상 상대 탭·가상 카메라의 실제 모델 초기화·메뉴 복귀 시 카메라 해제·반응형 레이아웃이 포함됩니다. 미션 완료 흐름은 합성 관절을 주입하여 검증합니다. 회귀 검사는 공개 인물 사진을 영상 입력으로 사용하며 오류도 강제로 주입합니다. **이 검사는 실제 사용자가 유도 동작을 하는 웹캠 환경의 인식률 검증을 대신하지 않습니다.**
 
 강도관 영상 링크는 [강도관 공식 기술 목록](https://kdkjd.org/names-of-judo-techniques/)에서 확인했습니다. 영상 임베드가 제한되면 플레이어 아래 YouTube 링크를 이용합니다. 가상 상대의 탭은 손 위치 유지로 발생하는 게임 이벤트이며 실제 압박의 시뮬레이션이 아닙니다.
+
+진입 회귀 검사(`browser-entry.cjs`)는 빌드 산출물에서 구형 Canvas 환경, 이전 무버전 모듈 캐시, 연습 모듈 로드 실패, 로딩 중 메뉴 복귀를 확인합니다. 연습 모듈 초기화는 메뉴에서 분리되어 실패해도 기술 설명과 메뉴 복귀는 사용할 수 있습니다.

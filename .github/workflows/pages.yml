@@ -1,8 +1,6 @@
-name: Deploy Just Judo to GitHub Pages
+name: Manual legacy GitHub Pages deployment
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -23,11 +21,7 @@ jobs:
       - name: Test pose geometry and scoring
         run: npm test
       - name: Prepare public files
-        run: |
-          mkdir -p dist/src
-          cp index.html dojo.css dist/
-          cp src/*.js dist/src/
-          touch dist/.nojekyll
+        run: npm run build
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist

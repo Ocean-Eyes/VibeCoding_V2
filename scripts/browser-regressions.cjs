@@ -43,7 +43,7 @@ async function enterPractice(page){
       const Original=window.Worker;
       window.Worker=class extends Original {constructor(...args){super(...args);window.testWorker=this;}};
     });
-    await page.route('**/src/tracker.js',route=>route.fulfill({contentType:'text/javascript',body:`
+    await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
       self.onmessage=({data})=>{
         if(data.type==='init')self.postMessage({type:'ready'});
         if(data.type==='break')self.postMessage({type:'error',message:'Injected inference failure'});

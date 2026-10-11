@@ -109,7 +109,6 @@ $('close-video').onclick=()=>$('video-dialog').close();$('video-dialog').addEven
 $('play').onclick=()=>{tapUntil=0;running=!running;hold=0;if(running){const done=completed;if(done.size===POSES.length){done.clear();updatePose()}countdown=3;$('countdown').hidden=false;notify('3초 뒤 시작합니다. 목표 자세를 50% 이상으로 3초 유지해 보세요.')}else{countdown=0;$('countdown').hidden=true;notify('일시 정지했습니다. 카메라 추적은 계속되며 유지 시간은 누적하지 않습니다.')}controls()};
 $('reset').onclick=()=>{tapUntil=0;hold=0;elapsed=0;countdown=running?3:0;notify('현재 동작의 유지 시간과 연습 타이머를 초기화했습니다.')};
 $('previous').onclick=()=>choose(selected-1);$('next').onclick=()=>choose(selected+1);
-$('help').onclick=()=>$('guide').showModal();$('close-help').onclick=()=>$('guide').close();
 document.addEventListener('visibilitychange',()=>{if(document.hidden){autoStart=false;tapUntil=0;running=false;countdown=hold=0;$('countdown').hidden=true;controls()}});
 window.addEventListener('pagehide',stop);updatePose();controls();requestAnimationFrame(tick);
 

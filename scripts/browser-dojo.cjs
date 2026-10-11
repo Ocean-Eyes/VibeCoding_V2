@@ -37,7 +37,7 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
   await page.locator('#back-menu').click();assert.equal(await page.locator('#video').evaluate(v=>v.srcObject),null);
   // Inject known poses only to test progression/reward plumbing. This is not recognition validation.
   await page.addInitScript(()=>{const Original=Worker;window.Worker=class extends Original{postMessage(data,transfer){if(data.type==='frame')data.step=Number(document.querySelector('#step-label').textContent.slice(0,2))-1;super.postMessage(data,transfer)}}});
-  await page.route('**/src/tracker.js',route=>route.fulfill({contentType:'text/javascript',body:`
+  await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
     self.onmessage=({data})=>{
       if(data.type==='init')self.postMessage({type:'ready'});
       if(data.type==='frame'){

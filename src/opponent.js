@@ -15,7 +15,11 @@ export function drawGripHand(ctx, x, y, size, palmUp, left=false) {
   path([[-.18,-.85],[.12,-.85],[.32,.66],[.02,.66]],'#faf7ee');
   path([[-.24,.7],[-.28,.2],[-.4,-.08],[-.34,-.43],[.24,-.46],[.36,-.14],[.26,.28],[.2,.7]],palmUp?'#efd0b2':'#cfa482');
   for(let i=0;i<4;i++){
-    ctx.beginPath();ctx.roundRect(-.35+i*.17,-.52,.17,.35,.07);ctx.fillStyle=palmUp?'#e6b995':'#d9b18e';ctx.fill();ctx.strokeStyle='#674b3b';ctx.stroke();
+    const fx=-.35+i*.17,fy=-.52,w=.17,h=.35,r=.07;
+    ctx.beginPath();ctx.moveTo(fx+r,fy);ctx.lineTo(fx+w-r,fy);ctx.quadraticCurveTo(fx+w,fy,fx+w,fy+r);
+    ctx.lineTo(fx+w,fy+h-r);ctx.quadraticCurveTo(fx+w,fy+h,fx+w-r,fy+h);ctx.lineTo(fx+r,fy+h);
+    ctx.quadraticCurveTo(fx,fy+h,fx,fy+h-r);ctx.lineTo(fx,fy+r);ctx.quadraticCurveTo(fx,fy,fx+r,fy);ctx.closePath();
+    ctx.fillStyle=palmUp?'#e6b995':'#d9b18e';ctx.fill();ctx.strokeStyle='#674b3b';ctx.stroke();
   }
   path([[-.3,.25],[-.53,-.03],[-.48,-.22],[-.34,-.2],[-.12,.04]],'#e3b38e');
   ctx.beginPath();
