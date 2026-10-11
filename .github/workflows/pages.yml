@@ -25,8 +25,8 @@ jobs:
       - name: Prepare public files
         run: |
           mkdir -p dist/src
-          cp index.html style.css dist/
-          cp src/app.js src/pose.js src/tracker.js dist/src/
+          cp index.html dojo.css dist/
+          cp src/*.js dist/src/
           touch dist/.nojekyll
       - uses: actions/upload-pages-artifact@v4
         with:

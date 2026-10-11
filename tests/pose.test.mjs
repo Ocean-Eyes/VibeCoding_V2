@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {POSES,bodyFrame,targetPose,armMatch,handMatch,handOpenness,advanceHold,fitRect} from '../src/pose.js';
+import {POSES as JUDO_POSES,bodyFrame,targetPose,armMatch,handMatch,handOpenness,advanceHold,fitRect} from '../src/pose.js';
+const POSES=[{angles:[0,0,Math.PI,Math.PI],gesture:'open'},...JUDO_POSES];
 const frame={origin:{x:640,y:300},scale:180,x:{x:1,y:0},y:{x:0,y:1}};
 test('all targets score 100 against themselves',()=>{for(const pose of POSES){const p=targetPose(frame,pose);assert.equal(armMatch(p,p,frame.scale).score,100)}});
 test('alignment is invariant under translation, scale and rotation',()=>{

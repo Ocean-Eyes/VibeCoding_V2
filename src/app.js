@@ -1,6 +1,6 @@
 import {PASS_SCORE,POSES,BONES,HAND_BONES,bodyFrame,targetPose,armMatch,handMatch,advanceHold,fitRect} from './pose.js';
 const $=id=>document.getElementById(id),video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d');
-const mint='#c1f575',cyan='#71d7ed',orange='#ffb783';
+const mint='#cf626b',cyan='#80baff',orange='#eab776';
 let mode='idle',worker=null,stream=null,ready=false,busy=false,generation=0,lastVideo=-1,lastSent=0,lastResult=0,lastTick=performance.now();
 let points=null,hands=[],selected=0,running=false,countdown=0,elapsed=0,hold=0,completed=new Set(),demoCompleted=new Set(),score=null;
 let armScore=null,handScore=null,fps=0,viewWidth=0,viewHeight=0,initTimer=null,frameTimer=null;
@@ -22,15 +22,15 @@ function drawHand(context,wrist,elbow,size,gesture,color){
 function skeleton(context,p,color,width=3){for(const[a,b]of BONES){if(p[a]&&p[b]&&(p[a].visibility??1)>=.65&&(p[b].visibility??1)>=.65)line(context,p[a],p[b],color,width)}for(const i of[11,12,13,14,15,16,23,24])if(p[i]&&(p[i].visibility??1)>=.65)circle(context,p[i],width*1.25,color)}
 function targetDraw(context,p,scale,gesture,head=false){
   context.save();context.globalAlpha=.28;skeleton(context,p,mint,Math.max(9,scale*.11));context.restore();
-  skeleton(context,p,'#c1f575b0',2);for(const i of[15,16]){circle(context,p[i],scale*.14,'#c1f57570',false);drawHand(context,p[i],p[i-2],scale*.3,gesture,mint)}
-  if(head){circle(context,p[0],scale*.23,'#c1f575aa',false);line(context,{x:p[0].x,y:p[0].y+scale*.23},{x:(p[11].x+p[12].x)/2,y:(p[11].y+p[12].y)/2},'#c1f57580',2)}
+  skeleton(context,p,'#cf626bb0',2);for(const i of[15,16]){circle(context,p[i],scale*.14,'#cf626b70',false);drawHand(context,p[i],p[i-2],scale*.3,gesture,mint)}
+  if(head){circle(context,p[0],scale*.23,'#cf626baa',false);line(context,{x:p[0].x,y:p[0].y+scale*.23},{x:(p[11].x+p[12].x)/2,y:(p[11].y+p[12].y)/2},'#cf626b80',2)}
 }
 function preview(canvas,index){const context=canvas.getContext('2d'),w=canvas.width,h=canvas.height;context.clearRect(0,0,w,h);const scale=Math.min(w/4.7,h/3.2);const frame={origin:{x:w/2,y:h*.53},scale,x:{x:-1,y:0},y:{x:0,y:1}};targetDraw(context,targetPose(frame,POSES[index]),scale,POSES[index].gesture,true)}
 function updatePose(){
-  const p=POSES[selected];$('step-label').textContent=`0${selected+1} / 04`;$('pose-number').textContent=`0${selected+1}`;$('pose-name').textContent=p.name;$('pose-description').textContent=p.description;$('gesture-label').textContent=p.gesture==='open'?'양손 펼치기':'양손 가볍게 쥐기';preview($('preview'),selected);
+  const p=POSES[selected];$('step-label').textContent=`0${selected+1} / 03`;$('pose-number').textContent=`0${selected+1}`;$('pose-name').textContent=p.name;$('pose-description').textContent=p.description;$('gesture-label').textContent='손바닥 방향은 직접 확인';preview($('preview'),selected);
   document.querySelectorAll('.pose-card').forEach((button,i)=>{button.classList.toggle('selected',i===selected);button.setAttribute('aria-pressed',String(i===selected));button.querySelector('.completion').textContent=(mode==='demo'?demoCompleted:completed).has(i)?'✓':''});
 }
-POSES.forEach((p,i)=>{const button=document.createElement('button');button.className='pose-card';button.innerHTML=`<canvas width="140" height="110" aria-hidden="true"></canvas><span class="card-copy"><small>MOVE 0${i+1}</small><strong>${p.name}</strong><span>${p.short}</span></span><span class="completion" aria-label="완료 여부"></span>`;button.onclick=()=>choose(i);$('pose-list').append(button);preview(button.querySelector('canvas'),i)});
+POSES.forEach((p,i)=>{const button=document.createElement('button');button.className='pose-card';button.innerHTML=`<canvas width="140" height="110" aria-hidden="true"></canvas><span class="card-copy"><small>STEP 0${i+1}</small><strong>${p.name}</strong><span>${p.short}</span></span><span class="completion" aria-label="완료 여부"></span>`;button.onclick=()=>choose(i);$('pose-list').append(button);preview(button.querySelector('canvas'),i)});
 function choose(index){selected=(index+POSES.length)%POSES.length;hold=0;score=armScore=handScore=null;updatePose()}
 function controls(){const active=mode==='live'||mode==='demo';$('welcome').hidden=mode!=='idle';$('start').disabled=mode==='loading';$('play').disabled=!active;$('reset').disabled=!active;$('stop').disabled=mode==='idle';$('play').innerHTML=running?'일시 정지 <span>Ⅱ</span>':'연습 시작 <span>▶</span>';$('stop').textContent=mode==='demo'?'데모 종료':'카메라 끄기';$('status-dot').classList.toggle('active',!!stream);$('status').textContent={idle:'카메라 대기 중',loading:'자세 추적 준비 중',preview:'카메라 켜짐 · 자세 추적 중단',live:'카메라 연결됨',demo:'데모 미리보기 · 실제 측정 아님'}[mode];$('mode-label').textContent={idle:'READY WHEN YOU ARE',loading:'CONNECTING',preview:'CAMERA ON · 추적 재연결 필요',live:'LIVE · LOCAL PROCESSING',demo:'DEMO · 가상 움직임'}[mode];}
 function stop(){
@@ -105,7 +105,7 @@ function draw(now){
     $('feedback').textContent=stream?'지금 가이드는 화면 중앙의 참고 자세입니다. 양어깨가 인식되면 내 몸에 맞춰 정렬하고 비교합니다.':'어깨와 팔꿈치, 양손이 모두 보여야 비교할 수 있어요.';return
   }
   const target=targetPose(frame,POSES[selected],current),arm=armMatch(current,target,frame.scale);armScore=arm?.score??null;handScore=mode==='demo'?95:handMatch(currentHands,current,frame.scale,POSES[selected].gesture);
-  score=armScore!==null&&handScore!==null?Math.round(armScore*.75+handScore*.25):null;
+  score=armScore; // Solo position score; palm orientation and technique effectiveness are not graded.
   const rect=fitRect(box.width,box.height,vw,vh);ctx.save();ctx.translate(rect.x,rect.y);ctx.scale(rect.scale,rect.scale);
   if($('mirror').checked){ctx.translate(vw,0);ctx.scale(-1,1)}
   if(mode==='demo'){ctx.save();ctx.globalAlpha=.3;circle(ctx,current[0],frame.scale*.25,'#758889');skeleton(ctx,current,'#607a75',frame.scale*.17);ctx.restore()}
@@ -113,28 +113,32 @@ function draw(now){
   for(const hand of currentHands){for(const[a,b]of HAND_BONES)line(ctx,hand[a],hand[b],cyan,2);for(const p of hand)circle(ctx,p,2,cyan)}
   for(const i of[15,16]){if((current[i]?.visibility??0)<.65)continue;const a=current[i],b=target[i];if(Math.hypot(a.x-b.x,a.y-b.y)>frame.scale*.16){line(ctx,a,b,orange,2,[6,5]);const theta=Math.atan2(b.y-a.y,b.x-a.x);for(const sign of[-1,1])line(ctx,b,{x:b.x-12*Math.cos(theta+sign*.5),y:b.y-12*Math.sin(theta+sign*.5)},orange,2)}}
   ctx.restore();
-  $('tracking-label').textContent=mode==='demo'?'가상 데이터':armScore===null?'팔 인식 대기':handScore===null?'손 인식 대기':'추적 중';
-  $('feedback').textContent=mode==='demo'?'가상 동작으로 기능을 미리 보고 있어요. 실제 일치도가 아닙니다.':armScore===null?'팔꿈치와 손목이 가려지지 않도록 양팔을 보여 주세요.':handScore===null?'양손을 카메라에 보여 주세요. 손이 작게 보이면 조금 가까이 서 주세요.':score>=PASS_SCORE?'좋아요! 지금 자세를 유지해 주세요.':handScore<65?POSES[selected].gesture==='open'?'양손의 손가락을 조금 더 펼쳐 주세요.':'양손을 가볍게 쥐어 주먹을 만들어 주세요.':arm.errors[2]>arm.errors[3]?'왼쪽 손목을 주황색 화살표 방향으로 옮겨 주세요.':'오른쪽 손목을 주황색 화살표 방향으로 옮겨 주세요.';
+  $('tracking-label').textContent=mode==='demo'?'가상 데이터':armScore===null?'팔 인식 대기':'팔 위치 추적 중';
+  $('feedback').textContent=mode==='demo'?'가상 관절 시범입니다. XP와 완료 기록에 반영하지 않습니다.':armScore===null?'팔꿈치와 손목이 가려지지 않도록 보여 주세요.':score>=PASS_SCORE?'팔 위치가 맞습니다. 손바닥 방향은 기술 설명과 비교해 직접 확인하세요.':arm.errors[2]>arm.errors[3]?'왼쪽 손목을 화살표 방향으로 옮겨 주세요.':'오른쪽 손목을 화살표 방향으로 옮겨 주세요.';
 }
 function tick(now){
   const dt=Math.min((now-lastTick)/1000,.2);lastTick=now;
   if(mode==='live')void sendFrame(now);
+  if($('practice-screen').hidden){requestAnimationFrame(tick);return}
   video.style.transform=$('mirror').checked?'scaleX(-1)':'none';draw(now);
   if(running&&countdown>0){countdown=Math.max(0,countdown-dt);$('countdown').textContent=Math.ceil(countdown)||'GO';$('countdown').hidden=countdown===0}
-  else if(running){elapsed+=dt;hold=advanceHold(hold,dt,score,true);if(hold>=3){const done=mode==='demo'?demoCompleted:completed;done.add(selected);if(done.size===POSES.length){running=false;hold=0;controls();updatePose();notify(mode==='demo'?'데모 루틴을 완료했습니다. 데모를 종료하고 카메라로 직접 연습해 보세요.':'4가지 동작을 모두 완료했어요! 원하는 동작을 선택해 다시 연습할 수 있습니다.')}else{choose(selected+1);notify(mode==='demo'?'데모: 다음 가상 동작을 보여드립니다.':'잘했어요! 다음 동작으로 이어갑니다.')}}}
-  $('score').textContent=score??'—';$('arm-score').textContent=armScore===null?'—':`${armScore}%`;$('hand-score').textContent=handScore===null?'—':`${handScore}%`;
+  else if(running){elapsed+=dt;hold=advanceHold(hold,dt,score,true);if(hold>=3){const done=mode==='demo'?demoCompleted:completed;done.add(selected);if(done.size===POSES.length){running=false;hold=0;controls();updatePose();document.dispatchEvent(new CustomEvent('judo-complete',{detail:{demo:mode==='demo'}}));notify(mode==='demo'?'데모 루틴을 완료했습니다. 데모를 종료하고 카메라로 직접 연습해 보세요.':'3단계 손 위치 연습을 마쳤습니다.')}else{choose(selected+1);notify(mode==='demo'?'데모: 다음 가상 동작을 보여드립니다.':'잘했어요! 다음 동작으로 이어갑니다.')}}}
+  $('score').textContent=score??'—';$('arm-score').textContent=armScore===null?'—':`${armScore}%`;$('hand-score').textContent=mode==='demo'?'가상':mode==='live'?`${Math.min(hands.length,2)} / 2`:'—';
   $('score-verdict').textContent=mode==='demo'?'데모 · 실제 측정 아님':score===null?'측정 가능한 자세를 기다려요':score>=PASS_SCORE?'좋아요, 그대로 유지해요':score>=35?'조금만 더 맞춰볼까요':'목표를 천천히 따라가세요';
   $('hold-text').textContent=`${hold.toFixed(1)} / 3.0초`;$('hold-progress').style.width=`${hold/3*100}%`;
   $('timer').textContent=`${String(Math.floor(elapsed/60)).padStart(2,'0')}:${String(Math.floor(elapsed%60)).padStart(2,'0')}`;$('fps').textContent=mode==='live'?`${Math.round(fps)} FPS · RGB CAMERA / 2D`:mode==='demo'?'SIMULATED MOVEMENT':'RGB CAMERA / 2D';
-  $('stage-hint').textContent=mode==='demo'?'데모 미리보기 · 카메라를 사용하지 않습니다':stream&&canvas.dataset.aligned!=='true'?'참고 가이드 · 아직 몸에 정렬되지 않았습니다':mode==='live'?running?countdown?'준비하세요. 잠시 후 시작합니다':'민트색 가이드에 팔과 손 모양을 맞춰 주세요':'자세를 확인한 뒤 연습 시작을 눌러 주세요':'어깨와 양손이 화면에 들어오도록 서 주세요';requestAnimationFrame(tick);
+  $('stage-hint').textContent=mode==='demo'?'데모 미리보기 · 카메라를 사용하지 않습니다':stream&&canvas.dataset.aligned!=='true'?'참고 가이드 · 아직 몸에 정렬되지 않았습니다':mode==='live'?running?countdown?'준비하세요. 잠시 후 시작합니다':'붉은색 가이드에 팔과 손 모양을 맞춰 주세요':'자세를 확인한 뒤 연습 시작을 눌러 주세요':'어깨와 양손이 화면에 들어오도록 서 주세요';requestAnimationFrame(tick);
 }
 $('start').onclick=start;
 $('retry-tracking').onclick=()=>{if(stream)connectTracker()};
 $('stop').onclick=()=>{stop();notify('연결을 종료했습니다. 카메라는 꺼져 있습니다.')};
 $('demo').onclick=()=>{stop();mode='demo';demoCompleted.clear();controls();updatePose();notify('가상 데이터로 표시되는 데모입니다. 연습 시작을 누르면 자동 진행을 확인할 수 있어요.')};
-$('play').onclick=()=>{running=!running;hold=0;if(running){const done=mode==='demo'?demoCompleted:completed;if(done.size===4){done.clear();updatePose()}countdown=3;$('countdown').hidden=false;notify(mode==='demo'?'데모 루틴을 재생합니다. 점수는 가상 데이터입니다.':'3초 뒤 시작합니다. 목표 자세를 50% 이상으로 3초 유지해 보세요.')}else{countdown=0;$('countdown').hidden=true;notify('일시 정지했습니다. 카메라 추적은 계속되며 유지 시간은 누적하지 않습니다.')}controls()};
+$('play').onclick=()=>{running=!running;hold=0;if(running){const done=mode==='demo'?demoCompleted:completed;if(done.size===POSES.length){done.clear();updatePose()}countdown=3;$('countdown').hidden=false;notify(mode==='demo'?'데모 루틴을 재생합니다. 점수는 가상 데이터입니다.':'3초 뒤 시작합니다. 목표 자세를 50% 이상으로 3초 유지해 보세요.')}else{countdown=0;$('countdown').hidden=true;notify('일시 정지했습니다. 카메라 추적은 계속되며 유지 시간은 누적하지 않습니다.')}controls()};
 $('reset').onclick=()=>{hold=0;elapsed=0;countdown=running?3:0;notify('현재 동작의 유지 시간과 연습 타이머를 초기화했습니다.')};
 $('previous').onclick=()=>choose(selected-1);$('next').onclick=()=>choose(selected+1);
 $('help').onclick=()=>$('guide').showModal();$('close-help').onclick=()=>$('guide').close();
 document.addEventListener('visibilitychange',()=>{if(document.hidden){running=false;countdown=hold=0;$('countdown').hidden=true;controls()}});
 window.addEventListener('pagehide',stop);updatePose();controls();requestAnimationFrame(tick);
+
+document.addEventListener('judo-exit',stop);
+document.addEventListener('judo-lesson',()=>{stop();completed.clear();demoCompleted.clear();selected=0;updatePose();notify('선택한 기술의 그립 방향을 확인하며 손 위치를 연습하세요.');});

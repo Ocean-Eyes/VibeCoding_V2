@@ -3,6 +3,12 @@ const {chromium}=require(process.argv[2]||'playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const base=process.env.SITE_URL||'http://localhost:5173/';
+async function enterPractice(page){
+  await page.locator('[data-category="katame"]').click();
+  await page.locator('[data-lesson="nami"]').click();
+  await page.locator('.quiz-choice').nth(0).click();
+  await page.locator('#enter-practice').click();
+}
 (async()=>{
   fs.mkdirSync('.test-output',{recursive:true});
   const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
@@ -22,7 +28,7 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
         track.stop=()=>{clearInterval(interval);image.close();stop()};return stream;
       };
     });
-    await person.goto(base);await person.locator('#start').click();
+    await person.goto(base);await enterPractice(person);await person.locator('#start').click();
     await person.waitForFunction(()=>document.querySelector('#overlay').dataset.aligned==='true',{},{timeout:90000});
     await person.waitForFunction(()=>document.querySelector('#arm-score').textContent!=='—');
     await person.locator('#play').click();
@@ -49,7 +55,7 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
           self.postMessage({type:'result',points,hands:[],time:data.time});
         }
       };` }));
-    await page.goto(base);await page.locator('#start').click();
+    await page.goto(base);await enterPractice(page);await page.locator('#start').click();
     await page.waitForFunction(()=>document.querySelector('#overlay').dataset.aligned==='true');
     assert.notEqual(await page.locator('#arm-score').innerText(),'—');
     await page.locator('#play').click();await page.evaluate(()=>window.testWorker.postMessage({type:'break'}));

@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "RGB webcam movement practice with MediaPipe",
+  "description": "Judo learning dojo with grip missions and solo webcam position practice",
   "scripts": {
     "start": "node scripts/serve.mjs",
-    "test": "node --test tests/pose.test.mjs"
+    "test": "node --test tests/pose.test.mjs tests/curriculum.test.mjs"
   },
   "engines": { "node": ">=20" }
 }
