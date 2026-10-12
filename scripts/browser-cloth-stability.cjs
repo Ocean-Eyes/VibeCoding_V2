@@ -14,17 +14,18 @@ const assert=require('node:assert/strict');
    const rest=render([]);let cases=0,maxError=0;
    for(const t of [.001,.008,.025,.05,.09,.12,.20,.30])
    for(const dx of [-.09,-.06,-.03,0,.03,.06,.09])
-   for(const dy of [-.025,0,.025])
+   for(const dy of [-.06,-.025,0,.025])
    for(const directions of [['↓','↓'],['↑','↑'],['↑','↓']])
-   for(const mirrored of [true,false]){
+   for(const mirrored of [true,false])for(const mask of [0,1,2]){
     const model=new CollarInteraction();
     const hands=[0,1].map(i=>{
      const side=(i?-1:1)*(mirrored?1:-1),p=lapelRest(side,t),center={x:p.x+side*dx,y:p.y+dy};
      const hand=handAt(center,.8,i===0,directions[i]==='↑');
      return mirrored?hand:hand.map(q=>({...q,x:2*center.x-q.x}));
     });
-    let state;for(let time=0;time<=240;time+=20)state=model.update(hands,time,{directions,mirrored});
-    if(state.count!==2)throw Error('capture failed');
+    const visible=hands.map((h,i)=>mask===2||mask===i?h:null);
+    let state;for(let time=0;time<=240;time+=20)state=model.update(visible,time,{directions,mirrored});
+    if(state.count!==(mask===2?2:1))throw Error('capture failed');
     const pixels=render(state.deformation);
     for(let i=0;i<pixels.length;i++)maxError=Math.max(maxError,Math.abs(pixels[i]-rest[i]));
     cases++;
@@ -48,7 +49,7 @@ const assert=require('node:assert/strict');
    return {cases,maxError,spikeError};
   });
   await page.screenshot({path:'.test-output/cloth-stability.png'});
-  assert.equal(result.cases,1008);assert.equal(result.maxError,0);assert.equal(result.spikeError,0);
+  assert.equal(result.cases,4032);assert.equal(result.maxError,0);assert.equal(result.spikeError,0);
   console.log('PASS pixel stability',JSON.stringify(result));
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

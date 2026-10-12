@@ -129,3 +129,36 @@ test('a pose-only wrist swap cannot override two stationary visible hand tracks'
   assert.equal(h[0][0].x,.3);assert.equal(h[1][0].x,.7);
  }
 });
+
+
+test('ordinary 15 fps hand travel is not frozen by the outlier gate',()=>{
+ const stream=new HandStream();stream.update(hand(.2),0);
+ for(let i=1;i<=15;i++){
+  stream.update(hand(.2+i*.04),i*65);
+  assert.ok(stream.trackedAt(i*65),'a continuous 4% frame-width step is valid');
+ }
+ assert.ok(stream.at(1040)[0].x>.76);
+});
+
+test('a relocated free hand recovers as a new faded track, never a pull on a held collar',()=>{
+ const stream=new HandStream();stream.update(hand(.3),0);
+ for(let t=65;t<=1040;t+=65){
+  stream.update(hand(.7),t,{reacquire:false});assert.equal(stream.trackedAt(t),null);
+ }
+ for(let t=1105;t<=1235;t+=65){
+  stream.update(hand(.7),t,{reacquire:true});assert.equal(stream.at(t),null);
+ }
+ stream.update(hand(.7),1365,{reacquire:true});
+ assert.equal(stream.at(1365)[0].x,.7);assert.equal(stream.opacityAt(1365),0);
+ assert.equal(stream.trackedAt(1465),null,'fade-in cannot score');
+ for(let t=1430;t<=1625;t+=65)stream.update(hand(.7),t,{reacquire:true});
+ assert.equal(stream.trackedAt(1625)[0].x,.7);
+});
+
+test('unsteady outliers cannot establish a replacement hand track',()=>{
+ const stream=new HandStream();stream.update(hand(.3),0);
+ for(let i=1;i<=50;i++){
+  stream.update(hand(i%2?.7:.9),i*65,{reacquire:true});
+  assert.equal(stream.trackedAt(i*65),null);
+ }
+});

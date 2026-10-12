@@ -1,3 +1,4 @@
+import {ClothMotion,CLOTH_MAX_TRAVEL,CLOTH_SPEED} from '../src/cloth-motion.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CollarInteraction,clothPoint,lapelRest,lapelPoint} from '../src/collar-interaction.js';
@@ -23,13 +24,13 @@ test('near-neck movement has bounded influence over the whole coat',()=>{
  }
 });
 
-test('1008 contact configurations preserve the initial coat across technique and mirror settings',()=>{
+test('4032 single/bilateral contact configurations preserve the initial coat across technique and mirror settings',()=>{
  let cases=0;
  for(const t of [.001,.008,.025,.05,.09,.12,.20,.30])
  for(const dx of [-.09,-.06,-.03,0,.03,.06,.09])
- for(const dy of [-.025,0,.025])
+ for(const dy of [-.06,-.025,0,.025])
  for(const directions of [['↓','↓'],['↑','↑'],['↑','↓']])
- for(const mirrored of [true,false]){
+ for(const mirrored of [true,false])for(const mask of [0,1,2]){
   const model=new CollarInteraction();
   const hands=[0,1].map(i=>{
    const side=(i?-1:1)*(mirrored?1:-1),p=lapelRest(side,t);
@@ -37,12 +38,13 @@ test('1008 contact configurations preserve the initial coat across technique and
    // Reflect the camera orientation without changing the chosen contact center.
    return mirrored?h:h.map(q=>({...q,x:2*(p.x+side*dx)-q.x}));
   });
-  let state;for(let time=0;time<=240;time+=20)state=model.update(hands,time,{directions,mirrored});
-  assert.equal(state.count,2,JSON.stringify({t,dx,dy,directions,mirrored}));
+  const visible=hands.map((h,i)=>mask===2||mask===i?h:null);
+  let state;for(let time=0;time<=240;time+=20)state=model.update(visible,time,{directions,mirrored});
+  assert.equal(state.count,mask===2?2:1,JSON.stringify({t,dx,dy,directions,mirrored,mask}));
   assert.ok(state.deformation.every(g=>Math.hypot(g.dx,g.dy)<1e-12));
   cases++;
  }
- assert.equal(cases,1008);
+ assert.equal(cases,4032);
 });
 
 test('128 seeded noisy trajectories reject spikes and preserve smooth grip motion over 23040 frames',()=>{
@@ -87,6 +89,31 @@ test('adding a second grip preserves an already displaced first collar',()=>{
   for(let y=.07;y<=1.2;y+=.03)for(let x=-.5;x<=.5;x+=.04){
    const a=clothPoint({x,y},before),b=clothPoint({x,y},state.deformation);
    assert.ok(Math.hypot(a.x-b.x,a.y-b.y)<.002,'second contact must not pull the existing fabric');
+  }
+ }
+});
+
+
+test('the photographed single-hand neck contact leaves the entire collar unchanged',()=>{
+ for(const side of [1,-1]){
+  const model=new CollarInteraction(),hands=side===1?[handAt({x:.285,y:.015},1,true),null]:[null,handAt({x:-.285,y:.015},1,false)];
+  let state;for(let t=0;t<=3000;t+=20)state=model.update(hands,t);
+  assert.equal(state.count,1);
+  for(let t=0;t<=1;t+=.01)assert.deepEqual(lapelPoint(side,t,state.deformation),lapelRest(side,t));
+ }
+});
+
+test('rendered cloth has independent speed and travel bounds for every frame',()=>{
+ for(const fps of [10,15,30,60,120])for(const amplitude of [.08,.24,3,1000]){
+  const motion=new ClothMotion(),step=1000/fps;
+  let previous=motion.update([{side:1,t:.008,dx:0,dy:0}],0)[0];
+  for(let i=1;i<=240;i++){
+   const sign=i%60<30?1:-1;
+   const next=motion.update([{side:1,t:.008,dx:sign*amplitude,dy:-sign*amplitude,engagement:sign>0?1:0}],i*step)[0];
+   assert.ok(Math.hypot(next.dx,next.dy)<=CLOTH_MAX_TRAVEL+1e-10);
+   assert.ok(Math.hypot(next.dx-previous.dx,next.dy-previous.dy)<=CLOTH_SPEED*Math.min(.05,step/1000)+1e-10);
+   assert.ok(Math.abs(next.engagement-previous.engagement)<=1.5*Math.min(.05,step/1000)+1e-10);
+   previous=next;
   }
  }
 });

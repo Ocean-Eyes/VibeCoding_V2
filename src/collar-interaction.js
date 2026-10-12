@@ -1,3 +1,4 @@
+import {ClothMotion} from './cloth-motion.js';
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const ease=t=>{t=clamp(t);return t*t*(3-2*t)};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,(a.z??0)-(b.z??0));
@@ -82,7 +83,7 @@ const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSin
 // Camera posture exercise only: neither collar depth behind the neck nor pressure is observable.
 export class CollarInteraction{
  constructor(){this.reset()}
- reset(){this.hands=[emptyHand(),emptyHand()];this.released=[];this.lastTime=null;this.hold=0;this.tapped=false;this.lastMirror=null;this.elbowBaseline=null;this.armMissingSince=null}
+ reset(){this.clothMotion=new ClothMotion();this.hands=[emptyHand(),emptyHand()];this.released=[];this.lastTime=null;this.hold=0;this.tapped=false;this.lastMirror=null;this.elbowBaseline=null;this.armMissingSince=null}
  release(i,now){
   const h=this.hands[i];if(h.grip)this.released.push({...h.grip,releasedAt:now});
   this.hands[i]=emptyHand();this.hold=0;this.tapped=false;
@@ -90,7 +91,8 @@ export class CollarInteraction{
  deformation(now){
   this.released=this.released.filter(g=>now-g.releasedAt<700);
   const live=this.hands.map(h=>h.grip).filter(Boolean);
-  return [...live,...this.released.filter(g=>!live.some(l=>l.side===g.side)).map(g=>({...g,dx:g.dx*Math.exp(-(now-g.releasedAt)/110),dy:g.dy*Math.exp(-(now-g.releasedAt)/110),engagement:(g.engagement??0)*Math.exp(-(now-g.releasedAt)/110)}))];
+  const targets=[...live,...this.released.filter(g=>!live.some(l=>l.side===g.side)).map(g=>({...g,dx:g.dx*Math.exp(-(now-g.releasedAt)/110),dy:g.dy*Math.exp(-(now-g.releasedAt)/110),engagement:(g.engagement??0)*Math.exp(-(now-g.releasedAt)/110)}))];
+  return this.clothMotion.update(targets,now);
  }
  update(observations,now,{active=false,mirrored=true,directions=['↓','↓'],arms=[null,null]}={}){
   if(this.lastMirror!==null&&this.lastMirror!==mirrored)this.reset();

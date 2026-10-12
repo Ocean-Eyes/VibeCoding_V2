@@ -133,19 +133,30 @@ export class HandIdentityTracker{
 // the last glove, but trackedAt returns null until observations are trusted.
 export class HandStream{
  constructor(){this.filter=new LandmarkStream();this.reset()}
- reset(){this.filter.reset();this.accepted=null;this.lastSeen=null;this.observed=false;this.missingSince=null;this.bridge=null}
- update(hand,time){
-  if(!hand){this.observed=false;this.missingSince??=time;return}
+ reset(){this.filter.reset();this.accepted=null;this.lastSeen=null;this.observed=false;this.missingSince=null;this.bridge=null;this.recovery=null;this.fadeStarted=null}
+ update(hand,time,{reacquire=false}={}){
+  if(!hand){this.observed=false;this.recovery=null;this.missingSince??=time;return}
   // After a longer absence, do not compare a new distance/scale to an expired hand.
   if(this.missingSince!==null&&time-this.missingSince>600)this.reset();
   this.missingSince=null;
   const old=this.accepted,visible=this.at(time),size=old?palmSize(old):0;
-  const step=Math.max(.015,Math.min(.035,size*.7))*Math.min(1.5,Math.max(.5,(time-(this.lastSeen??time))/65));
+  const step=Math.max(.035,Math.min(.05,size))*Math.min(1,Math.max(.5,(time-(this.lastSeen??time))/65));
   const jump=old&&(distance(hand[0],old[0])>step||distance(handCenter(hand),handCenter(old))>step*1.2);
   const oldRadius=old?Math.max(...old.map(p=>distance(p,old[0]))):0;
   const distorted=old&&hand.some(p=>distance(p,hand[0])>Math.max(.12,oldRadius*2.5));
   // Do not promote a repeated outlier to a valid fast movement.
-  if(jump||distorted){this.observed=false;return}
+  if(jump||distorted){
+   this.observed=false;
+   // A held collar never follows a relocated detection. Once the old hand has
+   // expired and the grip was released, a steady detection may start a NEW
+   // track, fading in at its location instead of dragging the old cloth there.
+   if(!reacquire||distorted){this.recovery=null;return}
+   if(!this.recovery||distance(hand[0],this.recovery.hand[0])>.025||distance(handCenter(hand),handCenter(this.recovery.hand))>.03)this.recovery={hand:copyHand(hand),since:time};
+   if(time-this.lastSeen<=900||time-this.recovery.since<200)return;
+   this.reset();this.filter.update(hand,time);this.accepted=copyHand(hand);
+   this.lastSeen=time;this.observed=true;this.fadeStarted=time;return;
+  }
+  this.recovery=null;
   const resume=old&&(!this.observed||this.lastSeen===null||time-this.lastSeen>150);
   if(resume){this.filter.reset();this.bridge=visible?{from:visible,time,duration:150}:null}
   this.filter.update(hand,time);this.accepted=copyHand(hand);this.lastSeen=time;this.observed=true;
@@ -160,6 +171,6 @@ export class HandStream{
   }
   return target;
  }
- trackedAt(time){return this.observed&&time-this.lastSeen<=250&&(!this.bridge||time-this.bridge.time>=this.bridge.duration)?this.at(time):null}
- opacityAt(time){return this.observed?1:Math.max(.25,1-Math.max(0,time-this.lastSeen-100)/350)}
+ trackedAt(time){return (this.fadeStarted===null||time-this.fadeStarted>=200)&&this.observed&&time-this.lastSeen<=250&&(!this.bridge||time-this.bridge.time>=this.bridge.duration)?this.at(time):null}
+ opacityAt(time){return this.observed?(this.fadeStarted===null?1:Math.min(1,Math.max(0,(time-this.fadeStarted)/200))):Math.max(.25,1-Math.max(0,time-this.lastSeen-100)/350)}
 }
