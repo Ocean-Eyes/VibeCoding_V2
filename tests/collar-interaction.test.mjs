@@ -180,7 +180,8 @@ test('repeated abrupt pulls never move the cloth pin, and returning resumes grad
  assert.equal(a.step('close',60).trackingPaused,false);
  const recovered=ramp(a,.22);assert.equal(recovered.count,2);
  assert.ok(recovered.grips.every(g=>Math.abs(g.travelX)>.20));
- assert.equal(a.step(movedHands(.8),1000).count,0,'invalid observations eventually release without moving the cloth');
+ assert.equal(a.step(movedHands(.8),1000).count,2,'uncertain detections preserve bilateral grips while the body is visible');
+ assert.equal(a.step('lost',1000).count,0,'leaving the camera still clears the grips');
 });
 
 test('wide or inward hand displacement never substitutes for elbow action',()=>{
@@ -234,4 +235,69 @@ test('elbow occlusion pauses briefly, then clears hold without releasing held co
  assert.ok(a.step('lift',100).hold>earned);
  const absent=a.step('no-elbows',1000);assert.equal(absent.count,2);assert.equal(absent.hold,0);assert.deepEqual(absent.elbowLevels,[null,null]);
  assert.equal(a.step('lift',1500).tapped,true);
+});
+
+
+test('bilateral grips survive prolonged wrist occlusion while the body remains visible',()=>{
+ for(const missing of [0,1,2]){
+  const model=new CollarInteraction(),hands=collarHands('close'),arms=collarArms();
+  let state;for(let t=0;t<=300;t+=20)state=model.update(hands,t,{active:true,arms});
+  const original=state.grips.map(g=>({...g}));
+  const hidden=hands.map((h,i)=>missing===2||missing===i?null:h);
+  for(let t=320;t<=5320;t+=20){
+   state=model.update(hidden,t,{active:true,arms:collarArms('lift')});
+   assert.equal(state.count,2,'occlusion is not release');
+   assert.equal(state.completion,0);assert.equal(state.tapped,false);
+   assert.deepEqual(state.grips.map(g=>g.center),original.map(g=>g.center));
+  }
+  state=model.update(hands,5340,{active:true,arms});
+  assert.equal(state.count,2);assert.equal(state.trackingPaused,false);
+  assert.deepEqual(state.grips.map(g=>g.start),original.map(g=>g.start),'resume the same attachments');
+  for(let t=5360;t<=5700;t+=20)state=model.update(collarHands('open'),t,{active:true,arms});
+  assert.equal(state.count,0,'clearly opening visible hands still releases');
+ }
+});
+
+test('occlusion cannot hold a collar after the user leaves the camera',()=>{
+ const model=new CollarInteraction(),hands=collarHands('close');
+ let state;for(let t=0;t<=300;t+=20)state=model.update(hands,t,{arms:collarArms()});
+ for(let t=320;t<=2320;t+=20)state=model.update([hands[0],null],t,{arms:collarArms()});
+ assert.equal(state.count,2);
+ for(let t=2340;t<=3300;t+=20)state=model.update([null,null],t,{arms:[null,null]});
+ assert.equal(state.count,0);
+});
+
+test('open-looking landmarks under the opposite wrist never imply release',()=>{
+ for(const hidden of [0,1]){
+  const model=new CollarInteraction(),base=collarHands('close');
+  let state;for(let t=0;t<=300;t+=20)state=model.update(base,t,{arms:collarArms()});
+  const mixed=base.map(h=>h.map(p=>({...p})));
+  mixed[hidden]=collarHands('open')[hidden];
+  mixed[1-hidden][0]={...graspCenter(mixed[hidden]),z:0};
+  for(let t=320;t<=2320;t+=20)state=model.update(mixed,t,{arms:collarArms('lift')});
+  assert.equal(state.count,2);assert.equal(state.tapped,false);assert.equal(state.trackingPaused,true);
+  for(let t=2340;t<=2940;t+=20)state=model.update(collarHands('open'),t,{arms:collarArms()});
+  assert.equal(state.count,0);
+ }
+});
+
+
+test('visible shoulders preserve both grips even when elbows and hands are hidden',()=>{
+ const model=new CollarInteraction(),hands=collarHands('close');
+ let state;for(let t=0;t<=300;t+=20)state=model.update(hands,t,{arms:collarArms(),bodyVisible:true});
+ for(let t=320;t<=4320;t+=20)state=model.update([null,null],t,{arms:[null,null],bodyVisible:true});
+ assert.equal(state.count,2);assert.equal(state.trackingPaused,true);assert.equal(state.hold,0);
+ model.reset();assert.equal(model.update([null,null],4340,{bodyVisible:true}).count,0);
+});
+
+test('flickering open estimates after occlusion do not accumulate release time',()=>{
+ const model=new CollarInteraction(),hands=collarHands('close'),arms=collarArms();
+ let state;for(let t=0;t<=300;t+=20)state=model.update(hands,t,{arms});
+ model.update([null,null],310,{arms});
+ for(let t=320;t<=3000;t+=20){
+  const seen=t%300<240?collarHands('open'):[null,null];
+  state=model.update(seen,t,{arms});assert.equal(state.count,2);
+ }
+ for(let t=3020;t<=3660;t+=20)state=model.update(collarHands('open'),t,{arms});
+ assert.equal(state.count,0);
 });

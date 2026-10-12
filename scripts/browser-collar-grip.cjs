@@ -1,5 +1,5 @@
 const {chromium}=require(process.argv[2]||'playwright');
-const assert=require('node:assert/strict');
+const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
  try{
@@ -13,6 +13,7 @@ const assert=require('node:assert/strict');
    window.qaGripPhase='open';const Original=Worker;
    window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;}super.postMessage(d,t)}};
   });
+  await page.route('**/tests/fixtures/collar-hands.mjs',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('tests/fixtures/collar-hands.mjs','utf8')}));
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
    const deps=Promise.all([import('./pose.js'),import('/tests/fixtures/collar-hands.mjs')]);
    let previous=null;
@@ -53,7 +54,10 @@ const assert=require('node:assert/strict');
      });
      if(data.phase!=='fast')hands=gradual(hands);
      hands.forEach((hand,i)=>{if(hand)pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
-     self.postMessage({type:'result',points:data.phase==='hands-only'?null:pose.map(p=>p?{...p,x:p.x/w,y:p.y/h,z:(p.z??0)/w}:{x:0,y:0,visibility:0}),hands:hands.filter(Boolean),time:data.time});
+     if(data.phase==='hidden-left')hands[0]=null;
+     if(data.phase==='hidden-right')hands[1]=null;
+     if(data.phase==='hidden-both'||data.phase==='body-lost')hands=[null,null];
+     self.postMessage({type:'result',points:['hands-only','body-lost'].includes(data.phase)?null:pose.map(p=>p?{...p,x:p.x/w,y:p.y/h,z:(p.z??0)/w}:{x:0,y:0,visibility:0}),hands:hands.filter(Boolean),time:data.time});
     }
    };`}));
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
@@ -80,6 +84,16 @@ const assert=require('node:assert/strict');
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
   assert.equal(await page.locator('#live-score-value').innerText(),'50');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-grabbed.png'});
+  const heldStarts=JSON.parse(await page.locator('#overlay').getAttribute('data-grips')).map(g=>g.start);
+  for(const hidden of ['hidden-left','hidden-right','hidden-both']){
+   await phase(hidden,2200);
+   assert.equal(await grabbed(),'2',hidden+' cannot release established grips');
+   assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0');
+   assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
+   assert.deepEqual(JSON.parse(await page.locator('#overlay').getAttribute('data-grips')).map(g=>g.start),heldStarts);
+   await phase('close',650);assert.equal(await grabbed(),'2');
+  }
+  await page.locator('#viewport').screenshot({path:'.test-output/collar-occlusion-recovered.png'});
   await phase('pull',1500);assert.equal(await grabbed(),'2');assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0');
   assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false','wide lateral pulling must not complete');
   const beforeSpike=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));
@@ -111,7 +125,8 @@ const assert=require('node:assert/strict');
   await page.locator('#result-again').click();await page.locator('#play').click();
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
   await phase('lost',300);assert.equal(await grabbed(),'2');
-  await phase('lost',1000);assert.equal(await grabbed(),'0');assert.equal(await page.locator('#live-score-value').innerText(),'—');
+  await phase('lost',1000);assert.equal(await grabbed(),'2');
+  await phase('body-lost',1000);assert.equal(await grabbed(),'0');assert.equal(await page.locator('#live-score-value').innerText(),'—');
   await page.setViewportSize({width:390,height:950});await phase('open');await phase('close');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-mobile.png'});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -130,12 +145,18 @@ const assert=require('node:assert/strict');
    assert.equal(await grabbed(),'0','edge-on hands must not acquire');
    await page.evaluate(up=>{window.qaEdge=false;window.qaPalmUp=up},up);
    await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
+   for(const hidden of ['hidden-left','hidden-right']){
+    await phase(hidden,1400);assert.equal(await grabbed(),'2',lesson+' '+hidden);
+    await phase('close',600);assert.equal(await grabbed(),'2');
+   }
    await page.locator('#viewport').screenshot({path:`.test-output/${lesson}-camera-grip.png`});
    await page.locator('#mirror').uncheck();
+   await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='0');
    await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
-   await phase('open');assert.equal(await grabbed(),'0');
+   await phase('hidden-both',1400);assert.equal(await grabbed(),'2',lesson+' mirrored occlusion');
+   await phase('close',600);await phase('open');assert.equal(await grabbed(),'0');
    await page.locator('#mirror').check();await page.locator('#back-menu').click();
   }
-  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: prepared capture, wide lateral pull rejected, stationary hands plus bilateral elbow rise triggers completion/XP, single elbow rejected, pose loss pauses score, cloth folds, fixed head, release, mobile, palm/back and edge-on rejection with mirroring. Synthetic camera landmarks.');
+  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: prepared capture, wide lateral pull rejected, stationary hands plus bilateral elbow rise triggers completion/XP, single elbow rejected, pose loss pauses score, cloth folds, fixed head, release, mobile, palm/back and edge-on rejection with mirroring. Prolonged left/right/both-hand occlusion preserves grips; body loss releases. Synthetic camera landmarks.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

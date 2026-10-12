@@ -79,7 +79,17 @@ export function gripPosture(hand,index,side,mirrored,direction){
  if((normal>0)!==(direction==='↓'))return 'palm';
  return null;
 }
-const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSince:null,hover:null,posture:null,missingSince:null,tracked:false});
+// A wrist/forearm covering the palm makes finger extension unreliable.
+function palmCovered(hand,other,arm){
+ if(!hand||!other)return false;
+ const p=graspCenter(hand),w=other[0],radius=Math.min(.11,Math.max(.035,Math.hypot(hand[5].x-hand[17].x,hand[5].y-hand[17].y)*.55));
+ const near=q=>Math.hypot(p.x-q.x,p.y-q.y)<radius+.035;
+ if(near(w)||near(graspCenter(other)))return true;
+ const e=arm?.elbow;if(!e||(e.visibility??1)<.65)return false;
+ const dx=e.x-w.x,dy=e.y-w.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-w.x)*dx+(p.y-w.y)*dy)/l):0;
+ return near({x:w.x+t*dx,y:w.y+t*dy});
+}
+const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSince:null,hover:null,posture:null,missingSince:null,tracked:false,wasOccluded:false,resumeSince:null});
 // Camera posture exercise only: neither collar depth behind the neck nor pressure is observable.
 export class CollarInteraction{
  constructor(){this.reset()}
@@ -94,35 +104,47 @@ export class CollarInteraction{
   const targets=[...live,...this.released.filter(g=>!live.some(l=>l.side===g.side)).map(g=>({...g,dx:g.dx*Math.exp(-(now-g.releasedAt)/110),dy:g.dy*Math.exp(-(now-g.releasedAt)/110),engagement:(g.engagement??0)*Math.exp(-(now-g.releasedAt)/110)}))];
   return this.clothMotion.update(targets,now);
  }
- update(observations,now,{active=false,mirrored=true,directions=['↓','↓'],arms=[null,null]}={}){
+ update(observations,now,{active=false,mirrored=true,directions=['↓','↓'],arms=[null,null],bodyVisible=null}={}){
   if(this.lastMirror!==null&&this.lastMirror!==mirrored)this.reset();
   const dt=this.lastTime===null?0:Math.min(.1,Math.max(0,(now-this.lastTime)/1000));
   if(this.lastTime!==null&&now-this.lastTime>GRIP_OCCLUSION_MS)this.reset();
   this.lastMirror=mirrored;this.lastTime=now;
+  const visibleBody=bodyVisible??arms.some(a=>a?.shoulder&&(a.shoulder.visibility??1)>=.65);
+  const preserveGrip=visibleBody&&this.hands.every(h=>h.grip);
+  const suspend=i=>{
+   const h=this.hands[i];h.releaseSince=null;h.resumeSince=null;h.wasOccluded=true;
+   if(preserveGrip){h.missingSince=null;return}
+   h.missingSince??=now;if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now);
+  };
   for(let i=0;i<2;i++){
    const hand=observations[i],h=this.hands[i],extension=fingerExtension(hand);
    h.tracked=false;
    if(extension===null){
     h.releaseSince=null;h.pending=null;
-    if(h.grip){h.missingSince??=now;if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now)}
+    if(h.grip)suspend(i)
     else this.hands[i]=emptyHand();
     continue;
    }
    const center=graspCenter(hand);
    if(extension>.96)h.closed=false;else if(extension<.92)h.closed=true;
    if(h.grip){
-    // Opening must be clear and sustained; a curled grip never unlatches merely
-    // because it left the original collision zone while being pulled.
-    if(deliberatelyOpen(hand)){
-     h.releaseSince??=now;if(now-h.releaseSince>=GRIP_RELEASE_MS){this.release(i,now);continue}
-    }else{h.releaseSince=null;h.closed=true}
-    const dx=center.x-h.grip.start.x,dy=center.y-h.grip.start.y;
-    // Sudden changes are invalid input even when repeated. Only motion
-    // continuous with the last accepted pin can move the garment.
-    if(Math.hypot(center.x-h.grip.center.x,center.y-h.grip.center.y)>.12){
-     h.missingSince??=now;
-     if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now);
+    const open=deliberatelyOpen(hand),covered=palmCovered(hand,observations[1-i],arms[1-i]);
+    // A hidden/overlapped palm cannot establish a deliberate release or score.
+    if(covered){suspend(i);continue}
+    // A returned hand must be continuously visible before an open estimate
+    // can release an existing grip. A closed hand can resume immediately.
+    if(open&&h.wasOccluded){
+     h.resumeSince??=now;
+     if(now-h.resumeSince<300){h.releaseSince=null;continue}
+    }
+    if(open){
+     h.releaseSince??=now;if(now-h.releaseSince>=GRIP_RELEASE_MS)this.release(i,now);
      continue;
+    }else{h.releaseSince=null;h.closed=true;h.wasOccluded=false;h.resumeSince=null}
+    const dx=center.x-h.grip.start.x,dy=center.y-h.grip.start.y;
+    // A rejected observation never becomes an implicit release of both grips.
+    if(Math.hypot(center.x-h.grip.center.x,center.y-h.grip.center.y)>.12){
+     suspend(i);continue;
     }
     h.missingSince=null;h.tracked=h.releaseSince===null;
     h.grip.dx=h.grip.offset.x+dx;h.grip.dy=h.grip.offset.y+dy;h.grip.travelX=dx;h.grip.center=center;continue;

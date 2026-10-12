@@ -96,7 +96,7 @@ function draw(now){
     partner.dataset.frame=JSON.stringify(scene);
   }
   const mirrored=$('mirror').checked,fresh=mode==='live'&&now-lastResult<250;
-  const shown=fresh?poseStream.at(now)?.map(pixel):null,frame=gripProjection.resolve(bodyFrame(shown),collar.hands.some(h=>h.grip)),unit={origin:{x:0,y:0},scale:1};
+  const shown=fresh?poseStream.at(now)?.map(pixel):null,body=bodyFrame(shown),frame=gripProjection.resolve(body,collar.hands.some(h=>h.grip)),unit={origin:{x:0,y:0},scale:1};
   const projectedHands=method=>handStreams.map(s=>{
     const raw=fresh&&frame?s[method](now)?.map(pixel):null;return raw?projectHand(raw,frame,unit,mirrored):null;
   });
@@ -107,7 +107,7 @@ function draw(now){
       if(!frame||!shoulder||!elbow||(shoulder.visibility??1)<.65||(elbow.visibility??1)<.65)return null;
       const [s,e]=projectHand([shoulder,elbow],frame,unit,mirrored);return {shoulder:s,elbow:e};
     });
-    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms});
+    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body});
     const phase=Math.min(2,gripState.count);
     if(selected!==phase){selected=phase;updatePose()}
   }
