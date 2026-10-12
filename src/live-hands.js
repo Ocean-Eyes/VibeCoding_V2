@@ -74,3 +74,96 @@ export class GripProjection{
   return {...this.anchor,origin:this.origin};
  }
 }
+
+const palmSize=h=>Math.max(distance(h[0],h[9]),distance(h[5],h[17]),.015);
+const handCenter=h=>[0,5,9,13,17].reduce((a,i)=>({x:a.x+h[i].x/5,y:a.y+h[i].y/5}),{x:0,y:0});
+const copyHand=h=>h.map(p=>({...p}));
+// Pose wrists may swap at a crossing. Keep short-lived anatomical tracks and
+// prefer their predicted motion while the palms overlap; uncertain matches
+// are missing observations, never a fabricated second hand.
+export class HandIdentityTracker{
+ constructor(){this.reset()}
+ reset(){this.tracks=[null,null]}
+ update(hands,points,time){
+  this.tracks=this.tracks.map(t=>t&&time-t.time<=500?t:null);
+  const valid=(hands??[]).filter(h=>h?.length===21&&h.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y))).slice(0,2);
+  if(!valid.length)return [null,null];
+  const predictions=this.tracks.map(t=>t?{x:t.hand[0].x+t.vx*Math.min(100,time-t.time),y:t.hand[0].y+t.vy*Math.min(100,time-t.time)}:null);
+  // Crossed wrists alone are not occlusion: compare palm centers and widths.
+  const near=(a,b)=>a&&b&&distance(handCenter(a),handCenter(b))<Math.max(distance(a[5],a[17]),distance(b[5],b[17]),.015)*1.8;
+  const overlap=near(valid[0],valid[1])||near(this.tracks[0]?.hand,this.tracks[1]?.hand);
+  const continuous=valid.length===2&&predictions.every(p=>p&&valid.some(h=>distance(h[0],p)<Math.min(.025,palmSize(h)*.35)));
+  const trustHistory=overlap||continuous;
+  const cost=(h,i)=>{
+   const anchor=points?.[15+i],hasPose=anchor&&(anchor.visibility??1)>=.65,old=this.tracks[i];
+   const temporal=predictions[i]?distance(h[0],predictions[i]):null,poseCost=hasPose?distance(h[0],anchor):null;
+   let value=temporal===null?(poseCost??1):poseCost===null?temporal:temporal*(trustHistory?.92:.25)+poseCost*(trustHistory?.08:.75);
+   if(old){
+    // Palm topology is steadier than fingertips during opening/closing.
+    const shape=[5,9,13,17].reduce((sum,k)=>sum+Math.hypot((h[k].x-h[0].x)-(old.hand[k].x-old.hand[0].x),(h[k].y-h[0].y)-(old.hand[k].y-old.hand[0].y)),0)/4;
+    value+=shape*.25;
+   }
+   return value;
+  };
+  let chosen;
+  if(valid.length===1){
+   const costs=[cost(valid[0],0),cost(valid[0],1)];
+   if(this.tracks.every(Boolean)&&Math.abs(costs[0]-costs[1])<.008)return [null,null];
+   chosen=costs[0]<=costs[1]?[valid[0],null]:[null,valid[0]];
+  }else{
+   const a=cost(valid[0],0)+cost(valid[1],1),b=cost(valid[1],0)+cost(valid[0],1);
+   if(this.tracks.every(Boolean)&&Math.abs(a-b)<.008)return [null,null];
+   if(distance(handCenter(valid[0]),handCenter(valid[1]))<Math.max(.012,Math.min(...valid.map(palmSize))*.8))return [null,null];
+   chosen=a<=b?valid:[valid[1],valid[0]];
+  }
+  chosen.forEach((h,i)=>{
+   if(!h)return;const old=this.tracks[i],dt=old?Math.max(1,time-old.time):1;
+   // Do not let a single distant detection poison the identity prediction.
+   if(old&&distance(h[0],old.hand[0])>Math.max(.10,palmSize(old.hand)*2.5)){
+    if(!old.candidate||distance(h[0],old.candidate.point)>.06)old.candidate={point:h[0],time};
+    if(time-old.candidate.time<100)return;
+   }
+   const sampleVx=old?(h[0].x-old.hand[0].x)/dt:0,sampleVy=old?(h[0].y-old.hand[0].y)/dt:0;
+   // Extrapolate only consistent motion. A single approach jump followed by a
+   // stop must not predict through the other hand and swap their identities.
+   const steady=old&&Math.hypot(sampleVx-(old.sampleVx??0),sampleVy-(old.sampleVy??0))<.00045;
+   this.tracks[i]={hand:copyHand(h),time,sampleVx,sampleVy,vx:steady?Math.max(-.001,Math.min(.001,sampleVx)):0,vy:steady?Math.max(-.001,Math.min(.001,sampleVy)):0};
+  });
+  return chosen;
+ }
+}
+// Display retention is separate from scoring validity. A short occlusion holds
+// the last glove, but trackedAt returns null until observations are trusted.
+export class HandStream{
+ constructor(){this.filter=new LandmarkStream();this.reset()}
+ reset(){this.filter.reset();this.accepted=null;this.lastSeen=null;this.observed=false;this.candidate=null;this.bridge=null}
+ update(hand,time){
+  if(!hand){this.observed=false;this.candidate=null;return}
+  // After a longer absence, do not compare a new distance/scale to an expired hand.
+  if(this.lastSeen!==null&&time-this.lastSeen>600)this.reset();
+  const old=this.accepted,visible=this.at(time),size=old?palmSize(old):0;
+  const jump=old&&(distance(hand[0],old[0])>Math.max(.075,size*1.8)||distance(handCenter(hand),handCenter(old))>Math.max(.09,size*2));
+  const oldRadius=old?Math.max(...old.map(p=>distance(p,old[0]))):0;
+  const distorted=old&&hand.some(p=>distance(p,hand[0])>Math.max(.12,oldRadius*2.5));
+  if(jump||distorted){
+   if(!this.candidate||distance(hand[0],this.candidate.hand[0])>Math.max(.06,size*1.3))this.candidate={hand:copyHand(hand),since:time};
+   else this.candidate.hand=copyHand(hand);
+   if(distorted||time-this.candidate.since<100){this.observed=false;return}
+  }
+  const resume=old&&(!this.observed||this.lastSeen===null||time-this.lastSeen>150);
+  if(resume){this.filter.reset();this.bridge=visible?{from:visible,time,duration:150}:null}
+  this.filter.update(hand,time);this.accepted=copyHand(hand);this.lastSeen=time;this.observed=true;this.candidate=null;
+ }
+ at(time){
+  if(this.lastSeen===null||time-this.lastSeen>350)return null;
+  // Clamp only the display readback, never the observation timestamp.
+  const target=this.filter.at(Math.min(time,this.filter.time+65));if(!target)return null;
+  if(this.bridge){
+   const t=Math.max(0,Math.min(1,(time-this.bridge.time)/this.bridge.duration)),u=t*t*(3-2*t);
+   return target.map((p,i)=>{const a=this.bridge.from[i];return {...p,x:a.x+(p.x-a.x)*u,y:a.y+(p.y-a.y)*u,z:(a.z??0)+((p.z??0)-(a.z??0))*u}});
+  }
+  return target;
+ }
+ trackedAt(time){return this.observed&&time-this.lastSeen<=250&&(!this.bridge||time-this.bridge.time>=this.bridge.duration)?this.at(time):null}
+ opacityAt(time){return this.observed?1:Math.max(.25,1-Math.max(0,time-this.lastSeen-100)/350)}
+}

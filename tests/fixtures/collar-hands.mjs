@@ -8,7 +8,7 @@ export function handAt(center,curl,left=true,palmUp=false){
 export function collarHands(phase){
  if(phase==='lost')return [null,null];
  return [0,1].map(i=>{
-  const side=i?-1:1,point=lapelRest(side,side>0?.29:.48);
+  const side=i?-1:1,point=lapelRest(side,side>0?.12:.20);
   if(['pull','release'].includes(phase)||(phase==='one-pull'&&i===0))point.x+=side*.22;
   if(phase==='fast')point.x+=side*.56;
   if(['inward','hands-only'].includes(phase))point.x-=side*.19;
@@ -16,4 +16,9 @@ export function collarHands(phase){
   const open=['open','release'].includes(phase);
   return handAt(point,open?0:1,i===0);
  });
+}
+
+export function collarArms(phase='close'){
+ if(['lost','no-elbows','hands-only'].includes(phase))return [null,null];
+ return [0,1].map(i=>({shoulder:{x:i?.5:-.5,y:0,visibility:1},elbow:{x:i?.67:-.67,y:.70-(['lift','lift-wide'].includes(phase)||(phase==='one-lift'&&i===0)?.15:0),visibility:1}}));
 }

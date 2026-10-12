@@ -1,7 +1,7 @@
 import {drawIllustratedCoat} from './cloth-renderer.js';
 import {lapelPoint} from './collar-interaction.js';
 import {drawAnatomicalArm} from './hand-renderer.js';
-import {GRIP_STEPS,gripPlacement} from './demonstration.js';
+import {GRIP_STEPS,gripPlacement,guideElbow} from './demonstration.js';
 // Game input only: RGB positions cannot measure pressure or grip effectiveness.
 export function crossedGrip(points, target, frame) {
   if (!frame || !points || [15,16].some(i=>!points[i] || (points[i].visibility??1)<.65)) return false;
@@ -52,7 +52,7 @@ export function drawCollarTargets(ctx,frame,state){
  ctx.save();ctx.translate(frame.origin.x,frame.origin.y);ctx.scale(frame.scale,frame.scale);
  for(const side of [-1,1]){
   const grabbed=state.grips?.some(g=>g?.side===side);if(grabbed)continue;
-  const hovered=state.hover?.some(h=>h?.side===side),p=lapelPoint(side,side>0?.22:.60,state.deformation||[]);
+  const hovered=state.hover?.some(h=>h?.side===side),p=lapelPoint(side,side>0?.12:.20,state.deformation||[]);
   ctx.beginPath();ctx.ellipse(p.x,p.y,.07,.10,side*.5,0,Math.PI*2);
   ctx.strokeStyle=hovered?'#8ef0c8':'#efd49ca0';ctx.lineWidth=.009;ctx.setLineDash([.025,.018]);ctx.stroke();
  }
@@ -199,7 +199,7 @@ export function drawGripGuides(ctx,frame,hands,directions,mirrored=true,targets=
     const {angle,wrist}=gripPlacement(p,i,mirrored);
     ctx.save();ctx.globalAlpha=.7;
     const contact=collarContact(p,i);
-    drawAnatomicalArm(ctx,wrist,angle,i===0,directions[i]==='↑',true,!mirrored,contact>.8);
+    drawAnatomicalArm(ctx,wrist,angle,i===0,directions[i]==='↑',true,!mirrored,contact>.8,guideElbow(i,finish,mirrored));
     if(directions[i]==='↑')drawCollarFront(ctx,wrist,angle,i===0,true,!mirrored,contact);
     ctx.restore();
 

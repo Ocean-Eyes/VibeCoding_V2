@@ -7,7 +7,7 @@ const assert=require('node:assert/strict');
   page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
   await page.addInitScript(()=>{
    const Original=Worker;window.qaGesture='open';
-   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.gesture=window.qaGesture;d.reversed=window.qaReversed;d.one=window.qaOne;d.missing=window.qaMissing}super.postMessage(d,t)}};
+   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.gesture=window.qaGesture;d.reversed=window.qaReversed;d.one=window.qaOne;d.missing=window.qaMissing;d.spike=(window.qaSpikeFrames??0)>0;if(d.spike)window.qaSpikeFrames--;d.swap=window.qaPoseSwap}super.postMessage(d,t)}};
   });
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
    const deps=Promise.all([import('./pose.js'),import('./hand-rig.js')]);
@@ -24,6 +24,8 @@ const assert=require('node:assert/strict');
       const q=handViewPoint(p,i===0,false),wrist=pose[15+i];
       return {x:(wrist.x+q[0]*frame.scale*2.55)/w,y:(wrist.y+q[1]*frame.scale*2.55)/h,z:q[2]*frame.scale*2.55/w};
      }));
+     if(data.spike)hands.forEach(h=>h.forEach(p=>p.x+=.4));
+     if(data.swap)[pose[15],pose[16]]=[pose[16],pose[15]];
      if(data.one)hands.splice(1,1);if(data.reversed)hands.reverse();
      self.postMessage({type:'result',points:pose.map(p=>p?{...p,x:p.x/w,y:p.y/h}:{x:0,y:0,visibility:0}),hands:data.missing?[]:hands,time:data.time});
     }
@@ -46,6 +48,22 @@ const assert=require('node:assert/strict');
   const afterOrder=await page.locator('#overlay').evaluate(c=>Array.from(c.getContext('2d').getImageData(0,0,c.width,c.height).data));
   const drift=beforeOrder.reduce((v,x,i)=>v+Math.abs(x-afterOrder[i]),0)/beforeOrder.length;
   assert.ok(drift<.3,`detector reorder should not swap limbs: mean pixel drift ${drift}`);
+  await page.evaluate(()=>window.qaPoseSwap=true);await page.waitForTimeout(300);
+  const swapped=JSON.parse(await page.locator('#overlay').getAttribute('data-display-wrists'));
+  await page.evaluate(()=>window.qaPoseSwap=false);await page.waitForTimeout(300);
+  const stable=JSON.parse(await page.locator('#overlay').getAttribute('data-display-wrists'));
+  assert.ok(stable.every((p,i)=>Math.hypot(p.x-swapped[i].x,p.y-swapped[i].y)<.025),'swapped pose wrists at a crossing do not swap gloves');
+  const trace=await page.evaluate(async()=>{
+   window.qaSpikeFrames=1;const samples=[];const start=performance.now();
+   while(performance.now()-start<450){await new Promise(requestAnimationFrame);const c=document.querySelector('#overlay');samples.push({wrists:JSON.parse(c.dataset.displayWrists),valid:Number(c.dataset.liveHands)})}
+   return samples;
+  });
+  assert.ok(trace.some(s=>s.valid<2),'uncertain frame must not be scored');
+  assert.ok(trace.every(s=>s.wrists.every((p,i)=>p&&Math.hypot(p.x-stable[i].x,p.y-stable[i].y)<.04)),'single-frame detector teleport never reaches the displayed glove');
+  await page.evaluate(()=>window.qaMissing=true);await page.waitForTimeout(170);
+  assert.equal(await page.locator('#overlay').getAttribute('data-live-hands'),'0');
+  assert.ok(JSON.parse(await page.locator('#overlay').getAttribute('data-display-wrists')).every(Boolean),'brief occlusion holds both display gloves');
+  await page.evaluate(()=>window.qaMissing=false);await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='2');
   await page.locator('#mirror').uncheck();await page.waitForTimeout(150);
   assert.notEqual(await page.locator('#overlay').evaluate(c=>c.toDataURL()),renders.at(-1));
   await page.evaluate(()=>window.qaOne=true);await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='1');
@@ -57,6 +75,6 @@ const assert=require('node:assert/strict');
   await page.locator('#viewport').screenshot({path:'.test-output/live-glove-mobile.png'});
   await page.locator('#back-menu').click();assert.equal(await page.locator('#video').evaluate(v=>v.srcObject),null);
   assert.deepEqual(errors,[]);
-  console.log('PASS live gloves: open/partial/fist/crossed landmarks, detector reorder, mirroring, missing/reacquired hands, fixed partner, mobile and cleanup. Synthetic input; not a real-camera accuracy claim.');
+  console.log('PASS live gloves: open/partial/fist/crossed landmarks, detector reorder, crossed pose-wrist swap, rejected one-frame teleport, held occlusion with no scoring, smooth recovery, mirroring, fixed partner, mobile and cleanup. Synthetic input; not a real-camera accuracy claim.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -21,7 +21,10 @@ const assert=require('node:assert/strict');
     if(data.type==='frame'){
      const w=data.bitmap.width,h=data.bitmap.height;data.bitmap.close();
      const frame={origin:{x:w*.5,y:h*.32},scale:w*.18,x:{x:1,y:0},y:{x:0,y:1}},pose=targetPose(frame,POSES[0]);
-     if(data.phase==='inward')for(const id of [11,12])pose[id].x=frame.origin.x+(pose[id].x-frame.origin.x)*1.35;
+     for(const [i,id]of [13,14].entries()){
+      pose[id].y=frame.origin.y+frame.scale*(.70-(['lift','hands-only'].includes(data.phase)||(data.phase==='one-lift'&&i===0)?.15:0));
+      if(data.phase==='no-elbows')pose[id].visibility=.1;
+     }
      const hands=collarHands(data.phase).map((hand,i)=>{
       if(!hand)return null;
       if(data.palmUp){
@@ -62,33 +65,36 @@ const assert=require('node:assert/strict');
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
   assert.equal(await page.locator('#live-score-value').innerText(),'50');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-grabbed.png'});
-  await phase('one-pull',1500);assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
+  await phase('pull',1500);assert.equal(await grabbed(),'2');assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0');
+  assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false','wide lateral pulling must not complete');
   await phase('lost',350);assert.equal(await grabbed(),'2');
-  await phase('fast',400);assert.equal(await grabbed(),'2');assert.ok(Number(await page.locator('#overlay').getAttribute('data-tension'))>.9,'fast confirmed pull must respond instead of staying at zero');
+  await phase('fast',400);assert.equal(await grabbed(),'2');
+  const fastGrips=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));assert.ok(fastGrips.every(g=>Math.abs(g.travelX)>.5),'large hand movement still updates cloth but earns no score');
   await phase('release',1400);assert.equal(await grabbed(),'0');
-  assert.ok(await page.locator('#partner').evaluate(c=>c.toDataURL())===rest,'released cloth must return to its rest shape');
+  assert.ok(await page.locator('#partner').evaluate(c=>c.toDataURL())===rest,'released cloth returns to rest');
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
-  await phase('inward',250);await page.waitForFunction(()=>Number(document.querySelector('#overlay').dataset.tension)>.9);
-  const pulled=await page.locator('#partner').evaluate(c=>c.toDataURL());assert.notEqual(pulled,rest);
-  const pulledFabric=await fabricPixels();assert.ok(restFabric.reduce((sum,v,i)=>sum+Math.abs(v-pulledFabric[i]),0)/restFabric.length>2,'fabric away from the collar must deform too');
+  await phase('one-lift',1400);assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
+  await phase('close');
+  await phase('lift',300);await page.waitForFunction(()=>Number(document.querySelector('#overlay').dataset.completion)>.9);
+  const liftedFabric=await fabricPixels();assert.notDeepEqual(liftedFabric,restFabric,'illustrated folds react to elbow action without stretching hand positions');
   const currentHead=await headPixels();
-  // One color level at an antialiased boundary may blend with the collar behind it.
-  const changedHead=fixedHead.map((v,i)=>Math.abs(v-currentHead[i])>1?{i,v,now:currentHead[i]}:null).filter(Boolean);
-  assert.ok(!changedHead.length,'the head must remain fixed even during a bilateral pull');
+  assert.ok(fixedHead.every((v,i)=>Math.abs(v-currentHead[i])<=1),'opponent head remains fixed');
   const grips=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));
-  assert.ok(grips.every(g=>g.side*g.travelX<-.16),'pulling crossed hands toward their own shoulders remains measurable even while the shoulders widen');
-  assert.match(await page.locator('#live-hold').innerText(),/왼손 .*% · 오른손 .*%/);
-  await page.locator('#viewport').screenshot({path:'.test-output/collar-pulled.png'});
-  await phase('lost',350);assert.equal(await grabbed(),'2');assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
-  await phase('inward',150);assert.equal(await grabbed(),'2','return at the pulled position without re-grasping');
-  await page.locator('#show-skeleton').check();await phase('hands-only',250);assert.equal(await grabbed(),'2','visible hands keep responding if pose landmarks are briefly missing');
-  assert.ok(Number(await page.locator('#overlay').getAttribute('data-tension'))>.9);await page.locator('#show-skeleton').uncheck();
+  assert.ok(grips.every(g=>Math.abs(g.travelX)<.01),'elbows rise while hands stay at their grips');
+  assert.match(await page.locator('#live-hold').innerText(),/왼 팔꿈치 .*% · 오른 팔꿈치 .*%/);
+  await page.locator('#viewport').screenshot({path:'.test-output/collar-elbows-raised.png'});
+  await phase('no-elbows',300);assert.equal(await grabbed(),'2');assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
+  assert.match(await page.locator('#live-feedback').innerText(),/팔꿈치/);
+  await phase('lift',150);assert.equal(await grabbed(),'2');
+  await page.locator('#show-skeleton').check();await phase('hands-only',250);
+  assert.equal(await grabbed(),'2');assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0','no invented elbow score when pose landmarks disappear');
+  await page.locator('#show-skeleton').uncheck();await phase('lift',250);
   await page.waitForFunction(()=>document.querySelector('#opponent-status').dataset.tap==='true');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-tap.png'});
   await page.locator('#result-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#xp').innerText(),'20 XP');
   await page.locator('#result-again').click();await page.locator('#play').click();
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
-  await phase('lost',300);assert.equal(await grabbed(),'2','brief tracking loss retains grasp');
+  await phase('lost',300);assert.equal(await grabbed(),'2');
   await phase('lost',1000);assert.equal(await grabbed(),'0');assert.equal(await page.locator('#live-score-value').innerText(),'—');
   await page.setViewportSize({width:390,height:950});await phase('open');await phase('close');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-mobile.png'});
@@ -114,6 +120,6 @@ const assert=require('node:assert/strict');
    await phase('open');assert.equal(await grabbed(),'0');
    await page.locator('#mirror').check();await page.locator('#back-menu').click();
   }
-  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: open/close collision, prepared closed-entry capture, two cloth attachments, one-hand pull rejected, confirmed fast pull responds, inward pull with widening shoulders triggers tap/XP, release, tracking loss, mobile, cleanup, palm/back and edge-on rejection for both techniques with mirroring. Synthetic camera landmarks.');
+  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: prepared capture, wide lateral pull rejected, stationary hands plus bilateral elbow rise triggers completion/XP, single elbow rejected, pose loss pauses score, cloth folds, fixed head, release, mobile, palm/back and edge-on rejection with mirroring. Synthetic camera landmarks.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

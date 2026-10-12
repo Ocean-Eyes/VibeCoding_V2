@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {POSES,targetPose,bodyFrame} from '../src/pose.js';
-import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,sceneHands,gripPlacement} from '../src/demonstration.js';
+import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,sceneHands,gripPlacement,guideElbow} from '../src/demonstration.js';
 
 test('grips finish on the upper lapels, preparation stays below the shoulders',()=>{
   assert.ok(GRIP_STEPS[0].every(p=>p.y>.5));
@@ -51,7 +51,7 @@ test('final hands follow the V collar and their cuffs cross without breaking und
     assert.ok(Math.abs(p.angle)>.8);
     const contact={x:p.x+Math.sin(p.angle)*.3*.27,y:p.y-Math.cos(p.angle)*.3*.27};
     assert.ok(Math.abs(contact.x)>.13&&Math.abs(contact.x)<.29);
-    assert.ok(contact.y>.17&&contact.y<.25);
+    assert.ok(contact.y>.10&&contact.y<.17);
     const reflected=gripPlacement(GRIP_STEPS[2][i],i,false);
     assert.equal(reflected.x,-p.x);assert.equal(reflected.angle,-p.angle);
     assert.equal(reflected.wrist.x,-p.wrist.x);assert.equal(reflected.wrist.y,p.wrist.y);
@@ -83,4 +83,12 @@ test('enlarged partner retains head, sleeves and belt within desktop and narrow 
   assert.ok(frame.origin.y+1.68*frame.scale<=height);
   assert.ok(frame.origin.x-.9*frame.scale>=0&&frame.origin.x+.9*frame.scale<=width);
  }
+});
+
+test('finish raises both demonstrated elbows while keeping upper-collar hand positions fixed',()=>{
+ for(const mirrored of [true,false])for(const index of [0,1]){
+  const start=guideElbow(index,0,mirrored),finish=guideElbow(index,1,mirrored);
+  assert.equal(start.x,finish.x);assert.ok(finish.y<start.y-.20);
+ }
+ assert.deepEqual(demonstrationAt(8).hands,demonstrationAt(9).hands);
 });

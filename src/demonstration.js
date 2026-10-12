@@ -2,9 +2,15 @@ import {POSES,targetPose} from './pose.js';
 
 const unit={origin:{x:0,y:0},scale:1,x:{x:1,y:0},y:{x:0,y:1}};
 export const GRIP_STEPS=POSES.map(p=>{const target=targetPose(unit,p);return [target[15],target[16]].map(({x,y})=>({x,y}))});
+// Upper collar positions for the visible practice guide, independent of body pose targets.
+GRIP_STEPS[1][0]={x:-.17,y:.18};
+GRIP_STEPS[2]=[{x:-.17,y:.18},{x:.17,y:.205}];
+export function guideElbow(index,finish=0,mirrored=true){
+ return {x:(index?1:-1)*(mirrored?1:-1)*.67,y:.70-.25*finish};
+}
 const REST=[{x:.55,y:1.05},{x:-.55,y:1.05}];
 const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*t*(t*(t*6-15)+10)};
-const blend=(a,b,t)=>a.map((p,i)=>({x:p.x+(b[i].x-p.x)*t,y:p.y+(b[i].y-p.y)*t}));
+const blend=(a,b,t)=>t===1?b:a.map((p,i)=>({x:p.x+(b[i].x-p.x)*t,y:p.y+(b[i].y-p.y)*t}));
 
 // The partner's frame depends ONLY on viewport dimensions, never camera landmarks.
 export function opponentFrame(width,height){

@@ -39,7 +39,7 @@ export function collarHit(point,deformation=[],excluded=[]){
  for(const side of [-1,1]){
   if(excluded.includes(side))continue;
   for(let k=0;k<=120;k++){
-   const t=k/120,rest=lapelRest(side,t);if(rest.y<.12||rest.y>.46)continue;
+   const t=k/120,rest=lapelRest(side,t);if(rest.y<.065||rest.y>.46)continue;
    const p=lapelPoint(side,t,deformation),d=Math.hypot(point.x-p.x,point.y-p.y);
    if(d<.13&&(!best||d<best.distance))best={side,t,point:p,distance:d};
   }
@@ -75,10 +75,10 @@ export function gripPosture(hand,index,side,mirrored,direction){
  return null;
 }
 const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSince:null,hover:null,posture:null,missingSince:null,tracked:false,motionCandidate:null});
-// Geometric game interaction only: this measures virtual displacement, not physical pressure.
+// Camera posture exercise only: neither collar depth behind the neck nor pressure is observable.
 export class CollarInteraction{
  constructor(){this.reset()}
- reset(){this.hands=[emptyHand(),emptyHand()];this.released=[];this.lastTime=null;this.hold=0;this.tapped=false;this.lastMirror=null}
+ reset(){this.hands=[emptyHand(),emptyHand()];this.released=[];this.lastTime=null;this.hold=0;this.tapped=false;this.lastMirror=null;this.elbowBaseline=null;this.armMissingSince=null}
  release(i,now){
   const h=this.hands[i];if(h.grip)this.released.push({...h.grip,releasedAt:now});
   this.hands[i]=emptyHand();this.hold=0;this.tapped=false;
@@ -86,9 +86,9 @@ export class CollarInteraction{
  deformation(now){
   this.released=this.released.filter(g=>now-g.releasedAt<700);
   const live=this.hands.map(h=>h.grip).filter(Boolean);
-  return [...live,...this.released.filter(g=>!live.some(l=>l.side===g.side)).map(g=>({...g,dx:g.dx*Math.exp(-(now-g.releasedAt)/110),dy:g.dy*Math.exp(-(now-g.releasedAt)/110)}))];
+  return [...live,...this.released.filter(g=>!live.some(l=>l.side===g.side)).map(g=>({...g,dx:g.dx*Math.exp(-(now-g.releasedAt)/110),dy:g.dy*Math.exp(-(now-g.releasedAt)/110),engagement:(g.engagement??0)*Math.exp(-(now-g.releasedAt)/110)}))];
  }
- update(observations,now,{active=false,mirrored=true,directions=['↓','↓']}={}){
+ update(observations,now,{active=false,mirrored=true,directions=['↓','↓'],arms=[null,null]}={}){
   if(this.lastMirror!==null&&this.lastMirror!==mirrored)this.reset();
   const dt=this.lastTime===null?0:Math.min(.1,Math.max(0,(now-this.lastTime)/1000));
   if(this.lastTime!==null&&now-this.lastTime>GRIP_OCCLUSION_MS)this.reset();
@@ -141,21 +141,38 @@ export class CollarInteraction{
   }
   const grips=this.hands.map(h=>h.grip),count=grips.filter(Boolean).length;
   const crossed=count===2&&grips.every((g,i)=>g.side===(i?-1:1)*(mirrored?1:-1));
-  // Crossed hands can pull back toward their own shoulders or spread outward.
-  // Measure opposed displacement, not a hard-coded sign for a collar branch.
-  const travel=grips.map(g=>g?.travelX??0),pulls=travel.map(x=>clamp(Math.abs(x)/.20));
-  const opposed=travel[0]*travel[1]<0,tension=crossed&&opposed?Math.min(...pulls):0;
-  const pullDirection=opposed?'opposed':travel.every(x=>Math.abs(x)>.025)?'together':'waiting';
-  const trackingPaused=count>0&&this.hands.some(h=>h.grip&&!h.tracked);
+  const handsTracked=this.hands.every(h=>h.grip&&h.tracked);
+  const armVisible=a=>a&&[a.elbow,a.shoulder].every(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&(p.visibility??1)>=.65);
+  const armsTracked=arms.length===2&&arms.every(armVisible);
+  const trackingPaused=count>0&&(this.hands.some(h=>h.grip&&!h.tracked)||(count===2&&!armsTracked));
+  // Measure the elbow relative to BOTH its shoulder and its held wrist. Body
+  // translation, a shrug, or lifting the whole arm together cannot earn credit.
+  const measures=handsTracked&&armsTracked?arms.map((a,i)=>({height:a.elbow.y-a.shoulder.y,gap:a.elbow.y-observations[i][0].y})):null;
+  if(count!==2){this.elbowBaseline=null;this.armMissingSince=null}
+  if(count===2&&measures&&!this.elbowBaseline)this.elbowBaseline=measures;
+  const elbowLift=measures&&this.elbowBaseline?measures.map((m,i)=>Math.max(0,Math.min(this.elbowBaseline[i].height-m.height,this.elbowBaseline[i].gap-m.gap))):[null,null];
+  const elbowLevels=elbowLift.map(v=>v===null?null:clamp(v/.15));
+  // An upper-collar location is a visible proxy, NOT a claim to see a grip
+  // behind the neck. Lateral separation is never a positive scoring signal.
+  const upper=count===2&&grips.every(g=>g.center.y>=-.025&&g.center.y<=.255&&Math.abs(g.center.x)>=.10&&Math.abs(g.center.x)<=.36);
+  const stable=count===2&&grips.every(g=>Math.hypot(g.center.x-g.start.x,g.center.y-g.start.y)<=.16);
+  const facing=handsTracked&&grips.every((g,i)=>!gripPosture(observations[i],i,g.side,mirrored,directions[i]));
+  const aligned=crossed&&upper&&stable&&facing;
+  const completion=aligned&&!trackingPaused?Math.min(...elbowLevels.map(v=>v??0)):0;
+  const issue=trackingPaused?'tracking':!stable?'spread':!upper?'height':!facing?'orientation':completion<.7?'lift':'hold';
+  // A small illustrated gather responds to the arm action without moving the
+  // collar pins away from the hands or depicting the neck as stretching.
+  grips.forEach(g=>{if(g)g.engagement=completion});
   if(!this.tapped){
    if(!active||!crossed)this.hold=0;
-   else if(trackingPaused){/* Preserve earned hold, but never score hidden or opening hands. */}
-   else if(tension>=.7)this.hold=Math.min(GRIP_HOLD_SECONDS,this.hold+dt);
+   else if(trackingPaused){this.armMissingSince??=now;if(now-this.armMissingSince>=GRIP_OCCLUSION_MS)this.hold=0}
+   else if(completion>=.7)this.hold=Math.min(GRIP_HOLD_SECONDS,this.hold+dt);
    else this.hold=0;
   }
+  if(!trackingPaused)this.armMissingSince=null;
   if(this.hold>=GRIP_HOLD_SECONDS)this.tapped=true;
-  const score=Math.round(count*25+50*tension);
-  return {grips,trackingPaused,pullDirection,deformation:this.deformation(now),count,crossed,pulls,tension,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
+  const score=Math.round(count*25+50*completion);
+  return {grips,trackingPaused,issue,elbowLift,elbowLevels,completion,aligned,deformation:this.deformation(now),count,crossed,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
    posture:this.hands.map(h=>h.posture),hover:this.hands.map(h=>h.hover),armed:this.hands.map(h=>h.armed),closed:this.hands.map(h=>h.closed)};
  }
 }
