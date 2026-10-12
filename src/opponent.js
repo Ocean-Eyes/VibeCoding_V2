@@ -13,21 +13,46 @@ function gripContour(data) {
   if (!gripContours.has(data)) gripContours.set(data, new Path2D(data));
   return gripContours.get(data);
 }
+// A continuous glove silhouette keeps the live guide legible at small sizes.
+// A broad palm panel and wrapped thumb distinguish the palm from the smooth back.
+function drawGhostGlove(ctx,palmUp){
+  const paint=(data,fill,stroke=null,width=.018)=>{
+    const path=gripContour(data);ctx.fillStyle=fill;ctx.fill(path);
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke(path)}
+  };
+  const fabric=ctx.createLinearGradient(-.4,-.4,.38,.65);
+  fabric.addColorStop(0,'#ffffff');fabric.addColorStop(.5,'#f5fafc');fabric.addColorStop(1,'#c7d9e3');
+  // Joined, softly rounded fingertips: no individual knuckles, nails or joint lines.
+  paint('M -.23 .8 L -.23 .56 C -.24 .43 -.32 .32 -.36 .18 C -.4 .04 -.39 -.13 -.37 -.29 L -.36 -.4 C -.36 -.5 -.25 -.54 -.19 -.47 C -.17 -.62 -.01 -.63 .025 -.51 C .08 -.61 .22 -.56 .225 -.45 C .3 -.52 .4 -.44 .4 -.34 L .39 .03 C .38 .23 .28 .4 .25 .57 L .25 .8 Q 0 .84 -.23 .8 Z',fabric,'#839faa');
+  if(palmUp){
+    // A single soft fabric panel reads as the cupped palm, even in the small overlay.
+    const pad=ctx.createRadialGradient(.02,.16,.025,.02,.16,.32);
+    pad.addColorStop(0,'#b0c7d4');pad.addColorStop(.72,'#c4d7e1');pad.addColorStop(1,'#eaf3f7');
+    paint('M -.22 -.13 C -.12 -.23 .16 -.25 .27 -.12 C .36 .02 .24 .33 .09 .44 C -.06 .46 -.22 .34 -.25 .15 C -.28 .03 -.28 -.05 -.22 -.13 Z',pad);
+    paint('M -.3 .27 C -.42 .17 -.48 .02 -.45 -.09 C -.42 -.2 -.31 -.26 -.2 -.24 C -.11 -.23 -.1 -.14 -.17 -.08 L -.26 -.01 C -.26 .08 -.16 .1 -.12 .17 C -.09 .26 -.2 .34 -.3 .27 Z','#f5fafc','#97b0bd');
+  }else{
+    // The back remains smooth and bright, with only the side of the thumb visible.
+    paint('M -.15 -.29 C -.01 -.4 .23 -.32 .28 -.12 C .34 .09 .2 .38 .09 .47 C .08 .2 -.11 .04 -.15 -.29 Z','#ffffff99');
+    paint('M -.33 .25 C -.45 .15 -.49 -.01 -.44 -.12 C -.41 -.19 -.35 -.23 -.3 -.2 C -.24 -.17 -.27 -.07 -.29 0 C -.3 .08 -.23 .13 -.22 .2 C -.21 .26 -.27 .3 -.33 .25 Z','#e6f0f5','#97b0bd');
+  }
+  paint('M -.235 .64 Q .01 .69 .25 .64 L .25 .8 Q 0 .84 -.23 .8 Z','#edf5f9','#97b0bd',.014);
+}
 export function drawGripHand(ctx, x, y, size, palmUp, left=false, ghost=false) {
   ctx.save();
   ctx.translate(x,y);
   ctx.scale(left === palmUp ? -size : size,size);
   ctx.lineJoin='round';ctx.lineCap='round';
+  if(ghost){drawGhostGlove(ctx,palmUp);ctx.restore();return}
   const gradient=(x1,y1,x2,y2,stops)=>{
     const g=ctx.createLinearGradient(x1,y1,x2,y2);
-    stops.forEach(([offset,color])=>g.addColorStop(offset,ghost?(offset<.5?'#ffffff':'#cadde7'):color));return g;
+    stops.forEach(([offset,color])=>g.addColorStop(offset,color));return g;
   };
   const paint=(data,fill,stroke='#795641',width=.012)=>{
-    const p=gripContour(data);ctx.fillStyle=ghost&&typeof fill==='string'?'#edf5f9':fill;ctx.fill(p);
-    if(stroke){ctx.strokeStyle=ghost?'#a2b8c4':stroke;ctx.lineWidth=width;ctx.stroke(p)}
+    const p=gripContour(data);ctx.fillStyle=fill;ctx.fill(p);
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke(p)}
   };
   const line=(data,color='#986c53',width=.012)=>{
-    ctx.strokeStyle=ghost?'#9eb4bf':color;ctx.lineWidth=width;ctx.stroke(gripContour(data));
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke(gripContour(data));
   };
   const skin=gradient(-.4,0,.4,.15,[[0,'#bd8865'],[.22,'#e3b390'],[.52,'#f2c9a6'],[.8,'#dcaa84'],[1,'#ab7454']]);
   const palm=gradient(-.36,-.22,.33,.48,[[0,'#cf9877'],[.35,'#f5d2b4'],[.65,'#efc3a1'],[1,'#c18b68']]);
