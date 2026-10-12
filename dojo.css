@@ -200,3 +200,46 @@ footer { color: #303e2e; }
     border-width: 4px;
   }
 }
+
+/* The partner is static; only the translucent instructor hands and user markers move. */
+#partner { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+#overlay { pointer-events:none; }
+.viewport:has(.welcome:not([hidden])) #overlay { opacity:1; }
+#video { inset:auto auto 14px 14px; width:22%; max-width:150px; height:auto; aspect-ratio:4/3; object-fit:cover; border:1px solid #ffffff40; border-radius:4px; z-index:3; }
+.live-score { position:absolute; z-index:4; top:54px; right:14px; width:156px; padding:12px; color:#eaf4fa; background:#14212bed; border:1px solid #7694a155; border-radius:4px; pointer-events:none; }
+.live-score > span { display:block; font-size:10px; line-height:1.6; }
+.live-score > strong { display:block; font:600 42px var(--serif); line-height:1.25; margin:3px 0 6px; font-variant-numeric:tabular-nums; }
+.live-score p { font-size:10px; line-height:1.7; margin:8px 0 0; color:#c4d6df; }
+.live-score[data-level="good"] { border-color:#7fcb9c; }
+.live-score[data-level="good"] > strong { color:#a4edbc; }
+.live-score[data-level="near"] > strong { color:#f7d18c; }
+.live-score[data-level="adjust"] > strong { color:#f4a5a5; }
+.opponent-status { top:auto; bottom:49px; max-width:90%; white-space:normal; font-size:11px; }
+.stage-bottom { bottom:10px; }
+.stage-bottom > span { max-width:60%; line-height:1.5; }
+.legend { font-size:9px; }
+.target-dot { background:#eef6fb; box-shadow:0 0 0 1px #8097a6; }
+.demo-button { margin:0; padding:9px 12px; font-size:11px; }
+.demo-button[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); }
+@media(max-width:760px) {
+  .viewport { aspect-ratio:3/4; }
+  .live-score { top:49px; right:9px; width:107px; padding:8px; }
+  .live-score > strong { font-size:31px; }
+  .live-score > span,.live-score p { font-size:9px; }
+  .live-score p { margin-top:5px; }
+  .opponent-status { bottom:53px; padding:6px 9px; font-size:10px; }
+  .stage-top { left:9px; right:9px; font-size:8px; }
+  .stage-bottom { left:9px; right:9px; font-size:8px; }
+  .legend { gap:7px; font-size:8px; }
+  #video { bottom:52px; left:9px; }
+}
+
+.viewport:has(.welcome:not([hidden])) .opponent-status { visibility:visible; }
+
+.studio > .welcome { position:static; width:auto; padding:12px 15px; flex-direction:row; justify-content:space-between; gap:12px; text-align:left; border-bottom:1px solid var(--line); }
+.studio > .welcome p { margin:0; color:var(--muted); font-size:11px; }
+.studio > .welcome .primary { padding:10px 13px; font-size:10px; white-space:nowrap; }
+@media(max-width:480px) {
+  .studio > .welcome { flex-wrap:wrap; padding:10px; }
+  .studio > .welcome p { font-size:10px; }
+}

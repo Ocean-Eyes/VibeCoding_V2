@@ -31,7 +31,7 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
   await page.locator('#close-video').click();assert.equal(await page.locator('#kodokan-player').getAttribute('src'),null);
   await page.locator('#back-menu').click();
   // Exercise real camera/model initialization, then menu navigation releases the stream.
-  await page.locator('[data-lesson="nami"]').click();
+  await page.locator('[data-lesson="nami"]').click();await page.locator('#start').click();
   await page.waitForFunction(()=>document.querySelector('#status').textContent==='카메라 연결됨',{},{timeout:90000});
   await page.waitForFunction(()=>parseInt(document.querySelector('#fps').textContent)>0);
   await page.locator('#back-menu').click();assert.equal(await page.locator('#video').evaluate(v=>v.srcObject),null);
@@ -42,13 +42,13 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
       if(data.type==='init')self.postMessage({type:'ready'});
       if(data.type==='frame'){
         const w=data.bitmap.width,h=data.bitmap.height;data.bitmap.close();
-        const a=[[1.8,-1.15,Math.PI-1.8,-Math.PI+1.15],[1.8,-2.5,Math.PI-1.8,-Math.PI+1.15],[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5]][data.step];
+        const a=[[1.2,Math.PI,Math.PI-1.2,0],[1.8,-2.5,Math.PI-1.2,0],[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5]][data.step];
         const points=Array.from({length:33},()=>({x:.5,y:.5,visibility:.05}));const scale=w*.18;
         for(const [side,s,e,t,j]of [[1,11,13,15,0],[-1,12,14,16,2]]){let x=w*.5+side*scale*.5,y=h*.4;points[s]={x:x/w,y:y/h,visibility:1};x+=Math.cos(a[j])*scale*.68;y+=Math.sin(a[j])*scale*.68;points[e]={x:x/w,y:y/h,visibility:1};x+=Math.cos(a[j+1])*scale*.64;y+=Math.sin(a[j+1])*scale*.64;points[t]={x:x/w,y:y/h,visibility:1};}
         self.postMessage({type:'result',points,hands:[],time:data.time});
       }
     };`}));
-  await page.reload();await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();
+  await page.reload();await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();await page.locator('#start').click();
   await page.waitForFunction(()=>!document.querySelector('#play').disabled);
   await page.locator('#opponent-status[data-tap="true"]').waitFor({timeout:22000});await page.screenshot({path:'.test-output/opponent-tap.png',fullPage:true});
   await page.locator('#result-dialog').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#xp').innerText(),'20 XP');

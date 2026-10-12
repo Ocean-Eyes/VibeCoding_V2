@@ -1,8 +1,8 @@
 // All geometry uses image pixels, avoiding aspect-ratio distortion.
 export const PASS_SCORE = 50;
 export const POSES = [
-  {name:'그립 준비',short:'가슴 앞 · 양손 준비',description:'양손을 가슴 앞에 두고 팔꿈치를 편하게 내려 화면의 준비 위치를 따라하세요.',angles:[1.8,-1.15,Math.PI-1.8,-Math.PI+1.15],gesture:'fist'},
-  {name:'첫 손 교차',short:'왼손을 반대편으로',description:'왼손을 가슴 앞에서 반대편으로 옮깁니다. 손바닥은 선택한 기술의 방향을 직접 확인하세요.',angles:[1.8,-2.5,Math.PI-1.8,-Math.PI+1.15],gesture:'fist'},
+  {name:'그립 준비',short:'가슴 앞 · 양손 준비',description:'양손을 가슴 앞에 두고 팔꿈치를 편하게 내려 화면의 준비 위치를 따라하세요.',angles:[1.2,Math.PI,Math.PI-1.2,0],gesture:'fist'},
+  {name:'첫 손 교차',short:'왼손을 반대편으로',description:'왼손을 가슴 앞에서 반대편으로 옮깁니다. 손바닥은 선택한 기술의 방향을 직접 확인하세요.',angles:[1.8,-2.5,Math.PI-1.2,0],gesture:'fist'},
   {name:'양손 교차',short:'교차 위치 · 3초 유지',description:'오른손도 반대편으로 옮겨 가슴 앞에 X자 위치를 만드세요. 가상 상대의 깃 목표에 양손을 맞춰 3초 유지하면 탭합니다.',angles:[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5],gesture:'fist'},
 ];
 export const BONES=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24]];
