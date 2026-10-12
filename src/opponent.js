@@ -46,6 +46,36 @@ function drawLapels(ctx){
   }
   giLine(ctx,'M .19 .055 Q .09 .32 -.042 .523 Q -.25 .92 -.325 1.135','#ffffffc9',.007);
 }
+// The gripped lapel stays connected to the V collar and bends over the inserted digits.
+function drawGrippedLapels(ctx,contacts){
+  for(const [side,amount]of contacts){
+    if(amount<=0)continue;
+    ctx.save();ctx.scale(side,1);ctx.globalAlpha*=amount;
+    const band='M .19 .04 Q .255 .08 .29 .16 C .24 .245 .27 .32 .235 .38 Q .165 .475 .035 .55 L -.035 .51 Q .105 .365 .13 .28 Q .165 .10 .19 .04 Z';
+    giPaint(ctx,band,clothGradient(ctx,.10,.28,.245,.35),'#9da5ae',.005);
+    for(let j=0;j<4;j++){
+      const d=j*.012;
+      giLine(ctx,`M ${.195+d} .10 Q ${.165+d} .25 ${.165+d} .315 Q ${.19+d} .385 ${.015+d} .52`,'#a3aab39a',.003);
+    }
+    giLine(ctx,'M .19 .065 Q .153 .22 .13 .28 Q .105 .365 -.035 .51','#ffffffcb',.006);
+    ctx.restore();
+  }
+}
+function drawCollarFront(ctx,wrist,angle,left,palmUp,mirrored=false,amount=1){
+  if(amount<=0)return;
+  ctx.save();ctx.translate(wrist.x,wrist.y);ctx.rotate(angle);if(mirrored)ctx.scale(-1,1);
+  // Cover the inserted digit with the continuous cloth edge, not a digit-shaped mask.
+  const side=left?1:-1;
+  ctx.beginPath();
+  if(palmUp)ctx.ellipse(0,-.108*2.55,.041*2.55,.025*2.55,0,0,Math.PI*2);
+  else ctx.ellipse(side*.045*2.55,-.066*2.55,.018*2.55,.031*2.55,0,0,Math.PI*2);
+  ctx.clip();if(mirrored)ctx.scale(-1,1);ctx.rotate(-angle);ctx.translate(-wrist.x,-wrist.y);
+  ctx.globalAlpha=amount;drawGrippedLapels(ctx,[[side*(mirrored?-1:1),1]]);ctx.restore();
+}
+function collarContact(p,index){
+  const target=GRIP_STEPS[2][index],distance=Math.hypot(p.x-target.x,p.y-target.y);
+  const t=Math.max(0,Math.min(1,1-distance/.085));return t*t*(3-2*t);
+}
 let weaveContour;
 function drawJudogi(ctx,belt=true){
   const body='M -.2 .055 Q -.285 .11 -.40 .17 Q -.47 .38 -.44 .66 L -.48 1.1 Q -.48 1.35 -.53 1.55 Q -.27 1.64 .02 1.6 Q .32 1.65 .53 1.55 L .46 1.1 Q .42 .65 .44 .4 Q .44 .26 .39 .17 L .2 .055 L .14 .3 L 0 .55 L -.14 .3 Z';
@@ -105,9 +135,11 @@ export function drawGripStudy(ctx,width,height,directions){
   ctx.translate(width/2,-height*.025);ctx.scale(height*1.18,height*1.18);
   giPaint(ctx,'M -.2 -.05 L .2 -.05 L .18 .19 L 0 .55 L -.18 .19 Z','#dfb99a');
   drawJudogi(ctx,false);
+  drawGrippedLapels(ctx,[[1,1],[-1,1]]);
   for(const [i,p]of GRIP_STEPS[2].entries()){
     const {angle,wrist}=gripPlacement(p,i);
     drawAnatomicalArm(ctx,wrist,angle,i===0,directions[i]==='↑');
+    drawCollarFront(ctx,wrist,angle,i===0,directions[i]==='↑');
 
   }
   ctx.restore();
@@ -138,10 +170,12 @@ export function drawGripGuides(ctx,frame,hands,directions,mirrored=true,targets=
     ctx.beginPath();ctx.ellipse(sign*p.x,p.y,.075,.1,sign*p.x,0,Math.PI*2);
     ctx.fillStyle='#ffffff14';ctx.fill();ctx.strokeStyle='#e6f1f785';ctx.lineWidth=.012;ctx.setLineDash([.025,.025]);ctx.stroke();ctx.setLineDash([]);
   }
+  drawGrippedLapels(ctx,hands.map((p,i)=>[(i?-1:1)*(mirrored?1:-1),collarContact(p,i)]));
   for(const [i,p]of hands.entries()){
     const {angle,wrist}=gripPlacement(p,i,mirrored);
     ctx.save();ctx.globalAlpha=.7;
     drawAnatomicalArm(ctx,wrist,angle,i===0,directions[i]==='↑',true,!mirrored);
+    drawCollarFront(ctx,wrist,angle,i===0,directions[i]==='↑',!mirrored,collarContact(p,i));
     ctx.restore();
 
   }

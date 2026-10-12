@@ -9,6 +9,7 @@ float ellipsoid(vec3 p,vec3 center,vec3 size){vec3 q=p-center;float a=length(q/s
 float capsule(vec3 p,vec3 a,vec3 b,float r){vec3 ab=b-a;return length(p-a-ab*clamp(dot(p-a,ab)/dot(ab,ab),0.,1.))-r;}
 float shape(vec3 world){
  vec3 p=vec3(world.x*handed*turn,world.y,world.z*turn);
+ float blend=glove>.5?.011:.0055;
  float d=ellipsoid(p,vec3(-.001,-.041,-.002),vec3(.037,.055,.019));
  d=smin(d,ellipsoid(p,vec3(.024,-.026,-.016),vec3(.021,.036,.019)),.009);
  d=smin(d,ellipsoid(p,vec3(-.025,-.034,-.013),vec3(.016,.044,.015)),.007);
@@ -18,7 +19,7 @@ float shape(vec3 world){
  vec3 q=vec3(p.x,p.y-y,p.z);
  float arm=(length(vec3(q.x/rx,q.y/rx,q.z/rz))-1.)*min(rx,rz);
  d=smin(d,arm,.011);
- for(int i=0;i<15;i++)d=smin(d,capsule(world,boneA[i].xyz,boneB[i].xyz,boneA[i].w),.0055);
+ for(int i=0;i<15;i++)d=smin(d,capsule(world,boneA[i].xyz,boneB[i].xyz,boneA[i].w),blend);
  return d;
 }
 vec3 normalAt(vec3 p){vec2 e=vec2(.0004,0.);return normalize(vec3(shape(p+e.xyy)-shape(p-e.xyy),shape(p+e.yxy)-shape(p-e.yxy),shape(p+e.yyx)-shape(p-e.yyx)));}

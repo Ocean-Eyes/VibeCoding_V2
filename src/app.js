@@ -1,9 +1,15 @@
+import {LandmarkStream,assignHands,projectHand,palmFacing} from './live-hands.js';
+import {drawLiveGlove} from './live-glove.js';
 import {prepareHands} from './hand-renderer.js';
 import {drawOpponent,drawGripStudy,drawGripGuides,drawTrackedHands,crossedGrip} from './opponent.js';
-import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,sceneHands} from './demonstration.js';
+import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide} from './demonstration.js';
 import {TECHNIQUES} from './curriculum.js';
 import {PASS_SCORE,POSES,BONES,HAND_BONES,bodyFrame,targetPose,armMatch,advanceHold} from './pose.js';
 await prepareHands();
+const poseStream=new LandmarkStream(),handStreams=[new LandmarkStream(),new LandmarkStream()];
+let assignedHands=[null,null];
+function resetTrackingDisplay(){poseStream.reset();handStreams.forEach(s=>s.reset());assignedHands=[null,null]}
+const pixel=p=>p?{...p,x:p.x*video.videoWidth,y:p.y*video.videoHeight,z:(p.z??0)*video.videoWidth}:null;
 const $=id=>document.getElementById(id),video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d');
 const cyan='#80baff',partner=$('partner'),partnerCtx=partner.getContext('2d');
 let demonstrating=true,demoStarted=performance.now(),demoStep=-1,guideStarted=performance.now();
@@ -29,18 +35,20 @@ function clearScore(){
   $('live-score').dataset.level='waiting';$('live-hold').textContent='몸을 인식하면 점수가 표시됩니다';
 }
 function stop(){
+  resetTrackingDisplay();
   clearScore();
   tapUntil=0;autoStart=false;
   generation++;trackerGeneration++;clearTimeout(initTimer);clearTimeout(frameTimer);worker?.terminate();worker=null;stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;video.hidden=true;ready=busy=running=false;mode='idle';points=null;hands=[];lastResult=0;lastVideo=-1;elapsed=hold=countdown=0;score=armScore=handScore=null;$('countdown').hidden=true;$('retry-tracking').hidden=true;ctx.clearRect(0,0,canvas.width,canvas.height);controls();updatePose();
 }
 function fail(message){stop();notify(message,true)}
-function trackingFailed(message){clearScore();autoStart=false;tapUntil=0;
+function trackingFailed(message){resetTrackingDisplay();clearScore();autoStart=false;tapUntil=0;
   trackerGeneration++;clearTimeout(initTimer);clearTimeout(frameTimer);worker?.terminate();worker=null;
   ready=busy=running=false;points=null;hands=[];lastResult=0;hold=countdown=0;score=armScore=handScore=null;
   mode=stream?'preview':'idle';$('countdown').hidden=true;$('retry-tracking').hidden=!stream;controls();
   notify(`${message} 카메라 영상은 유지됩니다. 아래 버튼으로 자세 추적을 다시 연결해 주세요.`,true);
 }
 function connectTracker(){
+  resetTrackingDisplay();
   const session=generation,attempt=++trackerGeneration;
   clearTimeout(initTimer);clearTimeout(frameTimer);worker?.terminate();ready=busy=false;lastVideo=-1;points=null;hands=[];lastResult=0;
   mode='loading';$('retry-tracking').hidden=true;controls();notify('카메라가 연결되었습니다. 자세 추적 모델을 준비하고 있습니다.');
@@ -50,11 +58,14 @@ function connectTracker(){
     worker.onerror=e=>{if(session===generation&&attempt===trackerGeneration)trackingFailed(`추적 모듈 오류: ${e.message||'Worker 실행 실패'}`)};
     worker.onmessage=({data})=>{
       if(session!==generation||attempt!==trackerGeneration)return;
-      if(data.type==='ready'){clearTimeout(initTimer);ready=true;mode='live';if(autoStart){autoStart=false;running=true;countdown=3;$('countdown').hidden=false;}controls();notify('상대는 고정되어 있습니다. 파란 손 표시를 흰색 안내 손 위치로 가져가세요.');}
+      if(data.type==='ready'){clearTimeout(initTimer);ready=true;mode='live';if(autoStart){autoStart=false;running=true;countdown=3;$('countdown').hidden=false;}controls();notify('흰색 손이 내 손가락 움직임을 따라갑니다. 점선 깃 위치로 손을 가져가세요.');}
       if(data.type==='error')trackingFailed(data.message);
       if(data.type==='result'){
         clearTimeout(frameTimer);busy=false;const now=performance.now();fps=lastResult?1000/(now-lastResult):0;lastResult=now;
-        const pixel=p=>({...p,x:p.x*video.videoWidth,y:p.y*video.videoHeight});points=data.points?.map(pixel)??null;hands=data.hands.map(h=>h.map(pixel));
+        points=data.points?.map(pixel)??null;hands=data.hands.map(h=>h.map(pixel));
+        poseStream.update(data.points,now);
+        assignedHands=assignHands(data.hands,data.points,assignedHands);
+        assignedHands.forEach((h,i)=>handStreams[i].update(h,now));
       }
     };worker.postMessage({type:'init'});
   }catch(e){trackingFailed(`추적 모듈을 시작하지 못했습니다: ${e.message}`)}
@@ -91,20 +102,43 @@ function draw(now){
     if(demoStep!==instruction.step){demoStep=instruction.step;updatePose(demoStep)}
     drawGripGuides(ctx,scene,instruction.hands,activeTechnique.directions,mirrored,null,{actions:activeTechnique.actions,finish:instruction.finish});
   }else{
-    drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected]);
+    if(mode!=='live')drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected]);
+    canvas.dataset.liveHands='0';
     if(frame){
       const target=targetPose(frame,POSES[selected],current),arm=armMatch(current,target,frame.scale);
       score=armScore=arm?.score??null;gripReady=crossedGrip(current,target,frame);
-      drawTrackedHands(ctx,scene,sceneHands(current,frame,target,selected),mirrored);
-      if($('show-skeleton').checked){
+      const shown=poseStream.at(now)?.map(pixel),shownFrame=bodyFrame(shown);
+      if(shownFrame){
+        const shownTarget=targetPose(shownFrame,POSES[selected],shown);
+        for(const p of projectHand([shownTarget[15],shownTarget[16]],shownFrame,scene,mirrored)){
+          ctx.beginPath();ctx.ellipse(p.x,p.y,scene.scale*.07,scene.scale*.10,0,0,Math.PI*2);
+          ctx.strokeStyle='#efcf8dcc';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);ctx.stroke();ctx.setLineDash([]);
+        }
+        const live=handStreams.map((stream,i)=>{
+          const raw=stream.at(now)?.map(pixel);if(!raw)return null;
+          const hand=projectHand(raw,shownFrame,scene,mirrored);
+          const e=shown[13+i],elbow=e&&(e.visibility??1)>=.65?projectHand([e],shownFrame,scene,mirrored)[0]:null;
+          return {hand,elbow,left:i===0,depth:shown[15+i]?.z??0};
+        }).filter(Boolean).sort((a,b)=>b.depth-a.depth);
+        for(const h of live)drawLiveGlove(ctx,h.hand,palmFacing(h.hand,h.left,mirrored),h.elbow);
+        canvas.dataset.liveHands=String(live.length);
+        // Wrist-only tracking remains a dot, never a fabricated closed hand.
+        const wristDots=[15,16].map((id,i)=>{
+          const p=shown[id];if(handStreams[i].at(now)||!p||(p.visibility??1)<.65)return null;
+          return projectHand([p],shownFrame,{origin:{x:0,y:0},scale:1},false)[0];
+        });
+        drawTrackedHands(ctx,scene,wristDots,mirrored);
+      }
+      if($('show-skeleton').checked&&shownFrame){
+        const frame=shownFrame;
         const project=p=>{if(!p)return null;const dx=p.x-frame.origin.x,dy=p.y-frame.origin.y;return {...p,x:scene.origin.x+(mirrored?-1:1)*(dx*frame.x.x+dy*frame.x.y)/frame.scale*scene.scale,y:scene.origin.y+(dx*frame.y.x+dy*frame.y.y)/frame.scale*scene.scale}};
-        skeleton(ctx,current.map(project),cyan,1.5);
-        for(const hand of hands)for(const [a,b]of HAND_BONES)line(ctx,project(hand[a]),project(hand[b]),cyan,1);
+        skeleton(ctx,shown.map(project),cyan,1.5);
+        for(const hand of handStreams.map(s=>s.at(now)?.map(pixel)).filter(Boolean))for(const [a,b]of HAND_BONES)line(ctx,project(hand[a]),project(hand[b]),cyan,1);
       }
     }
   }
-  const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:!frame?'어깨와 팔꿈치, 양손이 보이도록 서 주세요.':score===null?'손목이나 팔꿈치가 가려졌습니다.':selected===2&&!gripReady?'양손을 교차해 각각 반대편 깃에 맞춰 주세요.':score>=PASS_SCORE?'좋아요. 지금 위치를 3초 유지하세요.':'파란 손 표시를 흰색 손의 도착 위치에 맞춰 주세요.';
-  $('tracking-label').textContent=demonstrating?'시연 중':frame?'손 위치 추적 중':stream?'인식 대기':'대기';
+  const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:!frame?'어깨와 팔꿈치, 양손이 보이도록 서 주세요.':score===null?'손목이나 팔꿈치가 가려졌습니다.':selected===2&&!gripReady?'양손을 교차해 각각 반대편 깃에 맞춰 주세요.':score>=PASS_SCORE?'좋아요. 지금 위치를 3초 유지하세요.':'흰색 내 손을 점선으로 표시된 깃 위치에 맞춰 주세요.';
+  $('tracking-label').textContent=demonstrating?'시연 중':frame?`${canvas.dataset.liveHands||0}개 손 · 손가락 추적 중`:stream?'인식 대기':'대기';
   $('feedback').textContent=feedback;$('live-feedback').textContent=feedback;
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':score>=PASS_SCORE?'good':score>=35?'near':'adjust';
   $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'팔 위치 일치도 / 100';
@@ -124,7 +158,7 @@ function tick(now){
   $('score-verdict').textContent=score===null?'측정 가능한 자세를 기다려요':score>=PASS_SCORE?'좋아요, 그대로 유지해요':score>=35?'조금만 더 맞춰볼까요':'목표를 천천히 따라가세요';
   $('hold-text').textContent=`${hold.toFixed(1)} / 3.0초`;$('hold-progress').style.width=`${hold/3*100}%`;
   $('timer').textContent=`${String(Math.floor(elapsed/60)).padStart(2,'0')}:${String(Math.floor(elapsed%60)).padStart(2,'0')}`;$('fps').textContent=mode==='live'?`${Math.round(fps)} FPS · RGB CAMERA / 2D`:'RGB CAMERA / 2D';
-  $('stage-hint').textContent=demonstrating?'흰색 손: 시연 · 상대는 고정됩니다':countdown?'잠시 후 시작합니다':running?'도착 위치에서 50점 이상 · 3초 유지':'내 동작 연습을 누르세요';requestAnimationFrame(tick);
+  $('stage-hint').textContent=demonstrating?'흰색 손: 시연 · 상대는 고정됩니다':countdown?'잠시 후 시작합니다':mode==='live'?'흰색 장갑: 내 손 · 점선: 목표 위치':'내 동작 연습을 누르세요';requestAnimationFrame(tick);
 }
 $('start').onclick=start;
 $('demo').onclick=()=>{stop();demonstrating=true;demoStarted=performance.now();demoStep=-1;controls();notify('흰색 손이 준비 → 왼손 교차 → 오른손 교차 → 유지 → 풀기를 반복합니다.')};
