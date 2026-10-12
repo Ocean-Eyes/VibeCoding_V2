@@ -18,6 +18,7 @@ const assert=require('node:assert/strict');
      const w=data.bitmap.width,h=data.bitmap.height;data.bitmap.close();
      const frame={origin:{x:w*.5,y:h*.32},scale:w*.18,x:{x:1,y:0},y:{x:0,y:1}};
      const pose=targetPose(frame,POSES[data.gesture==='cross'?2:0]);
+     if(data.gesture!=='cross'){pose[15].x+=frame.scale*.5;pose[16].x-=frame.scale*.5}
      const curl=data.gesture==='open'?0:data.gesture==='half'?.5:1;
      const hands=[0,1].map(i=>posedHand(curl).landmarks.map(p=>{
       const q=handViewPoint(p,i===0,false),wrist=pose[15+i];
@@ -36,7 +37,8 @@ const assert=require('node:assert/strict');
    await page.evaluate(g=>window.qaGesture=g,gesture);await page.waitForTimeout(900);
    await page.locator('#viewport').screenshot({path:`.test-output/live-glove-${gesture}.png`});
    renders.push(await page.locator('#overlay').evaluate(c=>c.toDataURL()));
-   assert.equal(await page.locator('#partner').evaluate(c=>c.toDataURL()),partner);
+   assert.equal(await page.locator('#overlay').getAttribute('data-grabbed'),'0','free-hand rendering fixture must remain outside the collar');
+   assert.ok(await page.locator('#partner').evaluate(c=>c.toDataURL())===partner,'free hand motion must not move the partner');
   }
   assert.equal(new Set(renders).size,4,'individual finger flexion and crossing change the live surface');
   const beforeOrder=await page.locator('#overlay').evaluate(c=>Array.from(c.getContext('2d').getImageData(0,0,c.width,c.height).data));

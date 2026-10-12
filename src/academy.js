@@ -42,7 +42,7 @@ function openLesson(t){
 function home(){lessonRequest++;document.dispatchEvent(new Event('judo-exit'));$('practice-screen').hidden=true;$('home-screen').hidden=false;$('back-menu').hidden=true;document.title='Just Judo — 나의 유도 도장';renderProgress();window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>selectCategory(b.dataset.category));
 $('featured-start').onclick=()=>selectCategory('katame');$('brand-home').onclick=e=>{e.preventDefault();home()};$('back-menu').onclick=home;
-document.addEventListener('judo-complete',event=>{const {demo}=event.detail;if(!active)return;if(!demo){progress[active.id]={...progress[active.id],practice:true};save()}$('result-title').textContent=demo?'데모 미리보기 완료':'TAP! 미션 완료!';$('result-copy').textContent=demo?'데모 점수는 XP와 완료 기록에 반영하지 않습니다.':`${active.name} · 손 위치 연습 20 XP (최초 1회). 실제 기술의 숙련도 인증은 아닙니다.`;$('result-dialog').showModal()});
+document.addEventListener('judo-complete',event=>{const {demo}=event.detail;if(!active)return;if(!demo){progress[active.id]={...progress[active.id],practice:true};save()}$('result-title').textContent=demo?'데모 미리보기 완료':'TAP! 미션 완료!';$('result-copy').textContent=demo?'데모 점수는 XP와 완료 기록에 반영하지 않습니다.':`${active.name} · 깃 잡기·당김 연습 20 XP (최초 1회). 실제 기술의 숙련도 인증은 아닙니다.`;$('result-dialog').showModal()});
 $('result-home').onclick=()=>{$('result-dialog').close();home()};$('result-again').onclick=()=>{$('result-dialog').close();void launchPractice(active)};renderProgress();
 
 $('reload-practice').onclick=()=>window.location.reload();

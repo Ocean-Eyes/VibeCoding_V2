@@ -17,7 +17,7 @@ function roundedHull(path,points){
 }
 // A single softly shaded silhouette has no drawn joint spheres, nails or knuckle lines.
 // All five finger curves come directly from the 21 live landmarks, including partial curls.
-function paintGlove(ctx,hand,palm,elbow=null){
+function paintGlove(ctx,hand,palm,elbow=null,thumbInside=false){
  if(!hand||hand.length!==21)return;
  const wrist=hand[0],size=Math.max(distance(wrist,hand[9]),distance(hand[5],hand[17])),r=size*.115;
  if(size<2)return;
@@ -26,8 +26,8 @@ function paintGlove(ctx,hand,palm,elbow=null){
  const cuff=[{x:wrist.x+nx*size*.22,y:wrist.y+ny*size*.22},{x:wrist.x-nx*size*.22,y:wrist.y-ny*size*.22}];
  // Order the wrist edges by proximity to the thumb side; this survives hand rotation.
  if(distance(cuff[0],hand[1])>distance(cuff[1],hand[1]))cuff.reverse();
- roundedHull(path,[cuff[0],hand[1],hand[2],hand[5],hand[9],hand[13],hand[17],cuff[1]]);
- for(let digit=0;digit<5;digit++){
+ roundedHull(path,thumbInside?[cuff[0],mix(hand[1],hand[5],.5),hand[5],hand[9],hand[13],hand[17],cuff[1]]:[cuff[0],hand[1],hand[2],hand[5],hand[9],hand[13],hand[17],cuff[1]]);
+ for(let digit=thumbInside?1:0;digit<5;digit++){
    const start=1+digit*4,ids=[start,start+1,start+2,start+3],radius=r*(digit===0?1.16:digit===4?.83:1);
    tube(path,ids.map(i=>hand[i]),[radius*1.08,radius,radius*.87,radius*.78]);
  }
@@ -54,13 +54,13 @@ function paintGlove(ctx,hand,palm,elbow=null){
 
 let surface;
 // Composite the complete glove once so overlapping fingers never become brighter blobs.
-export function drawLiveGlove(ctx,hand,palm,elbow=null){
+export function drawLiveGlove(ctx,hand,palm,elbow=null,thumbInside=false){
  if(!hand)return;
  surface??=Object.assign(document.createElement('canvas'),{width:512,height:512});
  const all=elbow?[...hand,elbow]:hand,pad=Math.max(12,distance(hand[0],hand[9])*.5);
  const x=Math.min(...all.map(p=>p.x))-pad,y=Math.min(...all.map(p=>p.y))-pad;
  const w=Math.max(...all.map(p=>p.x))-x+pad,h=Math.max(...all.map(p=>p.y))-y+pad,s=Math.min(2,512/Math.max(w,h));
  const paint=surface.getContext('2d');paint.setTransform(1,0,0,1,0,0);paint.clearRect(0,0,512,512);
- paint.setTransform(s,0,0,s,-x*s,-y*s);paintGlove(paint,hand,palm,elbow);
+ paint.setTransform(s,0,0,s,-x*s,-y*s);paintGlove(paint,hand,palm,elbow,thumbInside);
  ctx.save();ctx.globalAlpha=.78;ctx.drawImage(surface,0,0,w*s,h*s,x,y,w,h);ctx.restore();
 }

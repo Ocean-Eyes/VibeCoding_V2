@@ -38,18 +38,19 @@ const base=process.env.SITE_URL||'http://localhost:5173/dist/index.html';
   assert.notEqual(await page.locator('#overlay').evaluate(c=>c.toDataURL()),overlay);
   assert.equal(await page.locator('#live-score-value').innerText(),'—');
   await page.locator('#viewport').screenshot({path:'.test-output/fixed-partner-demo.png'});
-  await page.locator('#play').click();await page.waitForFunction(()=>document.querySelector('#live-score-value').textContent==='100').catch(async e=>{console.error(await page.locator('#notice').innerText(),await page.locator('#status').innerText());throw e});console.log('PASS camera connects and matching pose scores 100');
-  await page.locator('#play').click(); // Pause progression while evaluating the live score.
-  await page.evaluate(()=>window.qaPose='moved');await page.waitForTimeout(400);
-  assert.equal(await page.locator('#live-score-value').innerText(),'100');
-  assert.equal(await page.locator('#partner').evaluate(c=>c.toDataURL()),partner);
-  await page.evaluate(()=>window.qaPose='wrong');await page.waitForFunction(()=>Number(document.querySelector('#live-score-value').textContent)<50);
-  assert.equal(await page.locator('#live-score').getAttribute('data-level'),'adjust');
-  await page.evaluate(()=>window.qaPose='missing');await page.waitForFunction(()=>document.querySelector('#live-score-value').textContent==='—');
-  await page.evaluate(()=>window.qaPose='match');await page.waitForFunction(()=>document.querySelector('#live-score-value').textContent==='100');
-  await page.locator('#viewport').screenshot({path:'.test-output/fixed-partner-score.png'});
-  await page.locator('#play').click();await page.locator('#result-dialog').waitFor({state:'visible',timeout:22000});
-  assert.equal(await page.locator('#xp').innerText(),'20 XP');await page.locator('#result-home').click();
+  await page.locator('#play').click();await page.waitForFunction(()=>document.querySelector('#status').textContent==='카메라 연결됨');
+  await page.waitForTimeout(500);
+  const livePartner=await page.locator('#partner').evaluate(c=>c.toDataURL());
+  for(const observation of ['match','moved','wrong','missing']){
+    await page.evaluate(p=>window.qaPose=p,observation);await page.waitForTimeout(400);
+    assert.equal(await page.locator('#live-score-value').innerText(),'—','arm landmarks without fingers cannot earn a grip score');
+    assert.equal(await page.locator('#overlay').getAttribute('data-grabbed'),'0');
+    assert.equal(await page.locator('#partner').evaluate(c=>c.toDataURL()),livePartner,'body motion without a grip must not deform the partner');
+  }
+  await page.waitForTimeout(3500);
+  assert.equal(await page.locator('#result-dialog').isVisible(),false);
+  assert.equal(await page.locator('#xp').innerText(),'0 XP');
+  await page.locator('#back-menu').click();
   for(const width of [1024,760,390,320]){
     await page.setViewportSize({width,height:900});await page.locator('[data-lesson="gyaku"]').click();
     await page.waitForFunction(()=>document.querySelector('#mode-label').textContent.includes('시연'));
@@ -59,6 +60,6 @@ const base=process.env.SITE_URL||'http://localhost:5173/dist/index.html';
   }
   assert.equal(await page.locator('#video').evaluate(v=>v.srcObject),null);
   assert.deepEqual(errors,[]);
-  console.log('PASS: camera-free animated demonstration, fixed partner under body movement, genuine pose scores, missing tracking clears score, progression/XP, mobile layout and camera cleanup. Synthetic landmarks test plumbing, not real-world recognition.');
+  console.log('PASS: camera-free animated demonstration, fixed partner under body movement, no grip score or XP from arm pose alone, missing tracking clears score, mobile layout and camera cleanup. Synthetic landmarks test plumbing, not real-world recognition.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -3,7 +3,7 @@ let renderer;const sprites=new Map();
 const vertex=`attribute vec2 position;void main(){gl_Position=vec4(position,0.,1.);}`;
 const fragment=`precision highp float;
 uniform vec4 boneA[15];uniform vec4 boneB[15];
-uniform float handed;uniform float turn;uniform float glove;
+uniform float handed;uniform float turn;uniform float glove;uniform float thumbHidden;
 float smin(float a,float b,float k){float h=max(k-abs(a-b),0.)/k;return min(a,b)-h*h*k*.25;}
 float ellipsoid(vec3 p,vec3 center,vec3 size){vec3 q=p-center;float a=length(q/size),b=length(q/(size*size));return a*(a-1.)/max(b,.00001);}
 float capsule(vec3 p,vec3 a,vec3 b,float r){vec3 ab=b-a;return length(p-a-ab*clamp(dot(p-a,ab)/dot(ab,ab),0.,1.))-r;}
@@ -19,7 +19,7 @@ float shape(vec3 world){
  vec3 q=vec3(p.x,p.y-y,p.z);
  float arm=(length(vec3(q.x/rx,q.y/rx,q.z/rz))-1.)*min(rx,rz);
  d=smin(d,arm,.011);
- for(int i=0;i<15;i++)d=smin(d,capsule(world,boneA[i].xyz,boneB[i].xyz,boneA[i].w),blend);
+ for(int i=0;i<15;i++){if(thumbHidden>.5&&i<3)continue;d=smin(d,capsule(world,boneA[i].xyz,boneB[i].xyz,boneA[i].w),blend);}
  return d;
 }
 vec3 normalAt(vec3 p){vec2 e=vec2(.0004,0.);return normalize(vec3(shape(p+e.xyy)-shape(p-e.xyy),shape(p+e.yxy)-shape(p-e.yxy),shape(p+e.yyx)-shape(p-e.yyx)));}
@@ -55,13 +55,14 @@ function init(){
  const location=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(location);gl.vertexAttribPointer(location,2,gl.FLOAT,false,0,0);
  return {canvas,gl,program};
 }
-export function drawAnatomicalArm(ctx,wrist,angle,left,palmUp,ghost=false,mirrored=false){
- const key=`${left}/${palmUp}/${ghost}`;
+export function drawAnatomicalArm(ctx,wrist,angle,left,palmUp,ghost=false,mirrored=false,gripped=false){
+ const key=`${left}/${palmUp}/${ghost}/${gripped}`;
  if(!sprites.has(key)){
   renderer??=init();const {canvas,gl,program}=renderer,segments=handCapsules(left,palmUp);
   gl.uniform4fv(gl.getUniformLocation(program,'boneA[0]'),new Float32Array(segments.flatMap(b=>[...b.a,b.r])));
   gl.uniform4fv(gl.getUniformLocation(program,'boneB[0]'),new Float32Array(segments.flatMap(b=>[...b.b,0])));
   gl.uniform1f(gl.getUniformLocation(program,'handed'),left?1:-1);gl.uniform1f(gl.getUniformLocation(program,'turn'),palmUp?-1:1);gl.uniform1f(gl.getUniformLocation(program,'glove'),ghost?1:0);
+  gl.uniform1f(gl.getUniformLocation(program,'thumbHidden'),gripped&&!palmUp?1:0);
   gl.drawArrays(gl.TRIANGLES,0,6);
   const sprite=document.createElement('canvas');sprite.width=320;sprite.height=640;sprite.getContext('2d').drawImage(canvas,0,0);sprites.set(key,sprite);
  }
