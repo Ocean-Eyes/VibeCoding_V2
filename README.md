@@ -87,3 +87,13 @@ node scripts/browser-demonstration.cjs <Playwright 패키지 경로>
 `assets/jigoro-kano.jpg`: the user-selected portrait of Kano Jigoro (378 x 469).
 Source: [Wikimedia Commons, Kano Jigoro.jpg](https://commons.wikimedia.org/wiki/File:Kano_Jigoro.jpg), listed as public domain (PD-Japan-oldphoto / PD-1996).
 The original photograph is included unchanged; the frame is drawn with CSS.
+
+## 교차 그립 도식의 기준
+
+[강도관 기술 정의](https://kdkjd.org/names-of-judo-techniques/)와 IJF의
+[십자조르기](https://judo.ijf.org/techniques/Nami-juji-jime),
+[역십자조르기](https://judo.ijf.org/techniques/gyaku-juji-jime)를 기준으로 구분합니다.
+십자는 양 엄지가 안쪽·손바닥 아래·양손 밀기, 역십자는 양손의 네 손가락이 안쪽·손바닥 위·양팔 조이기입니다.
+외십자는 왼손 네 손가락 안쪽·당기기와 오른손 엄지 안쪽·밀기의 조합입니다.
+설명 그림과 시연은 동일한 V자 깃과 교차 손목 배치를 사용합니다. 손등을 보는 닫힌 그립에서는 접힌 손끝과 손톱을 그리지 않습니다.
+시연의 팔 움직임은 작용 방향을 표현하는 2D 도식입니다. 점수는 팔 위치만 평가하며 손바닥 방향, 실제 깃 안팎, 압박은 판정하지 않습니다.

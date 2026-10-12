@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {POSES,targetPose,bodyFrame} from '../src/pose.js';
-import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,sceneHands} from '../src/demonstration.js';
+import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,sceneHands,gripPlacement} from '../src/demonstration.js';
 
 test('grips finish on the upper lapels, preparation stays below the shoulders',()=>{
   assert.ok(GRIP_STEPS[0].every(p=>p.y>.5));
@@ -39,5 +39,38 @@ test('wrong wrists move the user marker away from the guide; invisible wrists di
 test('practice guides stay at the scoring target after arriving, without looping away',()=>{
   for(let step=0;step<3;step++)for(const seconds of [1.5,4,8,20]){
     practiceGuide(step,seconds).forEach((p,i)=>assert.ok(Math.hypot(p.x-GRIP_STEPS[step][i].x,p.y-GRIP_STEPS[step][i].y)<1e-10));
+  }
+});
+
+// Geometry regression for an actual crossed grip, not two upright floating fists.
+test('final hands follow the V collar and their cuffs cross without breaking under mirroring',()=>{
+  const placements=GRIP_STEPS[2].map((p,i)=>gripPlacement(p,i));
+  assert.ok(placements[0].x>placements[1].x);
+  assert.ok(placements[0].wrist.x<placements[1].wrist.x);
+  for(const [i,p]of placements.entries()){
+    assert.ok(Math.abs(p.angle)>.8);
+    const contact={x:p.x+Math.sin(p.angle)*.3*.27,y:p.y-Math.cos(p.angle)*.3*.27};
+    assert.ok(Math.abs(contact.x)>.13&&Math.abs(contact.x)<.29);
+    assert.ok(contact.y>.17&&contact.y<.25);
+    const reflected=gripPlacement(GRIP_STEPS[2][i],i,false);
+    assert.equal(reflected.x,-p.x);assert.equal(reflected.angle,-p.angle);
+    assert.equal(reflected.wrist.x,-p.wrist.x);assert.equal(reflected.wrist.y,p.wrist.y);
+  }
+});
+
+import {TECHNIQUES} from '../src/curriculum.js';
+test('Kodokan cross-grip variations retain their palm orientation and distinct final action',()=>{
+  const [nami,gyaku,kata]=TECHNIQUES;
+  assert.deepEqual(nami.directions,['↓','↓']);assert.deepEqual(nami.actions,['press','press']);
+  assert.deepEqual(gyaku.directions,['↑','↑']);assert.deepEqual(gyaku.actions,['draw','draw']);
+  assert.deepEqual(kata.directions,['↑','↓']);assert.deepEqual(kata.actions,['draw','press']);
+  assert.match(demonstrationAt(4,nami).label,/엄지/);
+  assert.match(demonstrationAt(4,gyaku).label,/네 손가락/);
+  assert.match(demonstrationAt(4,kata).label,/네 손가락/);
+  assert.match(demonstrationAt(7,kata).label,/엄지/);
+  assert.equal(new Set(TECHNIQUES.map(t=>demonstrationAt(9,t).label)).size,3);
+  for(const t of TECHNIQUES){
+    assert.deepEqual(demonstrationAt(9,t).hands,GRIP_STEPS[2]);
+    assert.equal(demonstrationAt(8,t).finish,0);assert.equal(demonstrationAt(9,t).finish,1);
   }
 });

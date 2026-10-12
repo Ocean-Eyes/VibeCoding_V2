@@ -1,4 +1,4 @@
-import {drawOpponent,drawGripHand,drawGripGuides,drawTrackedHands,crossedGrip} from './opponent.js';
+import {drawOpponent,drawGripStudy,drawGripGuides,drawTrackedHands,crossedGrip} from './opponent.js';
 import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,sceneHands} from './demonstration.js';
 import {TECHNIQUES} from './curriculum.js';
 import {PASS_SCORE,POSES,BONES,HAND_BONES,bodyFrame,targetPose,armMatch,advanceHold} from './pose.js';
@@ -15,7 +15,7 @@ function circle(context,p,r,color,fill=true){if(!p)return;context.beginPath();co
 function skeleton(context,p,color,width=3){for(const[a,b]of BONES){if(p[a]&&p[b]&&(p[a].visibility??1)>=.65&&(p[b].visibility??1)>=.65)line(context,p[a],p[b],color,width)}for(const i of[11,12,13,14,15,16,23,24])if(p[i]&&(p[i].visibility??1)>=.65)circle(context,p[i],width*1.25,color)}
 function preview(canvas,index){const context=canvas.getContext('2d'),w=canvas.width,h=canvas.height;context.clearRect(0,0,w,h);const frame=opponentFrame(w,h);drawOpponent(context,frame);drawGripGuides(context,frame,GRIP_STEPS[index],activeTechnique.directions,true)}
 function updatePose(index=selected){
-  const p=POSES[index];$('step-label').textContent=`0${index+1} / 03`;$('pose-number').textContent=`0${index+1}`;$('pose-name').textContent=p.name;$('pose-description').textContent=p.description;$('gesture-label').textContent='흰색 손의 이동을 따라하세요';preview($('preview'),index);
+  const p=POSES[index];$('step-label').textContent=`0${index+1} / 03`;$('pose-number').textContent=`0${index+1}`;$('pose-name').textContent=p.name;$('pose-description').textContent=activeTechnique.cues[index];$('gesture-label').textContent='흰색 손의 이동을 따라하세요';preview($('preview'),index);
   document.querySelectorAll('.pose-card').forEach((button,i)=>{preview(button.querySelector('canvas'),i);button.classList.toggle('selected',i===index);button.setAttribute('aria-pressed',String(i===index));button.querySelector('.completion').textContent=completed.has(i)?'✓':''});
 }
 POSES.forEach((p,i)=>{const button=document.createElement('button');button.className='pose-card';button.innerHTML=`<canvas width="140" height="110" aria-hidden="true"></canvas><span class="card-copy"><small>STEP 0${i+1}</small><strong>${p.name}</strong><span>${p.short}</span></span><span class="completion" aria-label="완료 여부"></span>`;button.onclick=()=>choose(i);$('pose-list').append(button);preview(button.querySelector('canvas'),i)});
@@ -85,9 +85,9 @@ function draw(now){
   score=armScore=handScore=null;gripReady=false;canvas.dataset.aligned=String(!!frame);canvas.dataset.skeleton=String($('show-skeleton').checked);
   let instruction;
   if(demonstrating){
-    instruction=demonstrationAt((now-demoStarted)/1000);
+    instruction=demonstrationAt((now-demoStarted)/1000,activeTechnique);
     if(demoStep!==instruction.step){demoStep=instruction.step;updatePose(demoStep)}
-    drawGripGuides(ctx,scene,instruction.hands,activeTechnique.directions,mirrored);
+    drawGripGuides(ctx,scene,instruction.hands,activeTechnique.directions,mirrored,null,{actions:activeTechnique.actions,finish:instruction.finish});
   }else{
     drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected]);
     if(frame){
@@ -101,11 +101,11 @@ function draw(now){
       }
     }
   }
-  const feedback=demonstrating?'흰색 손의 이동과 깃을 잡는 위치를 먼저 살펴보세요.':!frame?'어깨와 팔꿈치, 양손이 보이도록 서 주세요.':score===null?'손목이나 팔꿈치가 가려졌습니다.':selected===2&&!gripReady?'양손을 교차해 각각 반대편 깃에 맞춰 주세요.':score>=PASS_SCORE?'좋아요. 지금 위치를 3초 유지하세요.':'파란 손 표시를 흰색 손의 도착 위치에 맞춰 주세요.';
+  const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:!frame?'어깨와 팔꿈치, 양손이 보이도록 서 주세요.':score===null?'손목이나 팔꿈치가 가려졌습니다.':selected===2&&!gripReady?'양손을 교차해 각각 반대편 깃에 맞춰 주세요.':score>=PASS_SCORE?'좋아요. 지금 위치를 3초 유지하세요.':'파란 손 표시를 흰색 손의 도착 위치에 맞춰 주세요.';
   $('tracking-label').textContent=demonstrating?'시연 중':frame?'손 위치 추적 중':stream?'인식 대기':'대기';
   $('feedback').textContent=feedback;$('live-feedback').textContent=feedback;
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':score>=PASS_SCORE?'good':score>=35?'near':'adjust';
-  $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'동작 일치도 / 100';
+  $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'팔 위치 일치도 / 100';
   $('live-hold').textContent=demonstrating?'연습 버튼을 누르면 채점합니다':score===null?'몸을 인식하면 점수가 표시됩니다':`유지 ${hold.toFixed(1)} / 3초 · 통과 50점`;
   $('opponent-status').dataset.tap=String(!!tapUntil);
   $('opponent-status').textContent=tapUntil?'TAP! · 손을 풀어 주세요':demonstrating?instruction.label:`0${selected+1} · ${POSES[selected].name}`;
@@ -138,4 +138,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){autoStart=
 window.addEventListener('pagehide',stop);updatePose();controls();requestAnimationFrame(tick);
 
 document.addEventListener('judo-exit',stop);
-document.addEventListener('judo-lesson',({detail})=>{activeTechnique=detail;const gripCanvas=$('grip-preview'),gripContext=gripCanvas.getContext('2d');gripContext.clearRect(0,0,gripCanvas.width,gripCanvas.height);drawGripHand(gripContext,140,164,164,detail.directions[0]==='↑',true);drawGripHand(gripContext,420,164,164,detail.directions[1]==='↑',false);stop();completed.clear();selected=0;demonstrating=true;demoStarted=performance.now();demoStep=-1;updatePose();controls();notify('흰색 손의 시연을 확인한 뒤 내 동작 연습을 눌러 카메라를 연결하세요.');});
+document.addEventListener('judo-lesson',({detail})=>{activeTechnique=detail;const gripCanvas=$('grip-preview'),gripContext=gripCanvas.getContext('2d');drawGripStudy(gripContext,gripCanvas.width,gripCanvas.height,detail.directions);gripCanvas.setAttribute('aria-label',`${detail.name}: ${detail.detail}`);stop();completed.clear();selected=0;demonstrating=true;demoStarted=performance.now();demoStep=-1;updatePose();controls();notify('흰색 손의 시연을 확인한 뒤 내 동작 연습을 눌러 카메라를 연결하세요.');});

@@ -34,7 +34,7 @@ function renderCourses(){
 function openLesson(t){
   active=t;
   $('lesson-title').textContent=t.name;$('lesson-roman').textContent=t.roman;$('lesson-description').textContent=t.description;$('grip-note').textContent=t.detail;
-  $('grip-left').textContent=`왼손 · ${t.directions[0]==='↑'?'손바닥 ↑':'손등 ↑'}`;$('grip-right').textContent=`오른손 · ${t.directions[1]==='↑'?'손바닥 ↑':'손등 ↑'}`;$('grip-caption').textContent=t.grip;$('source-link').href=t.source;
+  $('grip-left').textContent='왼손 → 오른쪽 깃';$('grip-right').textContent='오른손 → 왼쪽 깃';$('grip-caption').textContent=t.grip;$('source-link').href=t.source;
   $('home-screen').hidden=true;$('practice-screen').hidden=false;$('back-menu').hidden=false;
   $('practice-title').textContent=t.name;$('practice-roman').textContent=t.roman;$('practice-grip').textContent=t.grip;
   document.title=`${t.name} · Just Judo`;void launchPractice(t);window.scrollTo(0,0);
