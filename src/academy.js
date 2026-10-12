@@ -19,10 +19,10 @@ function save(){try{localStorage.setItem('just-judo-progress-v1',JSON.stringify(
 function renderProgress(){const totals=progressTotals(progress);$('xp').textContent=`${totals.xp} XP`;$('completion-count').textContent=`${totals.completed} / 3`;document.querySelector('.journey-stamp').textContent=totals.completed===3?'조르기 예비 연습 3종 완료':totals.completed?`${totals.completed}개 미션 완료`:'첫 미션부터 시작해요';$('journey-fill').style.width=`${totals.completed/3*100}%`;if(!$('course-shelf').hidden)renderCourses()}
 function selectCategory(id){category=id;$('course-shelf').hidden=false;document.querySelectorAll('[data-category]').forEach(b=>{b.classList.toggle('selected',b.dataset.category===id);b.setAttribute('aria-pressed',String(b.dataset.category===id))});renderCourses();$('course-shelf').scrollIntoView({behavior:'smooth',block:'start'})}
 function renderCourses(){
-  $('course-title').textContent={basics:'기초를 차근차근',katame:'굳히기본 / 조르기',throws:'매치기본'}[category];
+  $('course-title').textContent={basics:'기초를 차근차근',katame:'굳히기본 / 조르기',throws:'메치기본'}[category];
   $('course-count').textContent=category==='katame'?'3개 미션 · 모두 선택 가능':'레슨 준비 중';
   $('course-grid').replaceChildren();
-  if(category==='throws'){$('course-grid').innerHTML='<div class="coming-panel"><span>03 / NEXT CHAPTER</span><h3>매치기본은 다음 순서입니다.</h3><p>지금은 굳히기본의 조르기 3종부터 구성하고 있어요.</p><button class="outline" id="go-katame">조르기 둘러보기 →</button></div>';$('go-katame').onclick=()=>selectCategory('katame');return}
+  if(category==='throws'){$('course-grid').innerHTML='<div class="coming-panel"><span>03 / NEXT CHAPTER</span><h3>메치기본은 다음 순서입니다.</h3><p>지금은 굳히기본의 조르기 3종부터 구성하고 있어요.</p><button class="outline" id="go-katame">조르기 둘러보기 →</button></div>';$('go-katame').onclick=()=>selectCategory('katame');return}
   const items=category==='katame'?TECHNIQUES:FOUNDATIONS;
   for(const [i,t]of items.entries()){
     const card=document.createElement('article');card.className='lesson-card';

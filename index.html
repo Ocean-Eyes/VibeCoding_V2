@@ -11,6 +11,13 @@
   <script type="module" src="./src/academy.js"></script>
 </head>
 <body>
+  <div class="dojo-room" aria-hidden="true">
+    <div class="dojo-wall"></div>
+    <div class="dojo-wainscot"></div>
+    <div class="dojo-floor"><div class="dojo-tatami"></div></div>
+    <div class="dojo-pillar dojo-pillar-left"></div>
+    <div class="dojo-pillar dojo-pillar-right"></div>
+  </div>
   <header class="topbar">
     <a id="brand-home" class="brand" href="./" aria-label="Just Judo 홈"><span class="brand-icon" lang="ja">柔</span> JUST JUDO</a>
     <span class="top-note"></span>
@@ -20,14 +27,14 @@
     <section id="home-screen">
       <section class="ink-hero" aria-label="유도 도장">
         <div class="margin-note" lang="zh-Hant">柔能制剛</div>
-        <div class="calligraphy-piece"><svg class="enso" viewBox="0 0 600 420" aria-hidden="true"><defs><filter id="ink-edge" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".07" numOctaves="3" seed="8" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale="3.5"/></filter></defs><path d="M438 60C353 17 248 22 177 78C110 129 93 215 126 281C162 355 242 390 321 379C411 366 481 304 490 229C496 163 469 109 428 80C418 72 425 71 435 80C438 83 440 86 441 88C485 120 509 178 498 237C487 322 410 387 321 398C222 411 133 365 104 287C74 211 100 120 166 65C244 0 367 9 447 54C455 59 453 66 447 65C443 64 440 62 438 60Z" fill="currentColor" filter="url(#ink-edge)"/></svg><h1 class="brush-title" lang="ja">柔道</h1><span class="ink-seal" lang="ja">修<br>練</span><span class="scroll-caption">JUST JUDO · 나의 수련장</span></div>
+        <div class="calligraphy-scroll"><div class="calligraphy-piece"><svg class="enso" viewBox="0 0 600 420" aria-hidden="true"><defs><filter id="ink-edge" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".07" numOctaves="3" seed="8" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale="3.5"/></filter></defs><path d="M438 60C353 17 248 22 177 78C110 129 93 215 126 281C162 355 242 390 321 379C411 366 481 304 490 229C496 163 469 109 428 80C418 72 425 71 435 80C438 83 440 86 441 88C485 120 509 178 498 237C487 322 410 387 321 398C222 411 133 365 104 287C74 211 100 120 166 65C244 0 367 9 447 54C455 59 453 66 447 65C443 64 440 62 438 60Z" fill="currentColor" filter="url(#ink-edge)"/></svg><h1 class="brush-title" lang="ja">柔道</h1><span class="ink-seal" lang="ja">修<br>練</span></div><span class="scroll-caption">JUST JUDO · 나의 수련장</span></div>
         <div class="right-note"><span>부드러움이 능히<br>강함을 제압한다.</span><button id="featured-start" class="ink-link">조르기 수련으로 <span>→</span></button></div>
       </section>
       <div class="chapter-heading"><h2>수련의 길</h2><span>과정을 선택하세요</span></div>
       <nav class="chapter-grid" aria-label="수련 과정">
         <button class="chapter" data-category="basics" aria-pressed="false"><span class="chapter-top">一 <span>시작의 준비</span></span><span class="chapter-calligraphy" lang="ja" aria-hidden="true">基本</span><span class="chapter-name">기초 <i>↗</i></span><span class="chapter-description">도복 입는 법 · 띠 매는 법 · 낙법</span><span class="chapter-bottom">레슨 준비 중</span></button>
         <button class="chapter" data-category="katame" aria-pressed="false"><span class="chapter-top">二 <span>지금 수련하기</span></span><span class="chapter-calligraphy" lang="ja" aria-hidden="true">固技</span><span class="chapter-name">굳히기본 <i>↗</i></span><span class="chapter-description">십자 · 역십자 · 외십자 조르기</span><span class="chapter-bottom">조르기 3종 열림</span></button>
-        <button class="chapter" data-category="throws" aria-pressed="false"><span class="chapter-top">三 <span>이어질 수련</span></span><span class="chapter-calligraphy" lang="ja" aria-hidden="true">投技</span><span class="chapter-name">매치기본 <i>↗</i></span><span class="chapter-description">다음으로 채워 갈 메치기 기술</span><span class="chapter-bottom">레슨 준비 중</span></button>
+        <button class="chapter" data-category="throws" aria-pressed="false"><span class="chapter-top">三 <span>이어질 수련</span></span><span class="chapter-calligraphy" lang="ja" aria-hidden="true">投技</span><span class="chapter-name">메치기본 <i>↗</i></span><span class="chapter-description">다음으로 채워 갈 메치기 기술</span><span class="chapter-bottom">레슨 준비 중</span></button>
       </nav>
       <section id="course-shelf" class="course-shelf" hidden><div class="chapter-heading"><h2 id="course-title">굳히기본 / 조르기</h2><span id="course-count"></span></div><div id="course-grid" class="course-grid"></div></section>
       <section class="journey"><div class="journey-label"><span class="journey-icon" lang="ja">修</span><div><h2>나의 수련 기록</h2><p id="storage-note">진행도는 이 브라우저에 저장됩니다.</p></div></div><div class="journey-progress"><div><span>손 위치 연습 완료</span><strong id="completion-count">0 / 3</strong></div><div class="progress"><div id="journey-fill"></div></div></div><span class="journey-stamp">첫 미션부터 시작해요</span></section>
@@ -60,7 +67,7 @@
     <footer><span>JUST JUDO / WEB DOJO</span><span>배움의 기록을 쌓는 곳 · RGB 웹캠</span></footer>
   </main>
   <dialog id="result-dialog"><div class="result-medal" lang="ja">済</div><div class="eyebrow">MISSION RESULT</div><h2 id="result-title"></h2><p id="result-copy"></p><button id="result-home" class="primary">기술 메뉴로 →</button><button id="result-again" class="outline">다시 연습</button></dialog>
-  <dialog id="guide"><button id="close-help" class="icon-button close" aria-label="가이드 닫기">×</button><div class="eyebrow">HOW TO PLAY</div><h2>나의 유도 도장 이용하기</h2><ol><li>굳히기본에서 조르기 기술을 선택하세요.</li><li>수련하기를 누르면 연습 화면이 열리고 카메라 연결을 시작합니다. 처음에는 카메라 권한을 허용하세요.</li><li>연결되면 3초 준비 후 연습이 시작됩니다. 옆의 기술 설명을 참고하고 어깨와 팔꿈치, 손목을 보여 주세요.</li><li>도복 상대의 붉은 목표에 손 표시를 맞추세요. 50% 이상을 3초 유지하면 다음 단계로, 마지막 양손 교차를 유지하면 상대가 탭합니다.</li><li>3단계를 마치면 20 XP와 연습 완료 도장이 기록됩니다. XP는 기술별 최초 1회 지급합니다.</li></ol><p>세 기술의 차이는 손바닥 방향입니다. 웹캠 미션은 세 기술에 공통인 교차 손 위치를 익히는 예비 연습이며, 실제 조르기 기술의 숙련도나 효과를 판정하지 않습니다. 실제 상대와의 실습은 지도자의 지도를 받으세요.</p><p>강도관 공식 영상은 연습 화면에서 볼 수 있습니다. 기초와 매치기본 레슨은 준비 중입니다. 영상은 기기 안에서 처리되며 저장하지 않습니다.</p></dialog>
+  <dialog id="guide"><button id="close-help" class="icon-button close" aria-label="가이드 닫기">×</button><div class="eyebrow">HOW TO PLAY</div><h2>나의 유도 도장 이용하기</h2><ol><li>굳히기본에서 조르기 기술을 선택하세요.</li><li>수련하기를 누르면 연습 화면이 열리고 카메라 연결을 시작합니다. 처음에는 카메라 권한을 허용하세요.</li><li>연결되면 3초 준비 후 연습이 시작됩니다. 옆의 기술 설명을 참고하고 어깨와 팔꿈치, 손목을 보여 주세요.</li><li>도복 상대의 붉은 목표에 손 표시를 맞추세요. 50% 이상을 3초 유지하면 다음 단계로, 마지막 양손 교차를 유지하면 상대가 탭합니다.</li><li>3단계를 마치면 20 XP와 연습 완료 도장이 기록됩니다. XP는 기술별 최초 1회 지급합니다.</li></ol><p>세 기술의 차이는 손바닥 방향입니다. 웹캠 미션은 세 기술에 공통인 교차 손 위치를 익히는 예비 연습이며, 실제 조르기 기술의 숙련도나 효과를 판정하지 않습니다. 실제 상대와의 실습은 지도자의 지도를 받으세요.</p><p>강도관 공식 영상은 연습 화면에서 볼 수 있습니다. 기초와 메치기본 레슨은 준비 중입니다. 영상은 기기 안에서 처리되며 저장하지 않습니다.</p></dialog>
 <dialog id="video-dialog" class="video-dialog"><button id="close-video" class="icon-button close" aria-label="영상 닫기">×</button><div class="eyebrow">KODOKAN / 공식 시범</div><h2 id="video-title"></h2><iframe id="kodokan-player" title="강도관 공식 기술 시범" allow="fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><a id="video-external" target="_blank" rel="noopener noreferrer">YouTube에서 영상 보기 ↗</a><p>재생이 제한되면 YouTube에서 확인하세요. 영상을 보는 동안 연습은 일시 정지됩니다.</p></dialog>
 </body>
 </html>

@@ -8,16 +8,15 @@ dialog{background:var(--paper);color:var(--ink);border:1px solid var(--line);pad
 :root{--paper:#f5f2e9;--panel:#f9f6ef;--ink:#292824;--muted:#858177;--line:#d4cec0;--accent:#982f2f;--blue:#354e67;--brush:'Yuji Boku','Yu Mincho',serif}
 body{background-color:var(--paper);background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23534735' opacity='.045' filter='url(%23n)' d='M0 0h160v160H0z'/%3E%3C/svg%3E")}
 .topbar{border-bottom:1px solid var(--line);min-height:78px}.brand{font:600 18px var(--serif);letter-spacing:3px}.brand-icon{font:26px var(--brush);letter-spacing:0;width:32px;height:36px}.header-actions{gap:23px}.xp-pill{background:transparent;color:var(--accent);border-left:1px solid var(--line);padding-left:20px;font-family:var(--serif)}
-.ink-hero{min-height:390px;display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;position:relative;border-bottom:1px solid var(--line)}.margin-note{writing-mode:vertical-rl;font:22px var(--brush);letter-spacing:8px;justify-self:center;color:#666159;height:225px}.margin-note span{font:10px var(--serif);letter-spacing:3px;margin-right:13px;color:var(--muted)}.calligraphy-piece{height:385px;display:grid;place-items:center;position:relative}.enso{position:absolute;width:100%;height:100%;color:#8c857833;max-width:570px}.brush-title{font:170px var(--brush);letter-spacing:-15px;line-height:1.2;margin:-20px 0 0;position:relative;transform:rotate(-5deg);white-space:nowrap;font-synthesis:none}.ink-seal{font:20px var(--brush);line-height:1.2;color:var(--accent);border:2px solid var(--accent);padding:5px 4px;position:absolute;right:12%;bottom:80px;transform:rotate(3deg)}.scroll-caption{position:absolute;bottom:29px;font:10px var(--serif);letter-spacing:3px;color:var(--muted)}.right-note{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:35px}.right-note>span{writing-mode:vertical-rl;letter-spacing:6px;font:14px var(--serif);line-height:1.8}.ink-link{background:none;border-bottom:1px solid var(--accent);color:var(--accent);font:11px var(--serif);padding:10px 0}.ink-link span{margin-left:14px}.chapter-heading{margin-top:30px}.chapter-heading h2{font-size:16px;letter-spacing:2px;font-weight:500}.chapter-heading>span{letter-spacing:1px;font:10px var(--serif)}.chapter-grid{gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.chapter{background:transparent;border:0;border-right:1px solid var(--line);padding:22px 35px 20px;gap:10px;position:relative}.chapter:last-child{border-right:0}.chapter:hover{transform:none;background:#29282404}.chapter.selected{outline:none;background:#982f2f04;box-shadow:inset 0 -2px var(--accent)}.chapter-top{font:14px var(--brush);color:var(--accent)}.chapter-top>span{font:9px var(--serif);letter-spacing:1px;color:var(--muted)}.chapter-calligraphy{font:54px var(--brush);display:block;margin:0;line-height:1.45;letter-spacing:4px;transform:rotate(-2deg);text-align:center}.chapter-name{font:600 18px var(--serif);letter-spacing:1px}.chapter-name i{font-size:16px;color:var(--accent)}.chapter-description{margin:0;font-size:10px;line-height:1.8;color:var(--muted)}.chapter-bottom{padding-top:8px;border:0;font:9px var(--serif);color:var(--accent)}.course-grid{display:block;border-top:1px solid var(--line)}.lesson-card{display:grid;grid-template-columns:28px 1.1fr 1.15fr 1.2fr 95px;align-items:center;gap:20px;border:0;border-bottom:1px solid var(--line);background:transparent;padding:27px 14px}.lesson-index{font:21px var(--brush);color:var(--accent)}.lesson-title-group>small{font-size:8px;letter-spacing:1px;color:var(--muted)}.lesson-title-group h3{font:600 19px var(--serif);margin:5px 0 8px}.tag{border:0;padding:0;color:var(--accent);font:9px var(--serif)}.lesson-kanji{font:32px var(--brush);white-space:nowrap;letter-spacing:-2px;opacity:.75}.lesson-card p{margin:0;min-height:0;font-size:10px}.lesson-enter{border:0;font:11px var(--serif);text-align:right;padding:10px 0}.coming-panel{background:transparent;border:0;padding:35px 14px}.coming-panel h3{font-weight:500}.journey{margin-top:30px;padding:18px 0;border-top:0}.journey-icon{font:24px var(--brush);color:var(--accent)}.journey h2{font-family:var(--serif);font-weight:500}.journey-stamp{border:2px solid var(--accent);font:11px var(--serif);padding:8px 11px}.progress{height:3px}.primary{border-radius:0;background:var(--accent);font-family:var(--serif)}.outline{font-family:var(--serif)}.heading h1{font-weight:500}.heading .eyebrow{color:var(--muted)}.studio,.target-panel,.score-panel{background:#f9f6ef99;border-color:var(--line)}.viewport{background:radial-gradient(ellipse at center,#35424e,#222c35)}.practice-context{font-family:var(--serif);background:transparent}.pose-card{background:transparent;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.pose-card.selected{box-shadow:inset 0 -2px var(--accent);border-color:var(--line);background:#982f2f04}.lesson-dialog{border-top:4px solid var(--accent)}.grip-diagram{background:transparent;border-left:0;border-right:0}.grip-diagram>div{font-family:var(--brush)}.quiz-choice{font-family:var(--serif)}footer{font-family:var(--serif);letter-spacing:2px}
+.ink-hero{min-height:390px;display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;position:relative;border-bottom:1px solid var(--line)}.margin-note{writing-mode:vertical-rl;font:22px var(--brush);letter-spacing:8px;justify-self:center;color:#666159;height:225px}.margin-note span{font:10px var(--serif);letter-spacing:3px;margin-right:13px;color:var(--muted)}.calligraphy-scroll{min-width:0}.calligraphy-piece{height:385px;display:grid;place-items:center;position:relative}.enso{position:absolute;width:100%;height:100%;color:#8c857833;max-width:570px}.brush-title{font:170px var(--brush);letter-spacing:-15px;line-height:1.2;margin:-20px 0 0;position:relative;transform:rotate(-5deg);white-space:nowrap;font-synthesis:none}.ink-seal{font:20px var(--brush);line-height:1.2;color:var(--accent);border:2px solid var(--accent);padding:5px 4px;position:absolute;right:12%;bottom:80px;transform:rotate(3deg)}.scroll-caption{display:block;margin:16px 0 24px;text-align:center;font:10px var(--serif);letter-spacing:3px;color:var(--muted)}.right-note{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:35px}.right-note>span{writing-mode:vertical-rl;letter-spacing:6px;font:14px var(--serif);line-height:1.8}.ink-link{background:none;border-bottom:1px solid var(--accent);color:var(--accent);font:11px var(--serif);padding:10px 0}.ink-link span{margin-left:14px}.chapter-heading{margin-top:30px}.chapter-heading h2{font-size:16px;letter-spacing:2px;font-weight:500}.chapter-heading>span{letter-spacing:1px;font:10px var(--serif)}.chapter-grid{gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.chapter{background:transparent;border:0;border-right:1px solid var(--line);padding:22px 35px 20px;gap:10px;position:relative}.chapter:last-child{border-right:0}.chapter:hover{transform:none;background:#29282404}.chapter.selected{outline:none;background:#982f2f04;box-shadow:inset 0 -2px var(--accent)}.chapter-top{font:14px var(--brush);color:var(--accent)}.chapter-top>span{font:9px var(--serif);letter-spacing:1px;color:var(--muted)}.chapter-calligraphy{font:54px var(--brush);display:block;margin:0;line-height:1.45;letter-spacing:4px;transform:rotate(-2deg);text-align:center}.chapter-name{font:600 18px var(--serif);letter-spacing:1px}.chapter-name i{font-size:16px;color:var(--accent)}.chapter-description{margin:0;font-size:10px;line-height:1.8;color:var(--muted)}.chapter-bottom{padding-top:8px;border:0;font:9px var(--serif);color:var(--accent)}.course-grid{display:block;border-top:1px solid var(--line)}.lesson-card{display:grid;grid-template-columns:28px 1.1fr 1.15fr 1.2fr 95px;align-items:center;gap:20px;border:0;border-bottom:1px solid var(--line);background:transparent;padding:27px 14px}.lesson-index{font:21px var(--brush);color:var(--accent)}.lesson-title-group>small{font-size:8px;letter-spacing:1px;color:var(--muted)}.lesson-title-group h3{font:600 19px var(--serif);margin:5px 0 8px}.tag{border:0;padding:0;color:var(--accent);font:9px var(--serif)}.lesson-kanji{font:32px var(--brush);white-space:nowrap;letter-spacing:-2px;opacity:.75}.lesson-card p{margin:0;min-height:0;font-size:10px}.lesson-enter{border:0;font:11px var(--serif);text-align:right;padding:10px 0}.coming-panel{background:transparent;border:0;padding:35px 14px}.coming-panel h3{font-weight:500}.journey{margin-top:30px;padding:18px 0;border-top:0}.journey-icon{font:24px var(--brush);color:var(--accent)}.journey h2{font-family:var(--serif);font-weight:500}.journey-stamp{border:2px solid var(--accent);font:11px var(--serif);padding:8px 11px}.progress{height:3px}.primary{border-radius:0;background:var(--accent);font-family:var(--serif)}.outline{font-family:var(--serif)}.heading h1{font-weight:500}.heading .eyebrow{color:var(--muted)}.studio,.target-panel,.score-panel{background:#f9f6ef99;border-color:var(--line)}.viewport{background:radial-gradient(ellipse at center,#35424e,#222c35)}.practice-context{font-family:var(--serif);background:transparent}.pose-card{background:transparent;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.pose-card.selected{box-shadow:inset 0 -2px var(--accent);border-color:var(--line);background:#982f2f04}.lesson-dialog{border-top:4px solid var(--accent)}.grip-diagram{background:transparent;border-left:0;border-right:0}.grip-diagram>div{font-family:var(--brush)}.quiz-choice{font-family:var(--serif)}footer{font-family:var(--serif);letter-spacing:2px}
 @media(max-width:1050px){.ink-hero{grid-template-columns:.65fr 2fr .65fr}.lesson-card{grid-template-columns:25px 1fr 1fr 90px}.lesson-card p{display:none}.chapter{padding:22px}.brush-title{font-size:155px}.ink-seal{right:7%}}
-@media(max-width:760px){.ink-hero{grid-template-columns:30px 1fr 30px;min-height:300px}.calligraphy-piece{height:290px}.brush-title{font-size:125px;letter-spacing:-12px}.margin-note{font-size:13px;height:180px;letter-spacing:5px}.margin-note span{display:none}.right-note{height:180px;justify-content:start}.right-note>span{font-size:10px;letter-spacing:4px}.right-note .ink-link{display:none}.scroll-caption{bottom:22px;font-size:8px;letter-spacing:1px}.ink-seal{font-size:13px;bottom:57px;right:0;padding:3px}.enso{width:120%;max-width:none}.chapter-grid{display:block}.chapter{width:100%;border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:76px 1fr;column-gap:20px;row-gap:6px;padding:18px 10px}.chapter:last-child{border-bottom:0}.chapter-top{grid-column:2;grid-row:1}.chapter-calligraphy{grid-column:1;grid-row:1/5;font-size:38px;align-self:center;writing-mode:vertical-rl;justify-self:center;letter-spacing:0}.chapter-name{grid-column:2;grid-row:2;font-size:18px}.chapter-description{grid-column:2;font-size:9px}.chapter-bottom{grid-column:2;padding-top:0}.lesson-card{grid-template-columns:20px 1fr 80px;gap:10px;padding:23px 2px}.lesson-kanji{display:none}.lesson-title-group h3{font-size:17px}.lesson-enter{font-size:10px}.brand{font-size:14px;letter-spacing:1px}.brand-icon{font-size:23px;width:29px}.header-actions{gap:12px}.xp-pill{font-size:9px;padding:5px 0 5px 10px}.journey-progress{width:36%}.lesson-card p{display:none}}
+@media(max-width:760px){.ink-hero{grid-template-columns:30px 1fr 30px;min-height:300px}.calligraphy-piece{height:290px}.brush-title{font-size:125px;letter-spacing:-12px}.margin-note{font-size:13px;height:180px;letter-spacing:5px}.margin-note span{display:none}.right-note{height:180px;justify-content:start}.right-note>span{font-size:10px;letter-spacing:4px}.right-note .ink-link{display:none}.scroll-caption{font-size:8px;letter-spacing:1px}.ink-seal{font-size:13px;bottom:57px;right:0;padding:3px}.enso{width:120%;max-width:none}.chapter-grid{display:block}.chapter{width:100%;border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:76px 1fr;column-gap:20px;row-gap:6px;padding:18px 10px}.chapter:last-child{border-bottom:0}.chapter-top{grid-column:2;grid-row:1}.chapter-calligraphy{grid-column:1;grid-row:1/5;font-size:38px;align-self:center;writing-mode:vertical-rl;justify-self:center;letter-spacing:0}.chapter-name{grid-column:2;grid-row:2;font-size:18px}.chapter-description{grid-column:2;font-size:9px}.chapter-bottom{grid-column:2;padding-top:0}.lesson-card{grid-template-columns:20px 1fr 80px;gap:10px;padding:23px 2px}.lesson-kanji{display:none}.lesson-title-group h3{font-size:17px}.lesson-enter{font-size:10px}.brand{font-size:14px;letter-spacing:1px}.brand-icon{font-size:23px;width:29px}.header-actions{gap:12px}.xp-pill{font-size:9px;padding:5px 0 5px 10px}.journey-progress{width:36%}.lesson-card p{display:none}}
 
 .target-dot{background:#cf626b}.countdown{color:#cf626b}.camera-icon svg{stroke:#cf626b}.lesson-characters{font:43px var(--brush);letter-spacing:2px;margin-top:20px}.result-medal{font:62px var(--brush);color:var(--accent)}
 
 /* One continuous, pressure-shaped ink stroke; no overlapping ring segments. */
 .enso{color:#353029;opacity:.94}.margin-note{font-size:30px;letter-spacing:10px;height:auto;line-height:1.8;color:var(--ink)}.right-note>span{font-size:13px;letter-spacing:3px;line-height:2.2}.right-note{gap:25px}
 @media(max-width:760px){.margin-note{font-size:18px;letter-spacing:6px}.right-note>span{font-size:10px;letter-spacing:1px;line-height:1.6}.right-note{height:auto}.enso{width:116%}}
-.scroll-caption{bottom:8px}
 
 .video-dialog{width:min(880px,94vw);max-width:94vw}.video-dialog iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#191b20;margin:20px 0}.video-dialog p{font-size:13px;color:#706b63}.transport{flex-wrap:wrap;gap:12px}.transport>div{flex-wrap:wrap}.opponent-status{position:absolute;top:58px;left:50%;transform:translateX(-50%);padding:8px 16px;background:#1b202bdd;color:#f7ead2;border:1px solid #e2d0aa55;border-radius:4px;text-align:center;white-space:nowrap;pointer-events:none}.opponent-status[data-tap="true"]{background:#922e36;color:white;font-size:24px}.welcome~.opponent-status{visibility:visible}.viewport:has(.welcome:not([hidden])) .opponent-status{visibility:hidden}
 
@@ -27,3 +26,142 @@ body{background-color:var(--paper);background-image:url("data:image/svg+xml,%3Cs
 
 .lesson-reference .grip-labels span{font:11px var(--serif);white-space:nowrap}.lesson-reference .grip-labels b{font:14px var(--serif)}.lesson-reference .grip-diagram strong{font-size:11px}.lesson-reference{padding:16px}.lesson-reference #grip-note{margin-bottom:8px}
 .viewport:has(.welcome:not([hidden])) #overlay{opacity:.18}
+
+/* A dojo interior: plaster above cedar boards, raised columns and tatami. */
+:root {
+  --paper: #f3f3ed;
+  --panel: #faf9f3;
+  --muted: #686b60;
+  --line: #c5c8b8;
+}
+body {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+  background: #a4b294;
+}
+.dojo-room {
+  --wall-height: clamp(440px, 52vh, 560px);
+  --wood-height: 210px;
+  --floor-top: calc(var(--wall-height) + var(--wood-height));
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.dojo-wall {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--wall-height);
+  background:
+    radial-gradient(ellipse at 50% 30%, #fffef9b3, transparent 75%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23534735' opacity='.035' filter='url(%23n)' d='M0 0h160v160H0z'/%3E%3C/svg%3E"),
+    linear-gradient(90deg, #d6d8d1, #f1f1eb 18%, #eeeee8 82%, #d0d3cc);
+  box-shadow: inset 0 12px 25px #303c3020;
+}
+.dojo-wainscot {
+  position: absolute;
+  top: var(--wall-height);
+  width: 100%;
+  height: var(--wood-height);
+  border-top: 9px solid #ad7b43;
+  border-bottom: 17px solid #73502f;
+  background:
+    linear-gradient(180deg, #422a2533, transparent 12%, transparent 78%, #39241440),
+    repeating-linear-gradient(90deg, #3b251943 0 1px, #f1c78945 1px 3px, transparent 3px 30px, #3b251966 30px 32px),
+    repeating-linear-gradient(91deg, transparent 0 5px, #63391818 6px, transparent 8px 13px),
+    linear-gradient(90deg, #9c703f, #bf9259 35%, #ad7d45 65%, #966738);
+  box-shadow: 0 -2px 4px #493d3426, inset 0 2px #edc38c, 0 7px 8px #263a3040;
+}
+.dojo-floor {
+  position: absolute;
+  inset: var(--floor-top) 0 0;
+  perspective: 650px;
+  background: #a3b396;
+}
+.dojo-tatami {
+  position: absolute;
+  inset: 0 -35% -100vh;
+  transform: rotateX(35deg);
+  transform-origin: center top;
+  background:
+    repeating-linear-gradient(0deg, #3f574f66 0 2px, #edf0d633 2px 4px, transparent 4px 150px),
+    repeating-linear-gradient(90deg, #3f574f66 0 2px, #edf0d633 2px 4px, transparent 4px 280px),
+    repeating-linear-gradient(0deg, #ffffff0b 0 1px, #5166480c 1px 3px),
+    conic-gradient(#aab99b 25%, #9dab8b 0 50%, #aab99b 0 75%, #9dab8b 0) 0 0 / 560px 300px;
+  box-shadow: inset 0 14px 30px #30433140;
+}
+.dojo-pillar {
+  position: absolute;
+  top: 0;
+  height: var(--floor-top);
+  width: clamp(25px, 3.5vw, 58px);
+  background: linear-gradient(90deg, #d1d3cb 0 8%, #f7f7f0 10%, #eeeee6 76%, #c4c7bd 79%, #bfc3b9);
+  border-left: 1px solid #ffffff80;
+  box-shadow: 12px 0 14px #31332922, -3px 0 7px #3943310d;
+}
+.dojo-pillar::after {
+  content: '';
+  position: absolute;
+  inset: auto -2px 0;
+  height: 20px;
+  background: linear-gradient(90deg, #80603d, #b58a56 12%, #a77a46 78%, #735330 80%);
+  box-shadow: 0 3px 4px #293b3033;
+}
+.dojo-pillar-left { left: 1%; }
+.dojo-pillar-right { right: 1%; }
+.topbar {
+  background: #f7f7f02b;
+  border-color: #a8afa04d;
+}
+.ink-hero { border-bottom-color: transparent; }
+.scroll-caption { color: #62675b; }
+#home-screen > .chapter-heading {
+  margin-top: 100px;
+  margin-bottom: 0;
+  padding: 18px 26px;
+  background: #f7f6edf2;
+  border-top: 3px solid #87633e;
+}
+.chapter-grid {
+  background: #f7f6edf5;
+  box-shadow: 0 10px 20px #25372520;
+}
+.chapter:hover { background: #637d5012; }
+.chapter.selected { background: #637d501a; }
+.course-shelf {
+  margin-top: 24px;
+  padding: 1px 26px 12px;
+  background: #f7f6edf5;
+  box-shadow: 0 6px 18px #25372518;
+}
+.journey {
+  padding: 20px 26px;
+  background: #eff2e7ed;
+  border: 1px solid #e1e6d5;
+}
+footer { color: #303e2e; }
+#practice-screen {
+  margin-top: 24px;
+  padding: 0 26px 26px;
+  background: #f5f5edf5;
+  box-shadow: 0 8px 24px #25372520;
+}
+@media (max-width: 760px) {
+  .dojo-room {
+    --wall-height: 420px;
+    --wood-height: 180px;
+  }
+  .dojo-pillar { width: 17px; }
+  .dojo-pillar-left { left: 0; }
+  .dojo-pillar-right { right: 0; }
+  #home-screen > .chapter-heading { margin-top: 80px; padding: 16px 14px; }
+  .chapter-grid { background: #f7f6edf2; }
+  .course-shelf { padding: 1px 14px 12px; }
+  .journey { padding: 18px 12px; }
+  #practice-screen { padding: 0 10px 18px; }
+}
+@media (max-width: 480px) {
+  #practice-screen .panel { grid-template-columns: minmax(0, 1fr); }
+}

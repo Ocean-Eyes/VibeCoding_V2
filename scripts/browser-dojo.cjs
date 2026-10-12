@@ -8,7 +8,7 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
  try{
   const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(base);await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:'.test-output/dojo-home.png',fullPage:true});
-  assert.deepEqual(await page.locator('.chapter-name').allTextContents(),['기초 ↗','굳히기본 ↗','매치기본 ↗']);
+  assert.deepEqual(await page.locator('.chapter-name').allTextContents(),['기초 ↗','굳히기본 ↗','메치기본 ↗']);
   assert.equal(await page.locator('#practice-screen').isVisible(),false);
   await page.locator('[data-category="basics"]').click();assert.equal(await page.locator('.lesson-enter:disabled').count(),3);
   await page.locator('[data-category="throws"]').click();assert.equal(await page.locator('.coming-panel').isVisible(),true);
