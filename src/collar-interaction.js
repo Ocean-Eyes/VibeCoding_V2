@@ -39,9 +39,9 @@ export function collarHit(point,deformation=[],excluded=[]){
  for(const side of [-1,1]){
   if(excluded.includes(side))continue;
   for(let k=0;k<=120;k++){
-   const t=k/120,rest=lapelRest(side,t);if(rest.y<.145||rest.y>.43)continue;
+   const t=k/120,rest=lapelRest(side,t);if(rest.y<.12||rest.y>.46)continue;
    const p=lapelPoint(side,t,deformation),d=Math.hypot(point.x-p.x,point.y-p.y);
-   if(d<.092&&(!best||d<best.distance))best={side,t,point:p,distance:d};
+   if(d<.13&&(!best||d<best.distance))best={side,t,point:p,distance:d};
   }
  }
  return best;
@@ -58,19 +58,19 @@ function fingerExtensions(hand){
 }
 export function fingerExtension(hand){const ratios=fingerExtensions(hand);return ratios?ratios.reduce((a,b)=>a+b,0)/4:null}
 function deliberatelyOpen(hand){return fingerExtensions(hand)?.every(r=>r>.94)??false}
-// Use the 3D palm normal, including depth: a natural grip may be edge-on
-// to the webcam. A 2D projected-area test would force the user to flatten it.
+// Camera-facing normal only: gravity/vertical tilt must not swap palm and back.
+// In projected mirrored coordinates a positive value means palm toward camera.
+export function cameraPalmNormal(hand,index,mirrored=true){
+ const w=hand[0],a=hand[5],b=hand[17];
+ const u={x:a.x-w.x,y:a.y-w.y,z:(a.z??0)-(w.z??0)},v={x:b.x-w.x,y:b.y-w.y,z:(b.z??0)-(w.z??0)};
+ const nx=u.y*v.z-u.z*v.y,ny=u.z*v.x-u.x*v.z,nz=u.x*v.y-u.y*v.x,length=Math.hypot(nx,ny,nz);
+ return length<.00001?0:nz*(index?-1:1)*(mirrored?-1:1)/length;
+}
 export function gripPosture(hand,index,side,mirrored,direction){
- const center=graspCenter(hand),wrist=hand[0],dx=center.x-wrist.x,dy=center.y-wrist.y,length=Math.hypot(dx,dy);
  if(side!==(index?-1:1)*(mirrored?1:-1))return 'opposite';
- if(length<.025||side*dx/length<.25||dy/length>-.12)return 'diagonal';
- const a=hand[5],b=hand[17],u={x:a.x-wrist.x,y:a.y-wrist.y,z:(a.z??0)-(wrist.z??0)},v={x:b.x-wrist.x,y:b.y-wrist.y,z:(b.z??0)-(wrist.z??0)};
- const nx=u.y*v.z-u.z*v.y,ny=u.z*v.x-u.x*v.z,nz=u.x*v.y-u.y*v.x;
- const length3D=Math.hypot(nx,ny,nz);
- if(length3D<.00001)return 'turn';
- // Downward and toward-camera components form the expected grip hemisphere.
- const normal=(ny-nz)*(index?-1:1)*(mirrored?1:-1)/(Math.SQRT2*length3D);
- if(Math.abs(normal)<.10)return 'turn';
+ const normal=cameraPalmNormal(hand,index,mirrored);
+ // Allow broad tilt, but an edge-on hand supplies no reliable front/back signal.
+ if(Math.abs(normal)<.20)return 'turn';
  if((normal>0)!==(direction==='↓'))return 'palm';
  return null;
 }
@@ -103,7 +103,7 @@ export class CollarInteraction{
     continue;
    }
    const center=graspCenter(hand);
-   if(extension>.90)h.closed=false;else if(extension<.86)h.closed=true;
+   if(extension>.96)h.closed=false;else if(extension<.92)h.closed=true;
    if(h.grip){
     // Opening must be clear and sustained; a curled grip never unlatches merely
     // because it left the original collision zone while being pulled.
@@ -130,11 +130,11 @@ export class CollarInteraction{
    h.posture=h.hover?gripPosture(hand,i,h.hover.side,mirrored,directions[i]):null;
    h.armed=!!h.hover&&!h.posture;
    // Bent fingers may enter already prepared: no fully-open gesture is required.
-   // Stable contact + correct opposite lapel, diagonal wrist and palm orientation
+   // Stable contact + correct opposite lapel and camera-facing palm orientation
    // prevent an arbitrary fist or a flat open hand from attaching to the coat.
    if(!h.closed||!h.armed){h.pending=null;continue}
    if(!h.pending||h.pending.side!==h.hover.side)h.pending={...h.hover,since:now};
-   if(now-h.pending.since>=120){
+   if(now-h.pending.since>=100){
     const hit=h.hover,rest=lapelRest(hit.side,hit.t),offset={x:center.x-rest.x,y:center.y-rest.y};
     h.grip={side:hit.side,t:hit.t,start:center,center,offset,dx:offset.x,dy:offset.y,travelX:0};h.pending=null;
    }

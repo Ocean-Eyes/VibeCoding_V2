@@ -134,7 +134,7 @@ function draw(now){
   }else drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected]);
   const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:
     state?.trackingPaused?'깃은 잡고 있습니다. 양손이 다시 보이면 당김 판정을 이어갑니다.':!state?.visible?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
-    state.posture?.some(p=>p==='palm'||p==='turn')?'기술 설명의 손바닥 방향으로 손을 돌려 깃을 잡으세요.':state.posture?.some(Boolean)?'손목을 비스듬히 교차해 각각 반대편 깃을 잡으세요.':
+    state.posture?.some(p=>p==='palm'||p==='turn')?`카메라에 왼손 ${activeTechnique.directions[0]==='↓'?'손바닥':'손등'}, 오른손 ${activeTechnique.directions[1]==='↓'?'손바닥':'손등'}이 보이게 해 주세요.`:state.posture?.some(Boolean)?'각 손으로 반대편 깃을 잡으세요.':
     state.count===0?'손가락을 굽히고 손목을 교차해 반대편 깃을 잡으세요.':state.count===1?'한쪽 깃이 잡혔습니다. 다른 손으로 반대쪽 깃을 잡으세요.':
     !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.pullDirection==='together'?'양손이 같은 방향으로 움직였습니다. 서로 반대 방향으로 당겨 주세요.':state.tension<.7?'양쪽 깃이 잡혔습니다. 쥔 손을 양옆으로 당기세요.':'깃이 당겨지고 있습니다. 잠깐 유지하세요.';
   $('tracking-label').textContent=demonstrating?'시연 중':state?.visible?`${state.visible}개 손 인식 · ${state.count}개 깃 잡힘`:stream?'인식 대기':'대기';

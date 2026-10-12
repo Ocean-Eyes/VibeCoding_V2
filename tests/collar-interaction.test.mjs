@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CollarInteraction,lapelPoint,lapelRest,graspCenter,fingerExtension,clothPoint} from '../src/collar-interaction.js';
+import {CollarInteraction,lapelPoint,lapelRest,graspCenter,fingerExtension,clothPoint,cameraPalmNormal,gripPosture} from '../src/collar-interaction.js';
 import {collarHands,handAt} from './fixtures/collar-hands.mjs';
 function setup(){
  const model=new CollarInteraction();let time=0,state;
@@ -18,7 +18,7 @@ test('prepared curled hands can enter the opposite lapel without first spreading
  assert.equal(c.step('close',100).count,2,'stable contact in the prepared posture acquires the collar');
 });
 
-test('each technique requires its palm orientation and a diagonal wrist on the opposite collar',()=>{
+test('each technique requires its camera-facing orientation on the opposite collar',()=>{
  for(const directions of [['↓','↓'],['↑','↑'],['↑','↓']]){
   const model=new CollarInteraction();
   const hands=[0,1].map(i=>handAt(lapelRest(i?-1:1,i?.48:.29),1,i===0,directions[i]==='↑'));
@@ -31,7 +31,7 @@ test('each technique requires its palm orientation and a diagonal wrist on the o
   const center=graspCenter(h),a=i?.95:-.95,c=Math.cos(a),s=Math.sin(a);
   return h.map(p=>({...p,x:center.x+(p.x-center.x)*c-(p.y-center.y)*s,y:center.y+(p.x-center.x)*s+(p.y-center.y)*c}));
  });
- assert.equal(setup().step(vertical).count,0,'upright hands must not replace the crossing posture');
+ assert.equal(setup().step(vertical).count,2,'correct opposite-lapel grips do not require an artificial diagonal wrist angle');
 });
 
 test('collar attachment coordinates remain continuous with anchored neck and waist',()=>{
@@ -99,18 +99,44 @@ test('a stationary hand still pins its fabric while the other hand pulls',()=>{
  assert.ok(Math.hypot(other.x-moving.x-.20,other.y-moving.y-.03)<1e-10);
 });
 
-test('edge-on palms with depth still acquire without being flattened toward the camera',()=>{
- const hands=collarHands('close').map((hand,i)=>{
-  const center=graspCenter(hand),sign=i?-1:1;
-  // Rotate the palm around the wrist-to-MCP axis while preserving diagonal approach.
-  const w=hand[0],axis={x:center.x-w.x,y:center.y-w.y,z:0},len=Math.hypot(axis.x,axis.y);axis.x/=len;axis.y/=len;
-  const angle=sign*1.30,c=Math.cos(angle),s=Math.sin(angle);
-  return hand.map(p=>{
-   const v={x:p.x-w.x,y:p.y-w.y,z:(p.z??0)-(w.z??0)},dot=v.x*axis.x+v.y*axis.y;
-   return {x:w.x+v.x*c+axis.y*v.z*s+axis.x*dot*(1-c),y:w.y+v.y*c-axis.x*v.z*s+axis.y*dot*(1-c),z:(w.z??0)+v.z*c+(axis.x*v.y-axis.y*v.x)*s};
+test('camera-facing classification is independent of gravity, wrist angle and mirroring',()=>{
+ // Independent anatomical fixture: selfie left palm has index toward screen right,
+ // pinky toward screen left; the right palm is opposite. No AAH hand generator.
+ for(const index of [0,1])for(const mirrored of [true,false])for(const palm of [true,false]){
+  for(const angle of [0,.7,1.5,2.8])for(const tilt of [-1.1,0,1.1]){
+   const sign=(index?-1:1)*(mirrored?1:-1)*(palm?1:-1);
+   const hand=Array.from({length:21},()=>({x:0,y:0,z:0}));
+   hand[5]={x:.05*sign,y:-.12,z:0};hand[17]={x:-.05*sign,y:-.12,z:0};
+   for(const p of hand){
+    p.z=p.x*Math.sin(tilt);p.x*=Math.cos(tilt);
+    const x=p.x,y=p.y;p.x=x*Math.cos(angle)-y*Math.sin(angle);p.y=x*Math.sin(angle)+y*Math.cos(angle);
+   }
+   const side=(index?-1:1)*(mirrored?1:-1),direction=palm?'↓':'↑';
+   assert.equal(cameraPalmNormal(hand,index,mirrored)>0,palm);
+   assert.equal(gripPosture(hand,index,side,mirrored,direction),null);
+   assert.equal(gripPosture(hand,index,side,mirrored,palm?'↑':'↓'),'palm');
+  }
+ }
+});
+
+test('an edge-on hand cannot substitute for either palm or back',()=>{
+ for(const index of [0,1])for(const direction of ['↓','↑']){
+  const hand=Array.from({length:21},()=>({x:0,y:0,z:0}));
+  hand[5]={x:0,y:-.12,z:.05};hand[17]={x:0,y:-.12,z:-.05};
+  assert.equal(gripPosture(hand,index,index?-1:1,true,direction),'turn');
+ }
+});
+
+test('a half-curled grip near either lapel acquires without a precise wrist angle',()=>{
+ for(const directions of [['↓','↓'],['↑','↑']]){
+  const hands=[0,1].map(i=>{
+   const center=lapelRest(i?-1:1,i?.48:.29);center.x+=(i?-1:1)*.105;
+   return handAt(center,.5,i===0,directions[i]==='↑');
   });
- });
- assert.equal(setup().step(hands).count,2);
+  const model=new CollarInteraction();let state;
+  for(let now=0;now<=240;now+=20)state=model.update(hands,now,{directions});
+  assert.equal(state.count,2);
+ }
 });
 
 test('brief occlusion preserves both grips and pauses hold until observations return',()=>{

@@ -11,12 +11,12 @@ const assert=require('node:assert/strict');
    const context=HTMLCanvasElement.prototype.getContext;
    HTMLCanvasElement.prototype.getContext=function(kind,options){return context.call(this,kind,kind==='2d'&&this.id==='partner'?{...options,willReadFrequently:true}:options)};
    window.qaGripPhase='open';const Original=Worker;
-   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame')d.phase=window.qaGripPhase;super.postMessage(d,t)}};
+   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;}super.postMessage(d,t)}};
   });
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
    const deps=Promise.all([import('./pose.js'),import('/tests/fixtures/collar-hands.mjs')]);
    self.onmessage=async({data})=>{
-    const [{POSES,targetPose},{collarHands}]=await deps;
+    const [{POSES,targetPose},{collarHands,handAt}]=await deps;
     if(data.type==='init')self.postMessage({type:'ready'});
     if(data.type==='frame'){
      const w=data.bitmap.width,h=data.bitmap.height;data.bitmap.close();
@@ -24,6 +24,14 @@ const assert=require('node:assert/strict');
      if(data.phase==='inward')for(const id of [11,12])pose[id].x=frame.origin.x+(pose[id].x-frame.origin.x)*1.35;
      const hands=collarHands(data.phase).map((hand,i)=>{
       if(!hand)return null;
+      if(data.palmUp){
+       const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
+       hand=handAt(center,data.phase==='open'?0:1,i===0,true);
+      }
+      if(data.edge){
+       const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
+       hand=hand.map(p=>({x:center.x,y:p.y,z:p.x-center.x}));
+      }
       const mapped=hand.map(p=>({x:frame.origin.x-p.x*frame.scale,y:frame.origin.y+p.y*frame.scale,z:p.z*frame.scale,visibility:1}));
       pose[15+i]=mapped[0];return mapped.map(p=>({...p,x:p.x/w,y:p.y/h,z:p.z/w}));
      });
@@ -87,6 +95,25 @@ const assert=require('node:assert/strict');
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   assert.ok(await page.evaluate(()=>document.querySelector('#live-score').getBoundingClientRect().top>=document.querySelector('#viewport').getBoundingClientRect().bottom),'score panel must not cover enlarged hands');
   await page.locator('#back-menu').click();assert.equal(await page.locator('#video').evaluate(v=>v.srcObject),null);
-  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: open/close collision, prepared closed-entry capture, two cloth attachments, one-hand pull rejected, confirmed fast pull responds, inward pull with widening shoulders triggers tap/XP, release, tracking loss, mobile, cleanup. Synthetic camera landmarks.');
+  // Check the user-facing camera convention through the real projection path,
+  // on both techniques and mirror settings, rather than just fixture math.
+  await page.setViewportSize({width:1440,height:1050});
+  for(const [lesson,up,face]of [['nami',false,'손바닥'],['gyaku',true,'손등']]){
+   await page.evaluate(up=>{window.qaGripPhase='close';window.qaPalmUp=!up;window.qaEdge=false},up);
+   await page.locator(`[data-lesson="${lesson}"]`).click();await page.locator('#play').click();
+   await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='2');await page.waitForTimeout(400);
+   assert.equal(await grabbed(),'0','the wrong face must not acquire');
+   assert.match(await page.locator('#live-feedback').innerText(),new RegExp(face));
+   await page.evaluate(()=>window.qaEdge=true);await page.waitForTimeout(500);
+   assert.equal(await grabbed(),'0','edge-on hands must not acquire');
+   await page.evaluate(up=>{window.qaEdge=false;window.qaPalmUp=up},up);
+   await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
+   await page.locator('#viewport').screenshot({path:`.test-output/${lesson}-camera-grip.png`});
+   await page.locator('#mirror').uncheck();
+   await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
+   await phase('open');assert.equal(await grabbed(),'0');
+   await page.locator('#mirror').check();await page.locator('#back-menu').click();
+  }
+  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: open/close collision, prepared closed-entry capture, two cloth attachments, one-hand pull rejected, confirmed fast pull responds, inward pull with widening shoulders triggers tap/XP, release, tracking loss, mobile, cleanup, palm/back and edge-on rejection for both techniques with mirroring. Synthetic camera landmarks.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

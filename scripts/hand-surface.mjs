@@ -1,4 +1,5 @@
-import {handCapsules} from '../src/hand-rig.js';
+import {drawLiveGlove} from '../src/live-glove.js';
+import {posedHand,handViewPoint,handCapsules} from '../src/hand-rig.js';
 let renderer;const sprites=new Map();
 const vertex=`attribute vec2 position;void main(){gl_Position=vec4(position,0.,1.);}`;
 const fragment=`precision highp float;
@@ -58,6 +59,11 @@ function init(){
 export function drawAnatomicalArm(ctx,wrist,angle,left,palmUp,ghost=false,mirrored=false,gripped=false){
  const key=`${left}/${palmUp}/${ghost}/${gripped}`;
  if(!sprites.has(key)){
+  if(ghost){
+   const sprite=document.createElement('canvas');sprite.width=320;sprite.height=640;
+   const hand=posedHand(1).landmarks.map(p=>{const q=handViewPoint(p,left,palmUp);return {x:(q[0]+.12)/.24*320,y:(q[1]+.15)/.48*640,z:q[2]/.24*320}});
+   drawLiveGlove(sprite.getContext('2d'),hand,palmUp,{x:160,y:640},gripped&&!palmUp,1);sprites.set(key,sprite);
+  }else{
   renderer??=init();const {canvas,gl,program}=renderer,segments=handCapsules(left,palmUp);
   gl.uniform4fv(gl.getUniformLocation(program,'boneA[0]'),new Float32Array(segments.flatMap(b=>[...b.a,b.r])));
   gl.uniform4fv(gl.getUniformLocation(program,'boneB[0]'),new Float32Array(segments.flatMap(b=>[...b.b,0])));
@@ -65,6 +71,7 @@ export function drawAnatomicalArm(ctx,wrist,angle,left,palmUp,ghost=false,mirror
   gl.uniform1f(gl.getUniformLocation(program,'thumbHidden'),gripped&&!palmUp?1:0);
   gl.drawArrays(gl.TRIANGLES,0,6);
   const sprite=document.createElement('canvas');sprite.width=320;sprite.height=640;sprite.getContext('2d').drawImage(canvas,0,0);sprites.set(key,sprite);
+  }
  }
  ctx.save();ctx.translate(wrist.x,wrist.y);ctx.rotate(angle);if(mirrored)ctx.scale(-1,1);
  const scale=2.55;ctx.drawImage(sprites.get(key),-.12*scale,-.15*scale,.24*scale,.48*scale);ctx.restore();
