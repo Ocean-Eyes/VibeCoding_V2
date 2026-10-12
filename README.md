@@ -79,3 +79,9 @@ node scripts/browser-entry.cjs <Playwright 패키지 경로>
 강도관 영상 링크는 [강도관 공식 기술 목록](https://kdkjd.org/names-of-judo-techniques/)에서 확인했습니다. 영상 임베드가 제한되면 플레이어 아래 YouTube 링크를 이용합니다. 가상 상대의 탭은 손 위치 유지로 발생하는 게임 이벤트이며 실제 압박의 시뮬레이션이 아닙니다.
 
 진입 회귀 검사(`browser-entry.cjs`)는 빌드 산출물에서 구형 Canvas 환경, 이전 무버전 모듈 캐시, 연습 모듈 로드 실패, 로딩 중 메뉴 복귀를 확인합니다. 연습 모듈 초기화는 메뉴에서 분리되어 실패해도 기술 설명과 메뉴 복귀는 사용할 수 있습니다.
+
+## Portrait image
+
+`assets/jigoro-kano.jpg`: the user-selected portrait of Kano Jigoro (378 x 469).
+Source: [Wikimedia Commons, Kano Jigoro.jpg](https://commons.wikimedia.org/wiki/File:Kano_Jigoro.jpg), listed as public domain (PD-Japan-oldphoto / PD-1996).
+The original photograph is included unchanged; the frame is drawn with CSS.
