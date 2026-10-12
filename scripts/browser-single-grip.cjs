@@ -33,9 +33,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    await page.setViewportSize({width,height:1050});
    await page.evaluate(qa=>window.qa=qa,{side,up,closed:false});
    await page.locator('[data-lesson="'+lesson+'"]').click();
+   await page.waitForFunction(()=>document.querySelector('#pose-list').children.length===3);
    await page.locator('#mirror').setChecked(mirrored);
    await page.locator('#play').click();
-   await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='1');
+   await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='1').catch(async error=>{
+    console.error('Capture setup failed',JSON.stringify({width,lesson,side,mirrored,status:await page.locator('#notice').innerText(),hands:await page.locator('#overlay').getAttribute('data-live-hands')}));
+    throw error;
+   });
    await page.waitForTimeout(250);
    const trace=await page.evaluate(async()=>{
     const c=document.querySelector('#partner'),overlay=document.querySelector('#overlay');
