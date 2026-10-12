@@ -11,7 +11,7 @@ export function collarHands(phase){
   const side=i?-1:1,point=lapelRest(side,side>0?.12:.20);
   if(['pull','release'].includes(phase)||(phase==='one-pull'&&i===0))point.x+=side*.22;
   if(phase==='fast')point.x+=side*.56;
-  if(['inward','hands-only'].includes(phase))point.x-=side*.19;
+  if(phase==='inward')point.x-=side*.19;
   if(phase==='outside'){point.x=side*.7;point.y=.7}
   const open=['open','release'].includes(phase);
   return handAt(point,open?0:1,i===0);

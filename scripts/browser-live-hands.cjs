@@ -6,11 +6,26 @@ const assert=require('node:assert/strict');
   const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[];
   page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
   await page.addInitScript(()=>{
+   const context=HTMLCanvasElement.prototype.getContext;
+   HTMLCanvasElement.prototype.getContext=function(kind,options){return context.call(this,kind,kind==='2d'?{...options,willReadFrequently:true}:options)};
    const Original=Worker;window.qaGesture='open';
    window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.gesture=window.qaGesture;d.reversed=window.qaReversed;d.one=window.qaOne;d.missing=window.qaMissing;d.spike=(window.qaSpikeFrames??0)>0;if(d.spike)window.qaSpikeFrames--;d.swap=window.qaPoseSwap}super.postMessage(d,t)}};
   });
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
    const deps=Promise.all([import('./pose.js'),import('./hand-rig.js')]);
+   let previous=null;
+   function gradual(target){
+    if(!previous){previous=target.map(h=>h?.map(p=>({...p}))??null);return target}
+    const result=target.map((hand,i)=>{
+     if(!hand)return null;
+     if(!previous[i])return hand;
+     const distance=Math.max(...hand.map((p,k)=>Math.hypot(p.x-previous[i][k].x,p.y-previous[i][k].y)));
+     const u=Math.min(1,.009/Math.max(.00001,distance));
+     return hand.map((p,k)=>({...p,x:previous[i][k].x+(p.x-previous[i][k].x)*u,y:previous[i][k].y+(p.y-previous[i][k].y)*u,z:previous[i][k].z+(p.z-previous[i][k].z)*u}));
+    });
+    if(target.some(Boolean))previous=result.map(h=>h?.map(p=>({...p}))??null);
+    return result;
+   }
    self.onmessage=async({data})=>{
     const [{POSES,targetPose},{posedHand,handViewPoint}]=await deps;
     if(data.type==='init')self.postMessage({type:'ready'});
@@ -20,10 +35,12 @@ const assert=require('node:assert/strict');
      const pose=targetPose(frame,POSES[data.gesture==='cross'?2:0]);
      if(data.gesture!=='cross'){pose[15].x+=frame.scale*.5;pose[16].x-=frame.scale*.5}
      const curl=data.gesture==='open'?0:data.gesture==='half'?.5:1;
-     const hands=[0,1].map(i=>posedHand(curl).landmarks.map(p=>{
+     let hands=[0,1].map(i=>posedHand(curl).landmarks.map(p=>{
       const q=handViewPoint(p,i===0,false),wrist=pose[15+i];
       return {x:(wrist.x+q[0]*frame.scale*2.55)/w,y:(wrist.y+q[1]*frame.scale*2.55)/h,z:q[2]*frame.scale*2.55/w};
      }));
+     hands=gradual(hands);
+     hands.forEach((hand,i)=>{pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
      if(data.spike)hands.forEach(h=>h.forEach(p=>p.x+=.4));
      if(data.swap)[pose[15],pose[16]]=[pose[16],pose[15]];
      if(data.one)hands.splice(1,1);if(data.reversed)hands.reverse();
@@ -36,7 +53,7 @@ const assert=require('node:assert/strict');
   await page.locator('#play').click(); // Keep the lesson on one step while changing real input.
   const partner=await page.locator('#partner').evaluate(c=>c.toDataURL()),renders=[];
   for(const gesture of ['open','half','fist','cross']){
-   await page.evaluate(g=>window.qaGesture=g,gesture);await page.waitForTimeout(900);
+   await page.evaluate(g=>window.qaGesture=g,gesture);await page.waitForTimeout(2400);
    await page.locator('#viewport').screenshot({path:`.test-output/live-glove-${gesture}.png`});
    renders.push(await page.locator('#overlay').evaluate(c=>c.toDataURL()));
    assert.equal(await page.locator('#overlay').getAttribute('data-grabbed'),'0','free-hand rendering fixture must remain outside the collar');
@@ -44,7 +61,7 @@ const assert=require('node:assert/strict');
   }
   assert.equal(new Set(renders).size,4,'individual finger flexion and crossing change the live surface');
   const beforeOrder=await page.locator('#overlay').evaluate(c=>Array.from(c.getContext('2d').getImageData(0,0,c.width,c.height).data));
-  await page.evaluate(()=>window.qaReversed=true);await page.waitForTimeout(900);
+  await page.evaluate(()=>window.qaReversed=true);await page.waitForTimeout(2400);
   const afterOrder=await page.locator('#overlay').evaluate(c=>Array.from(c.getContext('2d').getImageData(0,0,c.width,c.height).data));
   const drift=beforeOrder.reduce((v,x,i)=>v+Math.abs(x-afterOrder[i]),0)/beforeOrder.length;
   assert.ok(drift<.3,`detector reorder should not swap limbs: mean pixel drift ${drift}`);

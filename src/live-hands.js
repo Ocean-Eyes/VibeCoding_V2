@@ -113,16 +113,13 @@ export class HandIdentityTracker{
   }else{
    const a=cost(valid[0],0)+cost(valid[1],1),b=cost(valid[1],0)+cost(valid[0],1);
    if(this.tracks.every(Boolean)&&Math.abs(a-b)<.008)return [null,null];
-   if(distance(handCenter(valid[0]),handCenter(valid[1]))<Math.max(.012,Math.min(...valid.map(palmSize))*.8))return [null,null];
+   if(distance(handCenter(valid[0]),handCenter(valid[1]))<Math.max(.012,Math.min(...valid.map(h=>distance(h[5],h[17])))*.55))return [null,null];
    chosen=a<=b?valid:[valid[1],valid[0]];
   }
   chosen.forEach((h,i)=>{
    if(!h)return;const old=this.tracks[i],dt=old?Math.max(1,time-old.time):1;
    // Do not let a single distant detection poison the identity prediction.
-   if(old&&distance(h[0],old.hand[0])>Math.max(.10,palmSize(old.hand)*2.5)){
-    if(!old.candidate||distance(h[0],old.candidate.point)>.06)old.candidate={point:h[0],time};
-    if(time-old.candidate.time<100)return;
-   }
+   if(old&&distance(h[0],old.hand[0])>Math.max(.10,palmSize(old.hand)*2.5))return;
    const sampleVx=old?(h[0].x-old.hand[0].x)/dt:0,sampleVy=old?(h[0].y-old.hand[0].y)/dt:0;
    // Extrapolate only consistent motion. A single approach jump followed by a
    // stop must not predict through the other hand and swap their identities.
@@ -136,23 +133,22 @@ export class HandIdentityTracker{
 // the last glove, but trackedAt returns null until observations are trusted.
 export class HandStream{
  constructor(){this.filter=new LandmarkStream();this.reset()}
- reset(){this.filter.reset();this.accepted=null;this.lastSeen=null;this.observed=false;this.candidate=null;this.bridge=null}
+ reset(){this.filter.reset();this.accepted=null;this.lastSeen=null;this.observed=false;this.missingSince=null;this.bridge=null}
  update(hand,time){
-  if(!hand){this.observed=false;this.candidate=null;return}
+  if(!hand){this.observed=false;this.missingSince??=time;return}
   // After a longer absence, do not compare a new distance/scale to an expired hand.
-  if(this.lastSeen!==null&&time-this.lastSeen>600)this.reset();
+  if(this.missingSince!==null&&time-this.missingSince>600)this.reset();
+  this.missingSince=null;
   const old=this.accepted,visible=this.at(time),size=old?palmSize(old):0;
-  const jump=old&&(distance(hand[0],old[0])>Math.max(.075,size*1.8)||distance(handCenter(hand),handCenter(old))>Math.max(.09,size*2));
+  const step=Math.max(.015,Math.min(.035,size*.7))*Math.min(1.5,Math.max(.5,(time-(this.lastSeen??time))/65));
+  const jump=old&&(distance(hand[0],old[0])>step||distance(handCenter(hand),handCenter(old))>step*1.2);
   const oldRadius=old?Math.max(...old.map(p=>distance(p,old[0]))):0;
   const distorted=old&&hand.some(p=>distance(p,hand[0])>Math.max(.12,oldRadius*2.5));
-  if(jump||distorted){
-   if(!this.candidate||distance(hand[0],this.candidate.hand[0])>Math.max(.06,size*1.3))this.candidate={hand:copyHand(hand),since:time};
-   else this.candidate.hand=copyHand(hand);
-   if(distorted||time-this.candidate.since<100){this.observed=false;return}
-  }
+  // Do not promote a repeated outlier to a valid fast movement.
+  if(jump||distorted){this.observed=false;return}
   const resume=old&&(!this.observed||this.lastSeen===null||time-this.lastSeen>150);
   if(resume){this.filter.reset();this.bridge=visible?{from:visible,time,duration:150}:null}
-  this.filter.update(hand,time);this.accepted=copyHand(hand);this.lastSeen=time;this.observed=true;this.candidate=null;
+  this.filter.update(hand,time);this.accepted=copyHand(hand);this.lastSeen=time;this.observed=true;
  }
  at(time){
   if(this.lastSeen===null||time-this.lastSeen>350)return null;

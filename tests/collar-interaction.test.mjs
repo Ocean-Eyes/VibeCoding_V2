@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CollarInteraction,lapelPoint,lapelRest,graspCenter,fingerExtension,clothPoint,cameraPalmNormal,gripPosture} from '../src/collar-interaction.js';
 import {collarHands,collarArms,handAt} from './fixtures/collar-hands.mjs';
+function movedHands(amount){return collarHands('close').map((h,i)=>h.map(p=>({...p,x:p.x+(i?-1:1)*amount})))}
+function ramp(a,amount){let state;for(let i=1;i<=20;i++)state=a.step(movedHands(amount*i/20),40);return state}
 function setup(){
  const model=new CollarInteraction();let time=0,state;
  return {model,step(phase,duration=240,active=true){for(let t=0;t<duration;t+=20){time+=20;state=model.update(typeof phase==='string'?collarHands(phase):phase,time,{active,arms:collarArms(phase)})}return state}};
@@ -48,10 +50,10 @@ test('collar attachment coordinates remain continuous with anchored neck and wai
 });
 
 test('attached cloth stays at each hand during lateral pull, while the neckline and waist stay anchored',()=>{
- const a=setup();a.step('open');a.step('close');const state=a.step('pull',200);
+ const a=setup();a.step('open');a.step('close');const state=ramp(a,.22);
  for(const [i,g]of state.grips.entries()){
   const pin=lapelPoint(g.side,g.t,state.deformation),hand=graspCenter(collarHands('pull')[i]);
-  assert.ok(Math.hypot(pin.x-hand.x,pin.y-hand.y)<1e-10);
+  assert.ok(Math.hypot(pin.x-hand.x-g.contactOffset.x,pin.y-hand.y-g.contactOffset.y)<1e-10);
   assert.deepEqual(lapelPoint(g.side,0,state.deformation),lapelRest(g.side,0));
   assert.deepEqual(lapelPoint(g.side,1,state.deformation),clothPoint(lapelRest(g.side,1),state.deformation));
  }
@@ -147,7 +149,7 @@ test('brief occlusion preserves both grips and pauses hold until observations re
  assert.equal(a.step('lift',900).tapped,true,'resume the same grips without going back to the collars');
 });
 test('brief false-open observations do not unlatch; sustained open hands do',()=>{
- const a=setup();a.step('close');a.step('pull',300);
+ const a=setup();a.step('close');ramp(a,.22);
  assert.equal(a.step('release',100).count,2);
  assert.equal(a.step('pull',100).count,2);
  const partial=collarHands('pull').map((h,i)=>handAt(graspCenter(h),.4,i===0));
@@ -170,19 +172,22 @@ test('a tracking jump keeps the last cloth pin without earning a tap',()=>{
  assert.equal(a.step('lost',1000).count,0);
 });
 
-test('a confirmed fast bilateral pull recovers from the jump filter instead of freezing at zero',()=>{
- const a=setup();a.step('close');
- const fast=collarHands('close').map((h,i)=>h.map(p=>({...p,x:p.x+(i?-1:1)*.56})));
- const initial=a.step(fast,60);assert.equal(initial.count,2);assert.equal(initial.trackingPaused,true);assert.equal(initial.completion,0);
- const confirmed=a.step(fast,200);assert.equal(confirmed.trackingPaused,false);assert.equal(confirmed.completion,0);
- assert.equal(a.step(fast,1300).tapped,false);
- assert.ok(confirmed.grips.every((g,i)=>Math.abs(g.center.x-graspCenter(fast[i]).x)<1e-8));
+test('repeated abrupt pulls never move the cloth pin, and returning resumes gradual movement',()=>{
+ const a=setup(),initial=a.step('close'),pins=initial.grips.map(g=>({...g.center}));
+ const rejected=a.step(movedHands(.56),600);
+ assert.equal(rejected.count,2);assert.equal(rejected.trackingPaused,true);
+ assert.deepEqual(rejected.grips.map(g=>g.center),pins);assert.equal(rejected.completion,0);
+ assert.equal(a.step('close',60).trackingPaused,false);
+ const recovered=ramp(a,.22);assert.equal(recovered.count,2);
+ assert.ok(recovered.grips.every(g=>Math.abs(g.travelX)>.20));
+ assert.equal(a.step(movedHands(.8),1000).count,0,'invalid observations eventually release without moving the cloth');
 });
+
 test('wide or inward hand displacement never substitutes for elbow action',()=>{
  for(const amount of [.19,-.19,.56]){
   const a=setup();a.step('close');
   const moved=collarHands('close').map((h,i)=>h.map(p=>({...p,x:p.x+(i?1:-1)*amount})));
-  const state=a.step(moved,1600);assert.equal(state.count,2);assert.equal(state.completion,0);assert.equal(state.tapped,false);
+  ramp(a,-amount);const state=a.step(moved,1600);assert.equal(state.count,2);assert.equal(state.completion,0);assert.equal(state.tapped,false);
  }
 });
 
@@ -200,7 +205,10 @@ test('body translation, shrugging and raising wrists together with elbows cannot
   for(let now=0;now<=300;now+=20)model.update(base,now,{active:true,arms:collarArms()});
   const hands=kind==='shrug'?base:base.map(h=>h.map(p=>({...p,y:p.y-.10})));
   const arms=collarArms().map(a=>({shoulder:{...a.shoulder,y:kind==='whole-arm'?0:-.10},elbow:{...a.elbow,y:a.elbow.y-(kind==='shrug'?0:.10)}}));
-  let state;for(let now=320;now<=2400;now+=20)state=model.update(hands,now,{active:true,arms});
+  let state;for(let now=320;now<=2400;now+=20){
+   const input=kind==='wide'?base.map((h,i)=>h.map(p=>({...p,x:p.x+(i?-1:1)*.20*Math.min(1,(now-300)/400)}))):hands;
+   state=model.update(input,now,{active:true,arms});
+  }
   assert.equal(state.completion,0,kind);assert.equal(state.tapped,false,kind);
  }
 });
@@ -212,7 +220,10 @@ test('low grips, drifted hands, wrong facing and hidden elbows cannot complete e
   for(let now=0;now<=300;now+=20)model.update(base,now,{active:true,arms:collarArms()});
   const hands=kind==='wide'?base.map((h,i)=>h.map(p=>({...p,x:p.x+(i?-1:1)*.20}))):kind==='wrong-face'?base.map((h,i)=>handAt(graspCenter(h),1,i===0,true)):base;
   const arms=kind==='missing'?[null,null]:collarArms('lift');if(kind==='low-confidence')arms[0].elbow.visibility=.1;
-  let state;for(let now=320;now<=2400;now+=20)state=model.update(hands,now,{active:true,arms});
+  let state;for(let now=320;now<=2400;now+=20){
+   const input=kind==='wide'?base.map((h,i)=>h.map(p=>({...p,x:p.x+(i?-1:1)*.20*Math.min(1,(now-300)/400)}))):hands;
+   state=model.update(input,now,{active:true,arms});
+  }
   assert.equal(state.count,2,kind);assert.equal(state.completion,0,kind);assert.equal(state.tapped,false,kind);
  }
 });

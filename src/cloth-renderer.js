@@ -30,7 +30,9 @@ function gradient(ctx,x0,y0,x1,y1,colors){
 function paint(ctx,path,fill,stroke=null,width=.005){ctx.fillStyle=fill;ctx.fill(path);if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke(path)}}
 export function frontPanel(side,deformation=[]){
  const grip=deformation.find(g=>g.side===side),amount=clamp(Math.max(Math.hypot(grip?.dx??0,grip?.dy??0)/.24,(grip?.engagement??0)*.55)),drawing=drawingAt(amount);
- const edge=lapelRibbon(side,deformation),pin=lapelPoint(side,grip?.t??(side>0?.29:.48),deformation);
+ const edge=lapelRibbon(side,deformation),restPin=lapelPoint(side,side>0?.29:.48,deformation),contact=lapelPoint(side,grip?.t??(side>0?.29:.48),deformation);
+ // Merely selecting an attachment must not change the neutral coat silhouette.
+ const pin={x:blend(restPin.x,contact.x,amount),y:blend(restPin.y,contact.y,amount)};
  const path=new Path2D(),start=edge[0],end=edge.at(-1),bulge=drawing.bulge;
  path.moveTo(start.x,start.y);
  path.bezierCurveTo(side*(.28+amount*.07),.105,side*(.34+amount*.12),.12,side*(.40+amount*.10),.17);

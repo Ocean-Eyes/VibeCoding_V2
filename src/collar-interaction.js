@@ -16,16 +16,20 @@ export function clothPoint(point,deformation=[]){
  const envelope=y=>ease((y-.065)/.11)*ease((1.10-y)/.30);
  const kernel=(p,g)=>{
   const pin=lapelRest(g.side,g.t),r=Math.hypot(p.x-pin.x,p.y-pin.y)/.58;
-  return r>=1?0:(1-r)**4*(1+4*r)*envelope(p.y)/Math.max(.001,envelope(pin.y));
+  return r>=1?0:(1-r)**4*(1+4*r)*Math.min(1,envelope(p.y)/Math.max(.001,envelope(pin.y)));
  };
  const grips=deformation.slice(0,2);
  if(!grips.length)return {...point};
  let coefficients=grips.map(g=>({x:g.dx,y:g.dy}));
  if(grips.length===2){
-  const a=kernel(lapelRest(grips[0].side,grips[0].t),grips[1]),b=kernel(lapelRest(grips[1].side,grips[1].t),grips[0]),det=1-a*b;
+  const a=kernel(lapelRest(grips[0].side,grips[0].t),grips[1]),b=kernel(lapelRest(grips[1].side,grips[1].t),grips[0]),det=Math.max(.001,1-a*b);
   coefficients=coefficients.map((v,i)=>({x:(v.x-(i?b:a)*grips[1-i].dx)/det,y:(v.y-(i?b:a)*grips[1-i].dy)/det}));
  }
- return grips.reduce((p,g,i)=>{const w=kernel(point,g);return {x:p.x+w*coefficients[i].x,y:p.y+w*coefficients[i].y}}, {...point});
+ const delta=grips.reduce((p,g,i)=>{const w=kernel(point,g);return {x:p.x+w*coefficients[i].x,y:p.y+w*coefficients[i].y}}, {x:0,y:0});
+ // A fixed neck anchor must attenuate motion, never amplify it. Also bound
+ // the combined field where the two sewn-edge influences overlap.
+ const limit=Math.max(...grips.map(g=>Math.hypot(g.dx,g.dy))),length=Math.hypot(delta.x,delta.y),scale=length>limit?limit/length:1;
+ return {x:point.x+delta.x*scale,y:point.y+delta.y*scale};
 }
 export function lapelPoint(side,t,deformation=[]){return clothPoint(lapelRest(side,t),deformation)}
 export function lapelRibbon(side,deformation=[]){
@@ -74,7 +78,7 @@ export function gripPosture(hand,index,side,mirrored,direction){
  if((normal>0)!==(direction==='↓'))return 'palm';
  return null;
 }
-const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSince:null,hover:null,posture:null,missingSince:null,tracked:false,motionCandidate:null});
+const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSince:null,hover:null,posture:null,missingSince:null,tracked:false});
 // Camera posture exercise only: neither collar depth behind the neck nor pressure is observable.
 export class CollarInteraction{
  constructor(){this.reset()}
@@ -97,7 +101,7 @@ export class CollarInteraction{
    const hand=observations[i],h=this.hands[i],extension=fingerExtension(hand);
    h.tracked=false;
    if(extension===null){
-    h.releaseSince=null;h.pending=null;h.motionCandidate=null;
+    h.releaseSince=null;h.pending=null;
     if(h.grip){h.missingSince??=now;if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now)}
     else this.hands[i]=emptyHand();
     continue;
@@ -111,17 +115,13 @@ export class CollarInteraction{
      h.releaseSince??=now;if(now-h.releaseSince>=GRIP_RELEASE_MS){this.release(i,now);continue}
     }else{h.releaseSince=null;h.closed=true}
     const dx=center.x-h.grip.start.x,dy=center.y-h.grip.start.y;
-    // Reject a single jump, then accept a new position confirmed over time.
-    // Comparing forever against the old pin would freeze every fast valid pull.
-    if(Math.hypot(center.x-h.grip.center.x,center.y-h.grip.center.y)>.50){
-     if(!h.motionCandidate||Math.hypot(center.x-h.motionCandidate.center.x,center.y-h.motionCandidate.center.y)>.12)h.motionCandidate={center,since:now};
+    // Sudden changes are invalid input even when repeated. Only motion
+    // continuous with the last accepted pin can move the garment.
+    if(Math.hypot(center.x-h.grip.center.x,center.y-h.grip.center.y)>.12){
      h.missingSince??=now;
-     if(now-h.motionCandidate.since<100){
-      if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now);
-      continue;
-     }
+     if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now);
+     continue;
     }
-    h.motionCandidate=null;
     h.missingSince=null;h.tracked=h.releaseSince===null;
     h.grip.dx=h.grip.offset.x+dx;h.grip.dy=h.grip.offset.y+dy;h.grip.travelX=dx;h.grip.center=center;continue;
    }
@@ -135,8 +135,9 @@ export class CollarInteraction{
    if(!h.closed||!h.armed){h.pending=null;continue}
    if(!h.pending||h.pending.side!==h.hover.side)h.pending={...h.hover,since:now};
    if(now-h.pending.since>=100){
-    const hit=h.hover,rest=lapelRest(hit.side,hit.t),offset={x:center.x-rest.x,y:center.y-rest.y};
-    h.grip={side:hit.side,t:hit.t,start:center,center,offset,dx:offset.x,dy:offset.y,travelX:0};h.pending=null;
+    // Keep the fabric where contact occurred; acquisition tolerance is not a pull.
+    const hit=h.hover,rest=lapelRest(hit.side,hit.t),offset={x:hit.point.x-rest.x,y:hit.point.y-rest.y},contactOffset={x:hit.point.x-center.x,y:hit.point.y-center.y};
+    h.grip={side:hit.side,t:hit.t,start:center,center,offset,contactOffset,dx:offset.x,dy:offset.y,travelX:0};h.pending=null;
    }
   }
   const grips=this.hands.map(h=>h.grip),count=grips.filter(Boolean).length;
@@ -162,7 +163,7 @@ export class CollarInteraction{
   const issue=trackingPaused?'tracking':!stable?'spread':!upper?'height':!facing?'orientation':completion<.7?'lift':'hold';
   // A small illustrated gather responds to the arm action without moving the
   // collar pins away from the hands or depicting the neck as stretching.
-  grips.forEach(g=>{if(g)g.engagement=completion});
+  grips.forEach(g=>{if(g){const previous=g.engagement??0;g.engagement=previous+clamp(completion-previous,-dt*3,dt*3)}});
   if(!this.tapped){
    if(!active||!crossed)this.hold=0;
    else if(trackingPaused){this.armMissingSince??=now;if(now-this.armMissingSince>=GRIP_OCCLUSION_MS)this.hold=0}

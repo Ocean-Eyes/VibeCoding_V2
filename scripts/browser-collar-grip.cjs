@@ -15,6 +15,19 @@ const assert=require('node:assert/strict');
   });
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
    const deps=Promise.all([import('./pose.js'),import('/tests/fixtures/collar-hands.mjs')]);
+   let previous=null;
+   function gradual(target){
+    if(!previous){previous=target.map(h=>h?.map(p=>({...p}))??null);return target}
+    const result=target.map((hand,i)=>{
+     if(!hand)return null;
+     if(!previous[i])return hand;
+     const distance=Math.max(...hand.map((p,k)=>Math.hypot(p.x-previous[i][k].x,p.y-previous[i][k].y)));
+     const u=Math.min(1,.009/Math.max(.00001,distance));
+     return hand.map((p,k)=>({...p,x:previous[i][k].x+(p.x-previous[i][k].x)*u,y:previous[i][k].y+(p.y-previous[i][k].y)*u,z:previous[i][k].z+(p.z-previous[i][k].z)*u}));
+    });
+    if(target.some(Boolean))previous=result.map(h=>h?.map(p=>({...p}))??null);
+    return result;
+   }
    self.onmessage=async({data})=>{
     const [{POSES,targetPose},{collarHands,handAt}]=await deps;
     if(data.type==='init')self.postMessage({type:'ready'});
@@ -25,7 +38,7 @@ const assert=require('node:assert/strict');
       pose[id].y=frame.origin.y+frame.scale*(.70-(['lift','hands-only'].includes(data.phase)||(data.phase==='one-lift'&&i===0)?.15:0));
       if(data.phase==='no-elbows')pose[id].visibility=.1;
      }
-     const hands=collarHands(data.phase).map((hand,i)=>{
+     let hands=collarHands(data.phase).map((hand,i)=>{
       if(!hand)return null;
       if(data.palmUp){
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
@@ -38,6 +51,8 @@ const assert=require('node:assert/strict');
       const mapped=hand.map(p=>({x:frame.origin.x-p.x*frame.scale,y:frame.origin.y+p.y*frame.scale,z:p.z*frame.scale,visibility:1}));
       pose[15+i]=mapped[0];return mapped.map(p=>({...p,x:p.x/w,y:p.y/h,z:p.z/w}));
      });
+     if(data.phase!=='fast')hands=gradual(hands);
+     hands.forEach((hand,i)=>{if(hand)pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
      self.postMessage({type:'result',points:data.phase==='hands-only'?null:pose.map(p=>p?{...p,x:p.x/w,y:p.y/h,z:(p.z??0)/w}:{x:0,y:0,visibility:0}),hands:hands.filter(Boolean),time:data.time});
     }
    };`}));
@@ -45,7 +60,7 @@ const assert=require('node:assert/strict');
   await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();
   await page.waitForFunction(()=>document.querySelector('#pose-list').children.length===3);
   await page.locator('#play').click();await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='2');
-  const phase=async(name,wait=500)=>{await page.evaluate(p=>window.qaGripPhase=p,name);await page.waitForTimeout(wait)};
+  const phase=async(name,wait=900)=>{await page.evaluate(p=>window.qaGripPhase=p,name);await page.waitForTimeout(wait)};
   const grabbed=()=>page.locator('#overlay').getAttribute('data-grabbed');
   await page.waitForTimeout(3100);
   const headPixels=()=>page.locator('#partner').evaluate(c=>{
@@ -67,9 +82,10 @@ const assert=require('node:assert/strict');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-grabbed.png'});
   await phase('pull',1500);assert.equal(await grabbed(),'2');assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0');
   assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false','wide lateral pulling must not complete');
-  await phase('lost',350);assert.equal(await grabbed(),'2');
+  const beforeSpike=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));
+  await phase('lost',200);assert.equal(await grabbed(),'2');
   await phase('fast',400);assert.equal(await grabbed(),'2');
-  const fastGrips=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));assert.ok(fastGrips.every(g=>Math.abs(g.travelX)>.5),'large hand movement still updates cloth but earns no score');
+  const fastGrips=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));assert.ok(fastGrips.every((g,i)=>Math.abs(g.dx-beforeSpike[i].dx)<.005),'abrupt input cannot move the held cloth');
   await phase('release',1400);assert.equal(await grabbed(),'0');
   assert.ok(await page.locator('#partner').evaluate(c=>c.toDataURL())===rest,'released cloth returns to rest');
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');

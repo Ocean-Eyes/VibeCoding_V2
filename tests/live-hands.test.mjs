@@ -89,12 +89,15 @@ test('brief hand occlusion retains a fading glove and blends confirmed recovery'
  stream.update(null,400);assert.equal(stream.at(701),null,'old pose never stays on screen indefinitely');
 });
 
-test('sustained fast hand movement is confirmed then smoothly accepted rather than frozen',()=>{
+test('persistent abrupt movement never becomes accepted; gradual recovery remains possible',()=>{
  const stream=new HandStream();stream.update(hand(.3),0);
- stream.update(hand(.6),65);stream.update(hand(.61),130);assert.equal(stream.at(130)[0].x,.3);
- stream.update(hand(.62),195);assert.equal(stream.at(195)[0].x,.3);
- assert.ok(stream.at(270)[0].x>.3&&stream.at(270)[0].x<.62);
- stream.update(hand(.62),325);assert.ok(Math.abs(stream.trackedAt(350)[0].x-.62)<.01);
+ for(let t=65;t<=1950;t+=65){
+  stream.update(hand(.6),t);assert.equal(stream.trackedAt(t),null);
+  if(t<=350)assert.equal(stream.at(t)[0].x,.3);else assert.equal(stream.at(t),null);
+ }
+ stream.update(hand(.3),2015);assert.equal(stream.at(2015)[0].x,.3);
+ for(let i=1;i<=30;i++)stream.update(hand(.3+i*.006),2015+i*65);
+ assert.ok(Math.abs(stream.trackedAt(4030)[0].x-.48)<.015);
 });
 
 test('a stretched finger outlier does not deform the visible glove',()=>{
