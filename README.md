@@ -97,3 +97,19 @@ The original photograph is included unchanged; the frame is drawn with CSS.
 외십자는 왼손 네 손가락 안쪽·당기기와 오른손 엄지 안쪽·밀기의 조합입니다.
 설명 그림과 시연은 동일한 V자 깃과 교차 손목 배치를 사용합니다. 손등을 보는 닫힌 그립에서는 접힌 손끝과 손톱을 그리지 않습니다.
 시연의 팔 움직임은 작용 방향을 표현하는 2D 도식입니다. 점수는 팔 위치만 평가하며 손바닥 방향, 실제 깃 안팎, 압박은 판정하지 않습니다.
+
+## 참고 자료 기반 손 모델
+
+사용자가 제공한 `references/ms_arm_and_hand`의 AAH 모델에서 손목 이하 28개 body의 관절 위치·축·범위와 말단 골격 STL의 손끝 위치를 추출했습니다. `references/hands.md`의 MediaPipe 순서대로 21개 관절점을 구성합니다. 좌우 손은 해부학적 속성이며, 화면 좌우 위치나 카메라 반전으로 바꾸지 않습니다. 손바닥 전환은 깊이축까지 회전시킵니다.
+
+`src/hand-rig-data.js`는 원본 XML의 SHA256을 기록합니다. `src/hand-rig.js`가 범위 내 관절 회전과 뼈 길이를 유지합니다. 피부·흰 장갑 표면은 이 골격을 감싸도록 별도로 만든 부드러운 표면이며, 원본 자료에 피부 메시가 포함되어 있다는 의미는 아닙니다. 압박·깃 마찰을 계산하는 생체역학 시뮬레이터도 아닙니다.
+
+실행 시 GPU에 의존하지 않도록 관절 모델의 여덟 가지 좌우·앞뒤·재질 렌더를 `assets/hands-aah-v1/`에 저장합니다. 실패한 AI 생성 사진은 앱에 사용하지 않습니다. 원본 모델의 MIT 고지는 `assets/AAH-LICENSE.txt`에 포함했습니다. 큰 원본 참고 폴더는 배포물에 포함하지 않습니다.
+
+재생성 (저장소 루트에서 로컬 서버 실행 후):
+
+```sh
+python scripts/extract-hand-rig.py
+node scripts/render-hand-assets.cjs <Playwright 패키지 경로>
+node scripts/browser-hand-rig.cjs <Playwright 패키지 경로>
+```

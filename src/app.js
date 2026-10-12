@@ -1,7 +1,9 @@
+import {prepareHands} from './hand-renderer.js';
 import {drawOpponent,drawGripStudy,drawGripGuides,drawTrackedHands,crossedGrip} from './opponent.js';
 import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,sceneHands} from './demonstration.js';
 import {TECHNIQUES} from './curriculum.js';
 import {PASS_SCORE,POSES,BONES,HAND_BONES,bodyFrame,targetPose,armMatch,advanceHold} from './pose.js';
+await prepareHands();
 const $=id=>document.getElementById(id),video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d');
 const cyan='#80baff',partner=$('partner'),partnerCtx=partner.getContext('2d');
 let demonstrating=true,demoStarted=performance.now(),demoStep=-1,guideStarted=performance.now();

@@ -1,3 +1,4 @@
+import {drawAnatomicalArm} from './hand-renderer.js';
 import {GRIP_STEPS,gripPlacement} from './demonstration.js';
 // Game input only: RGB positions cannot measure pressure or grip effectiveness.
 export function crossedGrip(points, target, frame) {
@@ -14,80 +15,100 @@ function gripContour(data) {
   if (!gripContours.has(data)) gripContours.set(data, new Path2D(data));
   return gripContours.get(data);
 }
-export function drawGripHand(ctx,x,y,size,palmUp,left=false,ghost=false,collar=false){
-  ctx.save();ctx.translate(x,y);ctx.scale(left===palmUp?-size:size,size);
-  ctx.lineJoin='round';ctx.lineCap='round';
-  const edge=ghost?'#87a2b0':'#88664f';
-  const paint=(d,fill,stroke=edge,width=.012)=>{
-    const p=gripContour(d);ctx.fillStyle=fill;ctx.fill(p);
-    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke(p)}
-  };
-  const line=(d,color=edge,width=.012)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke(gripContour(d))};
-  const shade=(a,b)=>{const g=ctx.createLinearGradient(-.34,-.3,.3,.5);g.addColorStop(0,a);g.addColorStop(.55,ghost?'#f8fcff':'#ebc5a6');g.addColorStop(1,b);return g};
-  const skin=shade(ghost?'#ffffff':'#d7ad8d',ghost?'#c1d4df':'#c09574');
-  const thumb='M -.22 .33 C -.38 .28 -.45 .1 -.43 -.05 C -.42 -.15 -.35 -.22 -.24 -.25 L -.04 -.3 C .05 -.3 .08 -.22 .01 -.17 L -.19 -.05 C -.19 .03 -.1 .07 -.1 .17 C -.1 .26 -.15 .32 -.22 .33 Z';
-  const lapel=()=>{
-    // Reveal the real, continuous V-shaped collar through the local grip window.
-    // The clip remains in device space when the callback restores the scene transform.
-    if(typeof collar!=='function')return;
-    ctx.save();ctx.clip(gripContour('M -.49 -.51 L .4 -.51 L .4 -.12 L -.49 -.12 Z'));
-    collar(ctx);ctx.restore();
-  };
-  if(!palmUp){
-    // Thumb is behind the lapel. The dorsal surface runs uninterrupted to MCP knuckles.
-    if(collar){paint(thumb,skin);lapel()}
-    paint('M -.19 .72 L -.2 .49 C -.22 .35 -.3 .23 -.32 .05 L -.34 -.24 C -.35 -.34 -.28 -.4 -.2 -.36 C -.18 -.45 -.06 -.46 -.01 -.39 C .04 -.45 .16 -.43 .18 -.35 C .25 -.39 .33 -.32 .33 -.23 L .31 .07 C .3 .24 .23 .38 .21 .5 L .21 .72 Z',skin);
-    if(!ghost){
-      // Tendons end at the knuckle ridge; the curled finger tips are occluded behind it.
-      line('M -.12 .38 Q -.15 .12 -.23 -.24 M -.01 .39 Q -.01 .1 -.07 -.29 M .1 .39 Q .13 .1 .1 -.27','#b98c6b',.012);
-      line('M -.27 -.23 Q -.22 -.27 -.18 -.23 M -.11 -.28 Q -.05 -.32 0 -.27 M .065 -.27 Q .13 -.3 .17 -.24 M .21 -.2 Q .25 -.23 .29 -.19','#a67a5b',.009);
-    }
-    if(!collar)paint('M -.3 .24 C -.41 .13 -.43 -.02 -.38 -.12 C -.34 -.18 -.3 -.16 -.28 -.11 L -.24 .08 C -.19 .16 -.23 .24 -.3 .24 Z',skin);
-  }else{
-    // Palmar view: flexed fingers fold down toward the palm, never onto the hand's back.
-    paint('M -.2 .72 L -.2 .46 C -.25 .32 -.33 .22 -.34 .03 L -.33 -.26 Q -.31 -.4 -.2 -.38 Q -.1 -.49 .02 -.41 Q .15 -.46 .23 -.33 Q .34 -.31 .33 -.19 L .3 .14 C .26 .32 .21 .39 .2 .49 L .21 .72 Z',skin);
-    paint('M -.23 .04 C -.1 -.09 .15 -.03 .23 .1 C .26 .23 .13 .38 .01 .41 C -.16 .35 -.27 .22 -.23 .04 Z',ghost?'#b7cedb':'#ddb08f',null);
-    if(!ghost){
-      for(const [x,y,w]of [[-.32,-.3,.16],[-.155,-.36,.17],[.02,-.34,.165],[.19,-.25,.13]]){
-        paint(`M ${x} ${y+.1} Q ${x} ${y-.015} ${x+w/2} ${y} Q ${x+w} ${y} ${x+w} ${y+.1} L ${x+w-.01} ${y+.23} Q ${x+w/2} ${y+.3} ${x+.01} ${y+.23} Z`,skin);
-      }
-      line('M -.16 .19 Q -.02 .24 .15 .13 M -.17 .28 Q -.08 .33 -.02 .38','#af8061',.012);
-    }
-    // All four fingers pass behind the fold, while the thumb lies on its outer face.
-    if(collar)lapel();
-    paint(thumb,skin);
-    if(!ghost)line('M -.29 .02 Q -.23 .1 -.2 .19','#bd8e6c',.01);
-  }
-  paint('M -.205 .59 Q 0 .62 .22 .59 L .23 .75 Q 0 .78 -.22 .75 Z',ghost?'#edf5f9':'#f1efe5',ghost?'#97b0bd':'#aaa494');
-  ctx.restore();
+function giPaint(ctx,data,fill,stroke='#8e9397',width=.008){
+  const path=gripContour(data);ctx.fillStyle=fill;ctx.fill(path);
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke(path)}
 }
-
+function giLine(ctx,data,color='#a0a5aa',width=.006){
+  ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.stroke(gripContour(data));
+}
+function clothGradient(ctx,x1,y1,x2,y2){
+  const g=ctx.createLinearGradient(x1,y1,x2,y2);
+  for(const [t,c]of [[0,'#959ca6'],[.16,'#d3d7dd'],[.45,'#fafbfc'],[.7,'#e5e8ed'],[1,'#aeb5bf']])g.addColorStop(t,c);
+  return g;
+}
 function drawLapels(ctx){
-  for(const [path,fill]of [
-    ['M -.2 .05 L -.3 .16 L .17 1.19 L .29 1.16 Z','#c6d3d7'],
-    ['M .2 .05 L .3 .16 L -.13 1.19 L -.27 1.16 Z','#dce5e7']
-  ]){
-    const p=gripContour(path);ctx.fillStyle=fill;ctx.fill(p);ctx.strokeStyle='#81949b';ctx.lineWidth=.012;ctx.stroke(p);
+  // Wearer's right lapel disappears beneath the left front. Only the upper edges form a V.
+  // The upper left front continues diagonally to the belt, not into an exposed X.
+  const under='M -.19 .04 C -.235 .075 -.27 .11 -.29 .16 C -.22 .33 -.13 .48 -.035 .555 L .055 .47 C -.055 .31 -.14 .14 -.19 .04 Z';
+  const over='M .19 .04 C .24 .075 .275 .12 .29 .16 C .195 .37 .10 .54 -.01 .74 C -.10 .91 -.19 1.08 -.22 1.16 L -.34 1.14 C -.275 .935 -.16 .73 -.04 .51 C .067 .3 .15 .14 .19 .04 Z';
+  ctx.save();ctx.translate(.009,.014);giPaint(ctx,under,'#6f747b30',null);giPaint(ctx,over,'#6f747b40',null);ctx.restore();
+  giPaint(ctx,under,clothGradient(ctx,-.3,.2,-.12,.16));
+  // Several parallel stitch rows communicate the dense, padded collar from the reference.
+  for(let i=0;i<4;i++){
+    const d=i*.012;
+    giLine(ctx,`M ${-.209-d} .105 Q ${-.15-d} .3 ${.005-d} .49`,'#a0a5ad9c',.004);
+  }
+  giPaint(ctx,over,clothGradient(ctx,-.05,.3,.24,.45));
+  for(let i=0;i<5;i++){
+    const d=i*.012;
+    giLine(ctx,`M ${.196+d} ${.081+d} C ${.125+d} .28 ${-.005+d} .52 ${-.1+d} .71 Q ${-.246+d} .98 ${-.292+d} 1.13`,'#9da5ae9e',.004);
+  }
+  giLine(ctx,'M .19 .055 Q .09 .32 -.042 .523 Q -.25 .92 -.325 1.135','#ffffffc9',.007);
+}
+let weaveContour;
+function drawJudogi(ctx,belt=true){
+  const body='M -.2 .055 Q -.285 .11 -.40 .17 Q -.47 .38 -.44 .66 L -.48 1.1 Q -.48 1.35 -.53 1.55 Q -.27 1.64 .02 1.6 Q .32 1.65 .53 1.55 L .46 1.1 Q .42 .65 .44 .4 Q .44 .26 .39 .17 L .2 .055 L .14 .3 L 0 .55 L -.14 .3 Z';
+  // Loose sleeves hang from sloping shoulders, with fabric volume at elbow and cuff.
+  for(const side of [-1,1]){
+    ctx.save();ctx.scale(side,1);
+    giPaint(ctx,'M .32 .15 Q .49 .15 .59 .27 Q .67 .35 .70 .51 C .72 .67 .82 .83 .84 .98 L .64 1.07 Q .57 .91 .56 .76 Q .52 .63 .47 .5 L .37 .4 Z',clothGradient(ctx,.38,.4,.79,.48));
+    giPaint(ctx,'M .43 .31 Q .53 .5 .53 .67 Q .47 .53 .4 .48 Z','#858d9b3d',null);
+    giPaint(ctx,'M .6 .56 Q .60 .70 .73 .79 Q .65 .75 .58 .68 Z','#858e9f33',null);
+    giPaint(ctx,'M .66 .83 Q .76 .92 .79 .92 L .66 1.03 Q .72 .94 .66 .83 Z','#fdfdff85',null);
+    giLine(ctx,'M .45 .205 Q .515 .24 .52 .35 M .49 .49 Q .56 .53 .60 .5 M .58 .76 Q .66 .8 .71 .785','#929aa58a',.007);
+    giPaint(ctx,'M .635 1.045 Q .73 1.035 .835 .975 L .846 1.012 Q .73 1.08 .649 1.087 Z','#777b83','#969ca5',.006);
+    giLine(ctx,'M .641 1.015 Q .73 1.001 .821 .949','#c4c9d1',.008);
+    ctx.restore();
+  }
+  giPaint(ctx,body,clothGradient(ctx,-.49,.65,.5,.8));
+  // The upper front is one continuous overlapping fabric panel, held closed at the waist.
+  giPaint(ctx,'M .2 .055 L .39 .17 Q .47 .5 .43 .86 L .46 1.12 L .5 1.51 Q .19 1.58 -.16 1.52 L -.45 1.52 Q -.36 1.05 -.21 .82 Q .065 .34 .2 .055 Z',clothGradient(ctx,-.3,.7,.45,.9),'#bcc1c8',.005);
+  giPaint(ctx,'M -.38 .3 Q -.26 .43 -.22 .72 Q -.31 .56 -.38 .49 Z','#848c9c26',null);
+  giPaint(ctx,'M .38 .29 Q .30 .43 .31 .65 Q .38 .50 .4 .41 Z','#89929f24',null);
+  // Soft gathers converge on the belt. Avoid hard polygonal creases across the chest.
+  for(const [path,color]of [
+    ['M -.40 .76 Q -.32 .96 -.12 1.14 Q -.28 1.04 -.4 .91 Z','#929aa72c'],
+    ['M -.35 1.05 Q -.23 1.04 -.035 1.15 Q -.18 1.12 -.35 1.10 Z','#ffffffa0'],
+    ['M .39 .82 Q .28 1.04 .1 1.13 Q .29 1.035 .40 .96 Z','#8992a12b'],
+    ['M .40 1.04 Q .22 1.025 .04 1.16 Q .22 1.10 .4 1.09 Z','#ffffffa8'],
+    ['M -.39 1.27 Q -.28 1.38 -.27 1.54 L -.34 1.55 Z','#8e96a22c'],
+    ['M .29 1.27 Q .23 1.42 .34 1.54 Q .27 1.52 .22 1.37 Z','#8b94a126']
+  ])giPaint(ctx,path,color,null);
+  // Very fine sashiko-like weave, clipped to the coat, remains subtle at mobile sizes.
+  if(!weaveContour){
+    weaveContour=new Path2D();
+    for(let row=0;row<61;row++)for(let col=0;col<43;col++){
+      const x=-.53+col*.025+(row%2)*.0125,y=.06+row*.025;
+      weaveContour.moveTo(x,y);weaveContour.lineTo(x+.007,y+.011);
+    }
+  }
+  ctx.save();ctx.clip(gripContour(body));ctx.strokeStyle='#74808b12';ctx.lineWidth=.003;ctx.stroke(weaveContour);ctx.restore();
+  giLine(ctx,'M -.43 .44 Q -.405 .85 -.45 1.09 M .43 .44 Q .405 .85 .44 1.09','#aab1ba8f',.005);
+  giLine(ctx,'M -.48 1.52 Q -.23 1.60 .02 1.56 Q .27 1.61 .49 1.52','#969faa88',.005);
+  drawLapels(ctx);
+  if(belt){
+    giPaint(ctx,'M -.485 1.105 Q 0 1.15 .462 1.097 L .478 1.246 Q 0 1.31 -.49 1.25 Z','#222326','#111215',.01);
+    giLine(ctx,'M -.463 1.137 Q 0 1.185 .443 1.13 M -.468 1.218 Q 0 1.27 .455 1.213','#515257',.006);
+    giPaint(ctx,'M -.075 1.21 C -.17 1.26 -.26 1.42 -.32 1.63 L -.21 1.665 Q -.145 1.40 .055 1.26 Z','#242528','#121316',.008);
+    giPaint(ctx,'M .02 1.2 Q .16 1.26 .29 1.405 L .235 1.50 Q .085 1.35 -.055 1.29 Z','#303135','#151619',.008);
+    giLine(ctx,'M -.052 1.278 Q -.20 1.47 -.25 1.632 M .045 1.26 L .257 1.426','#55565b',.005);
+    giPaint(ctx,'M -.085 1.153 L .045 1.16 L .115 1.243 L .015 1.325 L -.106 1.27 Z','#35363a','#151619',.009);
+    giPaint(ctx,'M -.088 1.166 L -.007 1.173 L .07 1.275 L .012 1.307 Z','#242528',null);
+    giLine(ctx,'M -.07 1.177 L -.02 1.181 L .056 1.275','#55565a',.005);
   }
 }
 
 // One shared V collar and crossed forearms, seen from the practitioner's side.
 export function drawGripStudy(ctx,width,height,directions){
   ctx.clearRect(0,0,width,height);ctx.save();
-  ctx.translate(width/2,-height*.025);ctx.scale(height*.85,height*.85);
-  const paint=(d,fill,stroke='#b7b3a7')=>{const p=gripContour(d);ctx.fillStyle=fill;ctx.fill(p);ctx.strokeStyle=stroke;ctx.lineWidth=.012;ctx.stroke(p)};
-  paint('M -.2 .05 L -.3 .16 L -.7 .29 L -.78 1.2 L .78 1.2 L .7 .29 L .3 .16 L .2 .05 L .13 .39 L 0 .5 L -.13 .39 Z','#e8e5db');
-  paint('M -.2 -.05 L .2 -.05 L .18 .19 L 0 .49 L -.18 .19 Z','#dfb99a');
-  drawLapels(ctx);
-  const sceneTransform=ctx.getTransform();
+  ctx.translate(width/2,-height*.025);ctx.scale(height*1.18,height*1.18);
+  giPaint(ctx,'M -.2 -.05 L .2 -.05 L .18 .19 L 0 .55 L -.18 .19 Z','#dfb99a');
+  drawJudogi(ctx,false);
   for(const [i,p]of GRIP_STEPS[2].entries()){
-    const {x:px,angle,wrist}=gripPlacement(p,i),base=i?.62:-.62;
-    ctx.beginPath();ctx.moveTo(base,1.13);ctx.lineTo(wrist.x,wrist.y);
-    ctx.strokeStyle='#ad876b';ctx.lineWidth=.133;ctx.lineCap='round';ctx.stroke();
-    ctx.strokeStyle='#e6bd9b';ctx.lineWidth=.115;ctx.stroke();
-    ctx.save();ctx.translate(px,p.y);ctx.rotate(angle);
-    drawGripHand(ctx,0,0,.3,directions[i]==='↑',i===0,false,c=>{c.setTransform(sceneTransform);drawLapels(c)});
-    ctx.restore();
+    const {angle,wrist}=gripPlacement(p,i);
+    drawAnatomicalArm(ctx,wrist,angle,i===0,directions[i]==='↑');
+
   }
   ctx.restore();
 }
@@ -98,16 +119,9 @@ export function drawOpponent(ctx, frame) {
   const shape=(points,fill,stroke='#9c998f',width=.014)=>{ctx.beginPath();points.forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke()};
   const ellipse=(a,b,rx,ry,fill)=>{ctx.beginPath();ctx.ellipse(a,b,rx,ry,0,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill()};
   ctx.save();
-  // Broad sleeves, layered lapels and a black belt make the partner readable without bones.
-  shape([[-.34,.14],[-.69,.28],[-.86,.92],[-.57,1.02],[-.35,.57]],'#deded8');
-  shape([[.34,.14],[.69,.28],[.86,.92],[.57,1.02],[.35,.57]],'#deded8');
-  ellipse(-.71,1,.105,.13,'#c9a387');ellipse(.71,1,.105,.13,'#c9a387');
-  shape([[-.42,.16],[-.19,.08],[.19,.08],[.42,.16],[.52,1.49],[-.52,1.49]],'#f4f1e8');
+  ellipse(-.74,1.055,.078,.12,'#c9a387');ellipse(.74,1.055,.078,.12,'#c9a387');
   shape([[-.18,.06],[.18,.06],[.13,.42],[0,.55],[-.13,.42]],'#c9a387');
-  drawLapels(ctx);
-  shape([[-.49,1.13],[.49,1.13],[.5,1.25],[-.5,1.25]],'#292a2c','#292a2c');
-  shape([[-.055,1.19],[.1,1.2],[.2,1.65],[.08,1.68]],'#333438');
-  shape([[.055,1.19],[-.1,1.2],[-.16,1.57],[-.05,1.59]],'#292a2c');
+  drawJudogi(ctx);
   ellipse(0,-.22,.235,.3,'#c9a387');
   shape([[-.225,-.24],[-.23,-.43],[-.12,-.54],[.12,-.54],[.23,-.41],[.225,-.24],[.15,-.4],[-.13,-.4]],'#343231','#343231');
   ellipse(-.085,-.22,.019,.014,'#393635');ellipse(.085,-.22,.019,.014,'#393635');
@@ -124,15 +138,12 @@ export function drawGripGuides(ctx,frame,hands,directions,mirrored=true,targets=
     ctx.beginPath();ctx.ellipse(sign*p.x,p.y,.075,.1,sign*p.x,0,Math.PI*2);
     ctx.fillStyle='#ffffff14';ctx.fill();ctx.strokeStyle='#e6f1f785';ctx.lineWidth=.012;ctx.setLineDash([.025,.025]);ctx.stroke();ctx.setLineDash([]);
   }
-  const sceneTransform=ctx.getTransform();
   for(const [i,p]of hands.entries()){
-    const {x:px,angle,wrist}=gripPlacement(p,i,mirrored),press=actions[i]==='press',base=sign*(i?-1:1)*(.56+(press?.09:-.09)*finish);
-    const gripped=Math.hypot(p.x-GRIP_STEPS[2][i].x,p.y-GRIP_STEPS[2][i].y)<.025;
-    ctx.beginPath();ctx.moveTo(base,1.19+(press?-.13:.1)*finish);ctx.quadraticCurveTo(base*.6,.85,wrist.x,wrist.y);
-    ctx.strokeStyle='#edf7ff4d';ctx.lineWidth=.105;ctx.lineCap='round';ctx.stroke();
-    ctx.save();ctx.translate(px,p.y);
-    ctx.rotate(angle);ctx.globalAlpha=.68;
-    drawGripHand(ctx,0,0,.3,directions[i]==='↑',mirrored?i===0:i===1,true,gripped?(c=>{c.setTransform(sceneTransform);drawLapels(c)}):false);ctx.restore();
+    const {angle,wrist}=gripPlacement(p,i,mirrored);
+    ctx.save();ctx.globalAlpha=.7;
+    drawAnatomicalArm(ctx,wrist,angle,i===0,directions[i]==='↑',true,!mirrored);
+    ctx.restore();
+
   }
   ctx.restore();
 }
