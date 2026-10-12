@@ -6,6 +6,10 @@ const assert=require('node:assert/strict');
   const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[];
   page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
   await page.addInitScript(()=>{
+   // Pixel assertions use a stable readback surface: Chrome may otherwise switch
+   // from GPU to CPU rasterization after repeated screenshots/getImageData calls.
+   const context=HTMLCanvasElement.prototype.getContext;
+   HTMLCanvasElement.prototype.getContext=function(kind,options){return context.call(this,kind,kind==='2d'&&this.id==='partner'?{...options,willReadFrequently:true}:options)};
    window.qaGripPhase='open';const Original=Worker;
    window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame')d.phase=window.qaGripPhase;super.postMessage(d,t)}};
   });
@@ -50,24 +54,28 @@ const assert=require('node:assert/strict');
   assert.equal(await page.locator('#live-score-value').innerText(),'50');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-grabbed.png'});
   await phase('one-pull',1500);assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
-  await phase('release',1000);assert.equal(await grabbed(),'0');
-  assert.equal(await page.locator('#partner').evaluate(c=>c.toDataURL()),rest,'released cloth must return to its rest shape');
+  await phase('release',1400);assert.equal(await grabbed(),'0');
+  assert.ok(await page.locator('#partner').evaluate(c=>c.toDataURL())===rest,'released cloth must return to its rest shape');
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
   await phase('pull',250);await page.waitForFunction(()=>Number(document.querySelector('#overlay').dataset.tension)>.9);
   const pulled=await page.locator('#partner').evaluate(c=>c.toDataURL());assert.notEqual(pulled,rest);
   const pulledFabric=await fabricPixels();assert.ok(restFabric.reduce((sum,v,i)=>sum+Math.abs(v-pulledFabric[i]),0)/restFabric.length>2,'fabric away from the collar must deform too');
   const currentHead=await headPixels();
   // One color level at an antialiased boundary may blend with the collar behind it.
-  assert.ok(fixedHead.every((v,i)=>Math.abs(v-currentHead[i])<=1),'the head must remain fixed even during a bilateral pull');
+  const changedHead=fixedHead.map((v,i)=>Math.abs(v-currentHead[i])>1?{i,v,now:currentHead[i]}:null).filter(Boolean);
+  assert.ok(!changedHead.length,'the head must remain fixed even during a bilateral pull');
   const grips=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));
   assert.ok(grips.every(g=>g.side*g.travelX>.18));
   await page.locator('#viewport').screenshot({path:'.test-output/collar-pulled.png'});
+  await phase('lost',350);assert.equal(await grabbed(),'2');assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
+  await phase('pull',150);assert.equal(await grabbed(),'2','return at the pulled position without re-grasping');
   await page.waitForFunction(()=>document.querySelector('#opponent-status').dataset.tap==='true');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-tap.png'});
   await page.locator('#result-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#xp').innerText(),'20 XP');
   await page.locator('#result-again').click();await page.locator('#play').click();
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
-  await phase('lost',300);assert.equal(await grabbed(),'0');assert.equal(await page.locator('#live-score-value').innerText(),'—');
+  await phase('lost',300);assert.equal(await grabbed(),'2','brief tracking loss retains grasp');
+  await phase('lost',1000);assert.equal(await grabbed(),'0');assert.equal(await page.locator('#live-score-value').innerText(),'—');
   await page.setViewportSize({width:390,height:950});await phase('open');await phase('close');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-mobile.png'});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

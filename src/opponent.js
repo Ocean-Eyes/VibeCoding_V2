@@ -1,5 +1,5 @@
-import {drawDeformedCoat} from './cloth-renderer.js';
-import {lapelRibbon,lapelPoint} from './collar-interaction.js';
+import {drawIllustratedCoat} from './cloth-renderer.js';
+import {lapelPoint} from './collar-interaction.js';
 import {drawAnatomicalArm} from './hand-renderer.js';
 import {GRIP_STEPS,gripPlacement} from './demonstration.js';
 // Game input only: RGB positions cannot measure pressure or grip effectiveness.
@@ -30,7 +30,6 @@ function clothGradient(ctx,x1,y1,x2,y2){
   return g;
 }
 function drawLapels(ctx,interaction=null){
-  if(interaction){drawMovingLapels(ctx,interaction.deformation||[]);return}
   // Wearer's right lapel disappears beneath the left front. Only the upper edges form a V.
   // The upper left front continues diagonally to the belt, not into an exposed X.
   const under='M -.19 .04 C -.235 .075 -.27 .11 -.29 .16 C -.22 .33 -.13 .48 -.035 .555 L .055 .47 C -.055 .31 -.14 .14 -.19 .04 Z';
@@ -48,21 +47,6 @@ function drawLapels(ctx,interaction=null){
     giLine(ctx,`M ${.196+d} ${.081+d} C ${.125+d} .28 ${-.005+d} .52 ${-.1+d} .71 Q ${-.246+d} .98 ${-.292+d} 1.13`,'#9da5ae9e',.004);
   }
   giLine(ctx,'M .19 .055 Q .09 .32 -.042 .523 Q -.25 .92 -.325 1.135','#ffffffc9',.007);
-}
-function drawMovingLapels(ctx,deformation){
- for(const side of [-1,1]){
-  const samples=lapelRibbon(side,deformation),path=new Path2D();
-  const edges=[...samples.map(p=>({x:p.x+p.nx*p.width,y:p.y+p.ny*p.width})),...samples.toReversed().map(p=>({x:p.x-p.nx*p.width,y:p.y-p.ny*p.width}))];
-  edges.forEach((p,i)=>i?path.lineTo(p.x,p.y):path.moveTo(p.x,p.y));path.closePath();
-  ctx.save();ctx.shadowColor='#454e6850';ctx.shadowBlur=3;ctx.shadowOffsetX=1;ctx.shadowOffsetY=2;
-  ctx.fillStyle=clothGradient(ctx,-.28,.15,.30,.50);ctx.fill(path);ctx.shadowBlur=0;ctx.shadowOffsetX=ctx.shadowOffsetY=0;
-  ctx.lineWidth=.005;ctx.strokeStyle='#949eac';ctx.stroke(path);
-  for(const offset of [-.029,-.014,.001,.016,.031]){
-   ctx.beginPath();samples.forEach((p,i)=>i?ctx.lineTo(p.x+p.nx*offset,p.y+p.ny*offset):ctx.moveTo(p.x+p.nx*offset,p.y+p.ny*offset));
-   ctx.lineWidth=.003;ctx.strokeStyle='#a3acb68f';ctx.stroke();
-  }
-  ctx.restore();
- }
 }
 export function drawCollarTargets(ctx,frame,state){
  ctx.save();ctx.translate(frame.origin.x,frame.origin.y);ctx.scale(frame.scale,frame.scale);
@@ -106,11 +90,6 @@ function collarContact(p,index){
 }
 let weaveContour;
 function drawJudogi(ctx,belt=true,interaction=null){
-  if(interaction){
-    drawDeformedCoat(ctx,interaction.deformation||[],interaction.tapped,paint=>drawJudogiBase(paint,belt,{...interaction,deformation:[]}));
-  }else drawJudogiBase(ctx,belt);
-}
-function drawJudogiBase(ctx,belt=true,interaction=null){
   const body='M -.2 .055 Q -.285 .11 -.40 .17 Q -.47 .38 -.44 .66 L -.48 1.1 Q -.48 1.35 -.53 1.55 Q -.27 1.64 .02 1.6 Q .32 1.65 .53 1.55 L .46 1.1 Q .42 .65 .44 .4 Q .44 .26 .39 .17 L .2 .055 L .14 .3 L 0 .55 L -.14 .3 Z';
   // Loose sleeves hang from sloping shoulders, with fabric volume at elbow and cuff.
   for(const side of [-1,1]){
@@ -125,6 +104,8 @@ function drawJudogiBase(ctx,belt=true,interaction=null){
     giLine(ctx,'M .641 1.015 Q .73 1.001 .821 .949','#c4c9d1',.008);
     ctx.restore();
   }
+  if(interaction)drawIllustratedCoat(ctx,interaction.deformation||[]);
+  else{
   giPaint(ctx,body,clothGradient(ctx,-.49,.65,.5,.8));
   // The upper front is one continuous overlapping fabric panel, held closed at the waist.
   giPaint(ctx,'M .2 .055 L .39 .17 Q .47 .5 .43 .86 L .46 1.12 L .5 1.51 Q .19 1.58 -.16 1.52 L -.45 1.52 Q -.36 1.05 -.21 .82 Q .065 .34 .2 .055 Z',clothGradient(ctx,-.3,.7,.45,.9),'#bcc1c8',.005);
@@ -151,6 +132,7 @@ function drawJudogiBase(ctx,belt=true,interaction=null){
   giLine(ctx,'M -.43 .44 Q -.405 .85 -.45 1.09 M .43 .44 Q .405 .85 .44 1.09','#aab1ba8f',.005);
   giLine(ctx,'M -.48 1.52 Q -.23 1.60 .02 1.56 Q .27 1.61 .49 1.52','#969faa88',.005);
   drawLapels(ctx,interaction);
+  }
   if(belt){
     giPaint(ctx,'M -.485 1.105 Q 0 1.15 .462 1.097 L .478 1.246 Q 0 1.31 -.49 1.25 Z','#222326','#111215',.01);
     giLine(ctx,'M -.463 1.137 Q 0 1.185 .443 1.13 M -.468 1.218 Q 0 1.27 .455 1.213','#515257',.006);
@@ -186,7 +168,7 @@ export function drawOpponent(ctx, frame,interaction=null) {
   const ellipse=(a,b,rx,ry,fill)=>{ctx.beginPath();ctx.ellipse(a,b,rx,ry,0,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill()};
   ctx.save();
   ellipse(-.74,1.055,.078,.12,'#c9a387');if(!interaction?.tapped)ellipse(.74,1.055,.078,.12,'#c9a387');
-  shape([[-.18,.06],[.18,.06],[.37,.20],[.33,.66],[-.33,.66],[-.37,.20]],'#c9a387');
+  shape([[-.18,.06],[.18,.06],[.48,.20],[.40,.66],[-.40,.66],[-.48,.20]],'#c9a387');
   drawJudogi(ctx,true,interaction);
   if(interaction?.tapped){
     const beat=Math.sin((interaction.time??0)/95)*.018;

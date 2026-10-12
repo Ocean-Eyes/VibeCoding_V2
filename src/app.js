@@ -132,7 +132,7 @@ function draw(now){
     }
   }else drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected]);
   const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:
-    !state?.visible?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
+    state?.trackingPaused?'깃은 잡고 있습니다. 양손이 다시 보이면 당김 판정을 이어갑니다.':!state?.visible?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
     state.posture?.some(p=>p==='palm'||p==='turn')?'기술 설명의 손바닥 방향으로 손을 돌려 깃을 잡으세요.':state.posture?.some(Boolean)?'손목을 비스듬히 교차해 각각 반대편 깃을 잡으세요.':
     state.count===0?'손가락을 굽히고 손목을 교차해 반대편 깃을 잡으세요.':state.count===1?'한쪽 깃이 잡혔습니다. 다른 손으로 반대쪽 깃을 잡으세요.':
     !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.tension<.7?'양쪽 깃이 잡혔습니다. 쥔 손을 양옆으로 당기세요.':'깃이 당겨지고 있습니다. 잠깐 유지하세요.';
@@ -142,7 +142,7 @@ function draw(now){
   $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'깃 잡기·당김 / 100';
   $('live-hold').textContent=demonstrating?'연습 버튼을 누르면 채점합니다':state?.count===2?`양손 당김 유지 ${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`:'손목 교차 → 반대편 깃 잡기 → 양옆으로 당기기';
   $('opponent-status').dataset.tap=String(!!tapUntil||!!state?.tapped);
-  $('opponent-status').textContent=tapUntil||state?.tapped?'TAP! · 손을 펴서 놓기':demonstrating?instruction.label:state?.count===2?`양쪽 깃 잡힘 · 당김 ${Math.round(state.tension*100)}%`:state?.count===1?'한쪽 깃 잡힘':'깃 위에서 손을 쥐세요';
+  $('opponent-status').textContent=tapUntil||state?.tapped?'TAP! · 손을 펴서 놓기':demonstrating?instruction.label:state?.trackingPaused?'깃 잡기 유지 · 손 인식 대기':state?.count===2?`양쪽 깃 잡힘 · 당김 ${Math.round(state.tension*100)}%`:state?.count===1?'한쪽 깃 잡힘':'깃 위에서 손을 쥐세요';
 }
 
 function tick(now){

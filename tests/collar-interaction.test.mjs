@@ -34,13 +34,13 @@ test('each technique requires its palm orientation and a diagonal wrist on the o
  assert.equal(setup().step(vertical).count,0,'upright hands must not replace the crossing posture');
 });
 
-test('coat fabric and collar share a continuous displacement, with anchored neck and waist',()=>{
+test('collar attachment coordinates remain continuous with anchored neck and waist',()=>{
  const deformation=[{side:1,t:.29,dx:.20,dy:-.025},{side:-1,t:.48,dx:-.18,dy:.02}];
  for(const g of deformation){
   const rest=lapelRest(g.side,g.t),seam=clothPoint(rest,deformation),edge=lapelPoint(g.side,g.t,deformation);
   assert.deepEqual(seam,edge);
   const nearby=clothPoint({x:rest.x+g.side*.035,y:rest.y+.025},deformation);
-  assert.ok(g.side*(nearby.x-(rest.x+g.side*.035))>.10,'adjacent chest fabric must follow the grasp');
+  assert.ok(g.side*(nearby.x-(rest.x+g.side*.035))>.10,'nearby sewn-edge coordinates must follow the grasp');
   const adjacent=clothPoint({x:rest.x+.00001,y:rest.y},deformation);
   assert.ok(Math.hypot(adjacent.x-seam.x,adjacent.y-seam.y)<.0001,'no separation at the sewn edge');
  }
@@ -69,7 +69,7 @@ test('opening or losing a tracked hand releases the cloth and resets the complet
  const a=setup();a.step('open');a.step('close');a.step('pull',800);
  const release=a.step('release');assert.equal(release.count,0);assert.equal(release.hold,0);assert.equal(release.tension,0);
  assert.equal(a.step('release',800).deformation.length,0);
- a.step('open');a.step('close');assert.equal(a.step('lost',20).count,0);
+ a.step('open');a.step('close');assert.equal(a.step('lost',20).count,2);assert.equal(a.step('lost',900).count,0);
  assert.equal(a.step('close').count,2,'a newly tracked prepared grip reacquires after stable contact');
 });
 test('paused practice and mirror changes cannot carry a stale completion forward',()=>{
@@ -111,4 +111,35 @@ test('edge-on palms with depth still acquire without being flattened toward the 
   });
  });
  assert.equal(setup().step(hands).count,2);
+});
+
+test('brief occlusion preserves both grips and pauses hold until observations return',()=>{
+ const a=setup();a.step('close');const pulled=a.step('pull',500),earned=pulled.hold;
+ const hidden=a.step('lost',400);assert.equal(hidden.count,2);assert.equal(hidden.trackingPaused,true);
+ assert.equal(hidden.hold,earned);assert.equal(hidden.tapped,false);
+ const returned=a.step('pull',20);assert.equal(returned.count,2);assert.equal(returned.trackingPaused,false);
+ assert.equal(a.step('pull',900).tapped,true,'resume the same grips without going back to the collars');
+});
+test('brief false-open observations do not unlatch; sustained open hands do',()=>{
+ const a=setup();a.step('close');a.step('pull',300);
+ assert.equal(a.step('release',100).count,2);
+ assert.equal(a.step('pull',100).count,2);
+ const partial=collarHands('pull').map((h,i)=>handAt(graspCenter(h),.4,i===0));
+ assert.equal(a.step(partial,400).count,2,'uncertain curl must not be treated as deliberate release');
+ assert.equal(a.step('release',260).count,0);
+});
+test('a continuous wide lateral pull never releases merely for leaving the acquisition zone',()=>{
+ const a=setup();a.step('close');let state;
+ for(let step=1;step<=6;step++){
+  const hands=collarHands('close').map((h,i)=>h.map(p=>({...p,x:p.x+(i?-1:1)*step*.12})));
+  state=a.step(hands,80);assert.equal(state.count,2);
+ }
+ assert.equal(state.tension,1);
+});
+test('a tracking jump keeps the last cloth pin without earning a tap',()=>{
+ const a=setup();const acquired=a.step('close'),pins=acquired.grips.map(g=>({...g.center}));
+ const jumped=collarHands('close').map(h=>h.map(p=>({...p,x:p.x+1.5})));
+ const state=a.step(jumped,200);assert.equal(state.count,2);assert.equal(state.trackingPaused,true);assert.equal(state.tapped,false);
+ assert.deepEqual(state.grips.map(g=>g.center),pins);assert.equal(a.step('close',20).count,2);
+ assert.equal(a.step('lost',1000).count,0);
 });

@@ -3,13 +3,15 @@ const ease=t=>{t=clamp(t);return t*t*(3-2*t)};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,(a.z??0)-(b.z??0));
 export const GRIP_PASS_SCORE=85;
 export const GRIP_HOLD_SECONDS=1.2;
+export const GRIP_OCCLUSION_MS=800;
+export const GRIP_RELEASE_MS=200;
 export function lapelRest(side,t){
  const points=side>0?[[.215,.065],[.34,.20],[-.10,.69],[-.285,1.14]]:[[-.215,.065],[-.34,.20],[-.13,.44],[.01,.52]];
  const u=1-t,w=[u*u*u,3*u*u*t,3*u*t*t,t*t*t];
  return {x:points.reduce((a,p,i)=>a+p[0]*w[i],0),y:points.reduce((a,p,i)=>a+p[1]*w[i],0)};
 }
-// One continuous deformation field for the sewn collar AND the entire coat.
-// Compact radial constraints move surrounding fabric; neckline and belt remain fixed.
+// Continuous sewn-edge coordinates shared by collision and illustrated fronts.
+// The coat itself uses authored drawings, not an image warped by this field.
 export function clothPoint(point,deformation=[]){
  const envelope=y=>ease((y-.065)/.11)*ease((1.10-y)/.30);
  const kernel=(p,g)=>{
@@ -46,14 +48,16 @@ export function collarHit(point,deformation=[],excluded=[]){
 }
 // MCP positions remain stable as the fingers close, unlike the moving fingertips.
 export function graspCenter(hand){return [5,9,13,17].reduce((p,i)=>({x:p.x+hand[i].x/4,y:p.y+hand[i].y/4}),{x:0,y:0})}
-export function fingerExtension(hand){
+function fingerExtensions(hand){
  if(!hand||hand.length!==21)return null;
  const ratios=[5,9,13,17].map(i=>{
   const length=distance(hand[0],hand[i])+distance(hand[i],hand[i+1])+distance(hand[i+1],hand[i+2])+distance(hand[i+2],hand[i+3]);
   return length>.00001?distance(hand[0],hand[i+3])/length:1;
  });
- return ratios.reduce((a,b)=>a+b,0)/4;
+ return ratios;
 }
+export function fingerExtension(hand){const ratios=fingerExtensions(hand);return ratios?ratios.reduce((a,b)=>a+b,0)/4:null}
+function deliberatelyOpen(hand){return fingerExtensions(hand)?.every(r=>r>.94)??false}
 // Use the 3D palm normal, including depth: a natural grip may be edge-on
 // to the webcam. A 2D projected-area test would force the user to flatten it.
 export function gripPosture(hand,index,side,mirrored,direction){
@@ -70,7 +74,7 @@ export function gripPosture(hand,index,side,mirrored,direction){
  if((normal>0)!==(direction==='↓'))return 'palm';
  return null;
 }
-const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSince:null,hover:null,posture:null});
+const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSince:null,hover:null,posture:null,missingSince:null,tracked:false});
 // Geometric game interaction only: this measures virtual displacement, not physical pressure.
 export class CollarInteraction{
  constructor(){this.reset()}
@@ -87,19 +91,35 @@ export class CollarInteraction{
  update(observations,now,{active=false,mirrored=true,directions=['↓','↓']}={}){
   if(this.lastMirror!==null&&this.lastMirror!==mirrored)this.reset();
   const dt=this.lastTime===null?0:Math.min(.1,Math.max(0,(now-this.lastTime)/1000));
-  if(this.lastTime!==null&&now-this.lastTime>250)this.reset();
+  if(this.lastTime!==null&&now-this.lastTime>GRIP_OCCLUSION_MS)this.reset();
   this.lastMirror=mirrored;this.lastTime=now;
   for(let i=0;i<2;i++){
    const hand=observations[i],h=this.hands[i],extension=fingerExtension(hand);
-   if(extension===null){this.release(i,now);continue}
+   h.tracked=false;
+   if(extension===null){
+    h.releaseSince=null;h.pending=null;
+    if(h.grip){h.missingSince??=now;if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now)}
+    else this.hands[i]=emptyHand();
+    continue;
+   }
    const center=graspCenter(hand);
    if(extension>.90)h.closed=false;else if(extension<.86)h.closed=true;
    if(h.grip){
-    if(!h.closed){h.releaseSince??=now;if(now-h.releaseSince>=65){this.release(i,now);continue}}else h.releaseSince=null;
+    // Opening must be clear and sustained; a curled grip never unlatches merely
+    // because it left the original collision zone while being pulled.
+    if(deliberatelyOpen(hand)){
+     h.releaseSince??=now;if(now-h.releaseSince>=GRIP_RELEASE_MS){this.release(i,now);continue}
+    }else{h.releaseSince=null;h.closed=true}
     const dx=center.x-h.grip.start.x,dy=center.y-h.grip.start.y;
-    if(Math.hypot(dx,dy)>.65){this.release(i,now);continue}
+    // A single misassigned wrist can jump across the frame. Hold its last pin
+    // rather than turning a tracking outlier into a release or a scored pull.
+    if(Math.hypot(center.x-h.grip.center.x,center.y-h.grip.center.y)>.50){
+     h.missingSince??=now;if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now);continue;
+    }
+    h.missingSince=null;h.tracked=h.releaseSince===null;
     h.grip.dx=h.grip.offset.x+dx;h.grip.dy=h.grip.offset.y+dy;h.grip.travelX=dx;h.grip.center=center;continue;
    }
+   h.missingSince=null;h.tracked=true;
    h.hover=collarHit(center,this.deformation(now),this.hands.map(s=>s.grip?.side).filter(Boolean));
    h.posture=h.hover?gripPosture(hand,i,h.hover.side,mirrored,directions[i]):null;
    h.armed=!!h.hover&&!h.posture;
@@ -116,10 +136,16 @@ export class CollarInteraction{
   const grips=this.hands.map(h=>h.grip),count=grips.filter(Boolean).length;
   const crossed=count===2&&grips.every((g,i)=>g.side===(i?-1:1)*(mirrored?1:-1));
   const pulls=grips.map(g=>g?clamp(g.side*g.travelX/.20):0),tension=crossed?Math.min(...pulls):0;
-  if(!this.tapped){if(active&&crossed&&tension>=.7)this.hold=Math.min(GRIP_HOLD_SECONDS,this.hold+dt);else this.hold=0;}
+  const trackingPaused=count>0&&this.hands.some(h=>h.grip&&!h.tracked);
+  if(!this.tapped){
+   if(!active||!crossed)this.hold=0;
+   else if(trackingPaused){/* Preserve earned hold, but never score hidden or opening hands. */}
+   else if(tension>=.7)this.hold=Math.min(GRIP_HOLD_SECONDS,this.hold+dt);
+   else this.hold=0;
+  }
   if(this.hold>=GRIP_HOLD_SECONDS)this.tapped=true;
   const score=Math.round(count*25+50*tension);
-  return {grips,deformation:this.deformation(now),count,crossed,pulls,tension,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
+  return {grips,trackingPaused,deformation:this.deformation(now),count,crossed,pulls,tension,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
    posture:this.hands.map(h=>h.posture),hover:this.hands.map(h=>h.hover),armed:this.hands.map(h=>h.armed),closed:this.hands.map(h=>h.closed)};
  }
 }
