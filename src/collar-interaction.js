@@ -74,7 +74,7 @@ export function gripPosture(hand,index,side,mirrored,direction){
  if((normal>0)!==(direction==='↓'))return 'palm';
  return null;
 }
-const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSince:null,hover:null,posture:null,missingSince:null,tracked:false});
+const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSince:null,hover:null,posture:null,missingSince:null,tracked:false,motionCandidate:null});
 // Geometric game interaction only: this measures virtual displacement, not physical pressure.
 export class CollarInteraction{
  constructor(){this.reset()}
@@ -97,7 +97,7 @@ export class CollarInteraction{
    const hand=observations[i],h=this.hands[i],extension=fingerExtension(hand);
    h.tracked=false;
    if(extension===null){
-    h.releaseSince=null;h.pending=null;
+    h.releaseSince=null;h.pending=null;h.motionCandidate=null;
     if(h.grip){h.missingSince??=now;if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now)}
     else this.hands[i]=emptyHand();
     continue;
@@ -111,11 +111,17 @@ export class CollarInteraction{
      h.releaseSince??=now;if(now-h.releaseSince>=GRIP_RELEASE_MS){this.release(i,now);continue}
     }else{h.releaseSince=null;h.closed=true}
     const dx=center.x-h.grip.start.x,dy=center.y-h.grip.start.y;
-    // A single misassigned wrist can jump across the frame. Hold its last pin
-    // rather than turning a tracking outlier into a release or a scored pull.
+    // Reject a single jump, then accept a new position confirmed over time.
+    // Comparing forever against the old pin would freeze every fast valid pull.
     if(Math.hypot(center.x-h.grip.center.x,center.y-h.grip.center.y)>.50){
-     h.missingSince??=now;if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now);continue;
+     if(!h.motionCandidate||Math.hypot(center.x-h.motionCandidate.center.x,center.y-h.motionCandidate.center.y)>.12)h.motionCandidate={center,since:now};
+     h.missingSince??=now;
+     if(now-h.motionCandidate.since<100){
+      if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now);
+      continue;
+     }
     }
+    h.motionCandidate=null;
     h.missingSince=null;h.tracked=h.releaseSince===null;
     h.grip.dx=h.grip.offset.x+dx;h.grip.dy=h.grip.offset.y+dy;h.grip.travelX=dx;h.grip.center=center;continue;
    }
@@ -135,7 +141,11 @@ export class CollarInteraction{
   }
   const grips=this.hands.map(h=>h.grip),count=grips.filter(Boolean).length;
   const crossed=count===2&&grips.every((g,i)=>g.side===(i?-1:1)*(mirrored?1:-1));
-  const pulls=grips.map(g=>g?clamp(g.side*g.travelX/.20):0),tension=crossed?Math.min(...pulls):0;
+  // Crossed hands can pull back toward their own shoulders or spread outward.
+  // Measure opposed displacement, not a hard-coded sign for a collar branch.
+  const travel=grips.map(g=>g?.travelX??0),pulls=travel.map(x=>clamp(Math.abs(x)/.20));
+  const opposed=travel[0]*travel[1]<0,tension=crossed&&opposed?Math.min(...pulls):0;
+  const pullDirection=opposed?'opposed':travel.every(x=>Math.abs(x)>.025)?'together':'waiting';
   const trackingPaused=count>0&&this.hands.some(h=>h.grip&&!h.tracked);
   if(!this.tapped){
    if(!active||!crossed)this.hold=0;
@@ -145,7 +155,7 @@ export class CollarInteraction{
   }
   if(this.hold>=GRIP_HOLD_SECONDS)this.tapped=true;
   const score=Math.round(count*25+50*tension);
-  return {grips,trackingPaused,deformation:this.deformation(now),count,crossed,pulls,tension,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
+  return {grips,trackingPaused,pullDirection,deformation:this.deformation(now),count,crossed,pulls,tension,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
    posture:this.hands.map(h=>h.posture),hover:this.hands.map(h=>h.hover),armed:this.hands.map(h=>h.armed),closed:this.hands.map(h=>h.closed)};
  }
 }

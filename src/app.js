@@ -1,5 +1,5 @@
 import {CollarInteraction,GRIP_PASS_SCORE,GRIP_HOLD_SECONDS} from './collar-interaction.js';
-import {LandmarkStream,assignHands,projectHand,palmFacing} from './live-hands.js';
+import {LandmarkStream,GripProjection,assignHands,projectHand,palmFacing} from './live-hands.js';
 import {drawLiveGlove} from './live-glove.js';
 import {prepareHands} from './hand-renderer.js';
 import {drawOpponent,drawGripStudy,drawGripGuides,drawCollarTargets} from './opponent.js';
@@ -9,9 +9,10 @@ import {POSES,BONES,HAND_BONES,bodyFrame} from './pose.js';
 await prepareHands();
 const collar=new CollarInteraction();
 let gripState=collar.update([null,null],performance.now());
+const gripProjection=new GripProjection();
 const poseStream=new LandmarkStream(),handStreams=[new LandmarkStream(),new LandmarkStream()];
 let assignedHands=[null,null];
-function resetTrackingDisplay(){collar.reset();gripState=collar.update([null,null],performance.now());poseStream.reset();handStreams.forEach(s=>s.reset());assignedHands=[null,null]}
+function resetTrackingDisplay(){gripProjection.reset();collar.reset();gripState=collar.update([null,null],performance.now());poseStream.reset();handStreams.forEach(s=>s.reset());assignedHands=[null,null]}
 const pixel=p=>p?{...p,x:p.x*video.videoWidth,y:p.y*video.videoHeight,z:(p.z??0)*video.videoWidth}:null;
 const $=id=>document.getElementById(id),video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d');
 const cyan='#80baff',partner=$('partner'),partnerCtx=partner.getContext('2d');
@@ -95,7 +96,7 @@ function draw(now){
     partner.dataset.frame=JSON.stringify(scene);
   }
   const mirrored=$('mirror').checked,fresh=mode==='live'&&now-lastResult<250;
-  const shown=fresh?poseStream.at(now)?.map(pixel):null,frame=bodyFrame(shown),unit={origin:{x:0,y:0},scale:1};
+  const shown=fresh?poseStream.at(now)?.map(pixel):null,frame=gripProjection.resolve(bodyFrame(shown),collar.hands.some(h=>h.grip)),unit={origin:{x:0,y:0},scale:1};
   const observations=handStreams.map(s=>{
     const raw=fresh&&frame?s.at(now)?.map(pixel):null;return raw?projectHand(raw,frame,unit,mirrored):null;
   });
@@ -109,7 +110,7 @@ function draw(now){
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,box.width,box.height);
   canvas.dataset.aligned=String(!!frame);canvas.dataset.skeleton=String($('show-skeleton').checked);
   canvas.dataset.liveHands=String(state?.visible??0);canvas.dataset.grabbed=String(state?.count??0);
-  canvas.dataset.tension=String(state?.tension??0);canvas.dataset.grips=JSON.stringify(state?.grips??[]);
+  canvas.dataset.tension=String(state?.tension??0);canvas.dataset.pulls=JSON.stringify(state?.pulls??[]);canvas.dataset.grips=JSON.stringify(state?.grips??[]);
   score=state?.visible?state.score:null;armScore=state?Math.round(state.tension*100):null;
   hold=state?.hold??0;
   let instruction;
@@ -122,11 +123,11 @@ function draw(now){
     const live=observations.map((h,i)=>{
       if(!h)return null;
       const hand=h.map(p=>({...p,x:scene.origin.x+p.x*scene.scale,y:scene.origin.y+p.y*scene.scale}));
-      const e=shown[13+i],elbow=e&&(e.visibility??1)>=.65?projectHand([e],frame,scene,mirrored)[0]:null;
-      return {hand,elbow,index:i,depth:shown[15+i]?.z??0};
+      const e=shown?.[13+i],elbow=e&&(e.visibility??1)>=.65?projectHand([e],frame,scene,mirrored)[0]:null;
+      return {hand,elbow,index:i,depth:shown?.[15+i]?.z??0};
     }).filter(Boolean).sort((a,b)=>b.depth-a.depth);
     for(const h of live)drawLiveGlove(ctx,h.hand,palmFacing(h.hand,h.index===0,mirrored),h.elbow,!!state.grips[h.index]&&activeTechnique.directions[h.index]==='↓');
-    if($('show-skeleton').checked&&frame){
+    if($('show-skeleton').checked&&frame&&shown){
       const projected=shown.map(p=>p?projectHand([p],frame,scene,mirrored)[0]:null);skeleton(ctx,projected,cyan,1.5);
       for(const h of live)for(const [a,b]of HAND_BONES)line(ctx,h.hand[a],h.hand[b],cyan,1);
     }
@@ -135,12 +136,12 @@ function draw(now){
     state?.trackingPaused?'깃은 잡고 있습니다. 양손이 다시 보이면 당김 판정을 이어갑니다.':!state?.visible?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
     state.posture?.some(p=>p==='palm'||p==='turn')?'기술 설명의 손바닥 방향으로 손을 돌려 깃을 잡으세요.':state.posture?.some(Boolean)?'손목을 비스듬히 교차해 각각 반대편 깃을 잡으세요.':
     state.count===0?'손가락을 굽히고 손목을 교차해 반대편 깃을 잡으세요.':state.count===1?'한쪽 깃이 잡혔습니다. 다른 손으로 반대쪽 깃을 잡으세요.':
-    !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.tension<.7?'양쪽 깃이 잡혔습니다. 쥔 손을 양옆으로 당기세요.':'깃이 당겨지고 있습니다. 잠깐 유지하세요.';
+    !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.pullDirection==='together'?'양손이 같은 방향으로 움직였습니다. 서로 반대 방향으로 당겨 주세요.':state.tension<.7?'양쪽 깃이 잡혔습니다. 쥔 손을 양옆으로 당기세요.':'깃이 당겨지고 있습니다. 잠깐 유지하세요.';
   $('tracking-label').textContent=demonstrating?'시연 중':state?.visible?`${state.visible}개 손 인식 · ${state.count}개 깃 잡힘`:stream?'인식 대기':'대기';
   $('feedback').textContent=feedback;$('live-feedback').textContent=feedback;
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':score>=GRIP_PASS_SCORE?'good':score>=25?'near':'adjust';
   $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'깃 잡기·당김 / 100';
-  $('live-hold').textContent=demonstrating?'연습 버튼을 누르면 채점합니다':state?.count===2?`양손 당김 유지 ${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`:'손목 교차 → 반대편 깃 잡기 → 양옆으로 당기기';
+  $('live-hold').textContent=demonstrating?'연습 버튼을 누르면 채점합니다':state?.count===2?`왼손 ${Math.round(state.pulls[0]*100)}% · 오른손 ${Math.round(state.pulls[1]*100)}% · 유지 ${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`:'손목 교차 → 반대편 깃 잡기 → 양옆으로 당기기';
   $('opponent-status').dataset.tap=String(!!tapUntil||!!state?.tapped);
   $('opponent-status').textContent=tapUntil||state?.tapped?'TAP! · 손을 펴서 놓기':demonstrating?instruction.label:state?.trackingPaused?'깃 잡기 유지 · 손 인식 대기':state?.count===2?`양쪽 깃 잡힘 · 당김 ${Math.round(state.tension*100)}%`:state?.count===1?'한쪽 깃 잡힘':'깃 위에서 손을 쥐세요';
 }

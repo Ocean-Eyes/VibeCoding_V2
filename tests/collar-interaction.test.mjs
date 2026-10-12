@@ -139,7 +139,23 @@ test('a continuous wide lateral pull never releases merely for leaving the acqui
 test('a tracking jump keeps the last cloth pin without earning a tap',()=>{
  const a=setup();const acquired=a.step('close'),pins=acquired.grips.map(g=>({...g.center}));
  const jumped=collarHands('close').map(h=>h.map(p=>({...p,x:p.x+1.5})));
- const state=a.step(jumped,200);assert.equal(state.count,2);assert.equal(state.trackingPaused,true);assert.equal(state.tapped,false);
+ const state=a.step(jumped,80);assert.equal(state.count,2);assert.equal(state.trackingPaused,true);assert.equal(state.tapped,false);
  assert.deepEqual(state.grips.map(g=>g.center),pins);assert.equal(a.step('close',20).count,2);
  assert.equal(a.step('lost',1000).count,0);
+});
+
+test('a confirmed fast bilateral pull recovers from the jump filter instead of freezing at zero',()=>{
+ const a=setup();a.step('close');
+ const fast=collarHands('close').map((h,i)=>h.map(p=>({...p,x:p.x+(i?-1:1)*.56})));
+ const initial=a.step(fast,60);assert.equal(initial.count,2);assert.equal(initial.trackingPaused,true);assert.equal(initial.tension,0);
+ const confirmed=a.step(fast,200);assert.equal(confirmed.trackingPaused,false);assert.equal(confirmed.tension,1);
+ assert.equal(a.step(fast,1300).tapped,true);
+});
+test('crossed hands pulling toward their own shoulders count, but moving both hands together does not',()=>{
+ const a=setup();a.step('close');
+ const inward=collarHands('close').map((h,i)=>h.map(p=>({...p,x:p.x+(i?1:-1)*.19})));
+ const state=a.step(inward,1600);assert.equal(state.count,2);assert.equal(state.pullDirection,'opposed');assert.ok(state.tension>.9);assert.equal(state.tapped,true);
+ const b=setup();b.step('close');
+ const together=collarHands('close').map(h=>h.map(p=>({...p,x:p.x+.25})));
+ const moved=b.step(together,1600);assert.deepEqual(moved.pulls,[1,1]);assert.equal(moved.pullDirection,'together');assert.equal(moved.tension,0);assert.equal(moved.tapped,false);
 });

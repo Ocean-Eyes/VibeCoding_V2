@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {assignHands,LandmarkStream,projectHand,palmFacing} from '../src/live-hands.js';
+import {assignHands,LandmarkStream,GripProjection,projectHand,palmFacing} from '../src/live-hands.js';
 const hand=(x,y=.4)=>Array.from({length:21},(_,i)=>({x:x+(i%4)*.006,y:y-Math.floor(i/4)*.015,z:0}));
 const pose=(a,b)=>Array.from({length:33},(_,i)=>({x:i===15?a:i===16?b:.5,y:.4,visibility:1}));
 test('detector array reorder and crossing keep the anatomical streams separate',()=>{
@@ -34,4 +34,20 @@ test('all 21 finger positions survive projection, with mirror applied once to th
  const changed=h.map(p=>({...p}));changed[8].y+=.08;
  const c=projectHand(changed,body,scene,true);assert.equal(c[7].y,a[7].y);assert.ok(Math.abs(c[8].y-a[8].y-40)<1e-10);
  assert.equal(palmFacing(a,true,true),palmFacing(b,true,false));
+});
+
+test('grasp calibration preserves pull distance when shoulders widen, while rejecting common body translation',()=>{
+ const projection=new GripProjection(),scene={origin:{x:0,y:0},scale:1};
+ const body={origin:{x:500,y:200},scale:200,x:{x:1,y:0},y:{x:0,y:1}};
+ projection.resolve(body,false);
+ const start=projectHand([{x:460,y:260}],projection.resolve(body,true),scene,true)[0];
+ const widened={...body,scale:300};
+ const end=projectHand([{x:440,y:260}],projection.resolve(widened,true),scene,true)[0];
+ assert.ok(Math.abs(end.x-start.x-.1)<1e-10,'actual 20px pull must remain measurable');
+ const translated={...widened,origin:{x:550,y:230}};
+ const moved=projectHand([{x:490,y:290}],projection.resolve(translated,true),scene,true)[0];
+ assert.deepEqual(moved,end);
+ assert.equal(projection.resolve(null,true).scale,200,'visible hands remain usable during shoulder occlusion');
+ assert.equal(projection.resolve(widened,false).scale,300,'release allows recalibration');
+ projection.reset();assert.equal(projection.resolve(null,true),null);
 });

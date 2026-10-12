@@ -60,3 +60,17 @@ export function palmFacing(hand,left,mirrored=true){
   const cross=(a.x-w.x)*(b.y-w.y)-(a.y-w.y)*(b.x-w.x);
   return cross*(left?1:-1)*(mirrored?-1:1)>0;
 }
+
+// Calibrate scale and axes before grasping, then keep that ruler while pulling.
+// Re-estimating shoulder width every frame can divide away the hand movement.
+export class GripProjection{
+ constructor(){this.reset()}
+ reset(){this.anchor=null;this.origin=null}
+ resolve(body,gripped){
+  if(!gripped){this.anchor=body?{...body,origin:{...body.origin},x:{...body.x},y:{...body.y}}:null;this.origin=body?.origin??null;return body}
+  if(!this.anchor&&body)this.anchor={...body,origin:{...body.origin},x:{...body.x},y:{...body.y}};
+  if(!this.anchor)return null;
+  if(body)this.origin={...body.origin};
+  return {...this.anchor,origin:this.origin};
+ }
+}
