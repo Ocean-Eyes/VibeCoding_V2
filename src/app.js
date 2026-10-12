@@ -26,7 +26,7 @@ function circle(context,p,r,color,fill=true){if(!p)return;context.beginPath();co
 function skeleton(context,p,color,width=3){for(const[a,b]of BONES){if(p[a]&&p[b]&&(p[a].visibility??1)>=.65&&(p[b].visibility??1)>=.65)line(context,p[a],p[b],color,width)}for(const i of[11,12,13,14,15,16,23,24])if(p[i]&&(p[i].visibility??1)>=.65)circle(context,p[i],width*1.25,color)}
 function preview(canvas,index){const context=canvas.getContext('2d'),w=canvas.width,h=canvas.height;context.clearRect(0,0,w,h);const frame=opponentFrame(w,h);drawOpponent(context,frame);drawGripGuides(context,frame,GRIP_STEPS[index],activeTechnique.directions,true)}
 function updatePose(index=selected){
-  const p=POSES[index];$('step-label').textContent=`0${index+1} / 03`;$('pose-number').textContent=`0${index+1}`;$('pose-name').textContent=p.name;$('pose-description').textContent=activeTechnique.cues[index];$('gesture-label').textContent=['손을 편 채 반대편 깃으로','깃 위에서 쥐면 잡힙니다','양쪽 깃을 쥐고 양옆으로 당기기'][index];preview($('preview'),index);
+  const p=POSES[index];$('step-label').textContent=`0${index+1} / 03`;$('pose-number').textContent=`0${index+1}`;$('pose-name').textContent=p.name;$('pose-description').textContent=activeTechnique.cues[index];$('gesture-label').textContent=['손목을 교차해 반대편 깃으로','깃 위에서 쥐면 잡힙니다','양쪽 깃을 쥐고 양옆으로 당기기'][index];preview($('preview'),index);
   document.querySelectorAll('.pose-card').forEach((button,i)=>{preview(button.querySelector('canvas'),i);button.classList.toggle('selected',i===index);button.setAttribute('aria-pressed',String(i===index));button.querySelector('.completion').textContent=completed.has(i)?'✓':''});
 }
 POSES.forEach((p,i)=>{const button=document.createElement('button');button.className='pose-card';button.innerHTML=`<canvas width="140" height="110" aria-hidden="true"></canvas><span class="card-copy"><small>STEP 0${i+1}</small><strong>${p.name}</strong><span>${p.short}</span></span><span class="completion" aria-label="완료 여부"></span>`;button.onclick=()=>choose(i);$('pose-list').append(button);preview(button.querySelector('canvas'),i)});
@@ -61,7 +61,7 @@ function connectTracker(){
     worker.onerror=e=>{if(session===generation&&attempt===trackerGeneration)trackingFailed(`추적 모듈 오류: ${e.message||'Worker 실행 실패'}`)};
     worker.onmessage=({data})=>{
       if(session!==generation||attempt!==trackerGeneration)return;
-      if(data.type==='ready'){clearTimeout(initTimer);ready=true;mode='live';if(autoStart){autoStart=false;running=true;countdown=3;$('countdown').hidden=false;}controls();notify('손을 편 채 반대편 깃으로 가져간 뒤 쥐세요. 양쪽 깃을 잡고 양옆으로 당기면 상대가 반응합니다.');}
+      if(data.type==='ready'){clearTimeout(initTimer);ready=true;mode='live';if(autoStart){autoStart=false;running=true;countdown=3;$('countdown').hidden=false;}controls();notify('손가락을 굽힌 채 손목을 교차해 반대편 깃을 잡으세요. 양쪽 깃을 잡고 양옆으로 당기면 상대가 반응합니다.');}
       if(data.type==='error')trackingFailed(data.message);
       if(data.type==='result'){
         clearTimeout(frameTimer);busy=false;const now=performance.now();fps=lastResult?1000/(now-lastResult):0;lastResult=now;
@@ -100,7 +100,7 @@ function draw(now){
     const raw=fresh&&frame?s.at(now)?.map(pixel):null;return raw?projectHand(raw,frame,unit,mirrored):null;
   });
   if(mode==='live'&&!demonstrating){
-    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored});
+    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions});
     const phase=Math.min(2,gripState.count);
     if(selected!==phase){selected=phase;updatePose()}
   }
@@ -133,13 +133,14 @@ function draw(now){
   }else drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected]);
   const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:
     !state?.visible?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
-    state.count===0?'손을 편 채 깃 위로 가져간 뒤 쥐세요.':state.count===1?'한쪽 깃이 잡혔습니다. 다른 손으로 반대쪽 깃을 잡으세요.':
+    state.posture?.some(p=>p==='palm'||p==='turn')?'기술 설명의 손바닥 방향으로 손을 돌려 깃을 잡으세요.':state.posture?.some(Boolean)?'손목을 비스듬히 교차해 각각 반대편 깃을 잡으세요.':
+    state.count===0?'손가락을 굽히고 손목을 교차해 반대편 깃을 잡으세요.':state.count===1?'한쪽 깃이 잡혔습니다. 다른 손으로 반대쪽 깃을 잡으세요.':
     !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.tension<.7?'양쪽 깃이 잡혔습니다. 쥔 손을 양옆으로 당기세요.':'깃이 당겨지고 있습니다. 잠깐 유지하세요.';
   $('tracking-label').textContent=demonstrating?'시연 중':state?.visible?`${state.visible}개 손 인식 · ${state.count}개 깃 잡힘`:stream?'인식 대기':'대기';
   $('feedback').textContent=feedback;$('live-feedback').textContent=feedback;
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':score>=GRIP_PASS_SCORE?'good':score>=25?'near':'adjust';
   $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'깃 잡기·당김 / 100';
-  $('live-hold').textContent=demonstrating?'연습 버튼을 누르면 채점합니다':state?.count===2?`양손 당김 유지 ${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`:'펴기 → 깃 위에서 쥐기 → 양옆으로 당기기';
+  $('live-hold').textContent=demonstrating?'연습 버튼을 누르면 채점합니다':state?.count===2?`양손 당김 유지 ${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`:'손목 교차 → 반대편 깃 잡기 → 양옆으로 당기기';
   $('opponent-status').dataset.tap=String(!!tapUntil||!!state?.tapped);
   $('opponent-status').textContent=tapUntil||state?.tapped?'TAP! · 손을 펴서 놓기':demonstrating?instruction.label:state?.count===2?`양쪽 깃 잡힘 · 당김 ${Math.round(state.tension*100)}%`:state?.count===1?'한쪽 깃 잡힘':'깃 위에서 손을 쥐세요';
 }

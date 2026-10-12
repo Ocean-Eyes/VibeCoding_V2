@@ -8,7 +8,7 @@ const blend=(a,b,t)=>a.map((p,i)=>({x:p.x+(b[i].x-p.x)*t,y:p.y+(b[i].y-p.y)*t}))
 
 // The partner's frame depends ONLY on viewport dimensions, never camera landmarks.
 export function opponentFrame(width,height){
-  return {origin:{x:width/2,y:height*.36},scale:Math.min(width/2.6,height/3),x:{x:1,y:0},y:{x:0,y:1}};
+  return {origin:{x:width/2,y:height*.26},scale:Math.min(width/2.05,height/2.4),x:{x:1,y:0},y:{x:0,y:1}};
 }
 export function demonstrationAt(seconds,technique=null){
   const t=((seconds%12)+12)%12;

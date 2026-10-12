@@ -1,8 +1,8 @@
 import {posedHand,handViewPoint} from '../../src/hand-rig.js';
 import {lapelRest,graspCenter} from '../../src/collar-interaction.js';
-export function handAt(center,curl,left=true){
+export function handAt(center,curl,left=true,palmUp=false){
  const angle=left?.95:-.95,c=Math.cos(angle),s=Math.sin(angle);
- const hand=posedHand(curl).landmarks.map(p=>{const [x,y,z]=handViewPoint(p,left,false);return {x:2.55*(x*c-y*s),y:2.55*(x*s+y*c),z:z*2.55}});
+ const hand=posedHand(curl).landmarks.map(p=>{const [x,y,z]=handViewPoint(p,left,palmUp);return {x:2.55*(x*c-y*s),y:2.55*(x*s+y*c),z:z*2.55}});
  const anchor=graspCenter(hand);return hand.map(p=>({...p,x:p.x+center.x-anchor.x,y:p.y+center.y-anchor.y}));
 }
 export function collarHands(phase){

@@ -1,3 +1,4 @@
+import {drawDeformedCoat} from './cloth-renderer.js';
 import {lapelRibbon,lapelPoint} from './collar-interaction.js';
 import {drawAnatomicalArm} from './hand-renderer.js';
 import {GRIP_STEPS,gripPlacement} from './demonstration.js';
@@ -67,7 +68,7 @@ export function drawCollarTargets(ctx,frame,state){
  ctx.save();ctx.translate(frame.origin.x,frame.origin.y);ctx.scale(frame.scale,frame.scale);
  for(const side of [-1,1]){
   const grabbed=state.grips?.some(g=>g?.side===side);if(grabbed)continue;
-  const hovered=state.hover?.some(h=>h?.side===side),p=lapelPoint(side,side>0?.29:.48,state.deformation||[]);
+  const hovered=state.hover?.some(h=>h?.side===side),p=lapelPoint(side,side>0?.22:.60,state.deformation||[]);
   ctx.beginPath();ctx.ellipse(p.x,p.y,.07,.10,side*.5,0,Math.PI*2);
   ctx.strokeStyle=hovered?'#8ef0c8':'#efd49ca0';ctx.lineWidth=.009;ctx.setLineDash([.025,.018]);ctx.stroke();
  }
@@ -105,6 +106,11 @@ function collarContact(p,index){
 }
 let weaveContour;
 function drawJudogi(ctx,belt=true,interaction=null){
+  if(interaction){
+    drawDeformedCoat(ctx,interaction.deformation||[],interaction.tapped,paint=>drawJudogiBase(paint,belt,{...interaction,deformation:[]}));
+  }else drawJudogiBase(ctx,belt);
+}
+function drawJudogiBase(ctx,belt=true,interaction=null){
   const body='M -.2 .055 Q -.285 .11 -.40 .17 Q -.47 .38 -.44 .66 L -.48 1.1 Q -.48 1.35 -.53 1.55 Q -.27 1.64 .02 1.6 Q .32 1.65 .53 1.55 L .46 1.1 Q .42 .65 .44 .4 Q .44 .26 .39 .17 L .2 .055 L .14 .3 L 0 .55 L -.14 .3 Z';
   // Loose sleeves hang from sloping shoulders, with fabric volume at elbow and cuff.
   for(const side of [-1,1]){
@@ -180,7 +186,7 @@ export function drawOpponent(ctx, frame,interaction=null) {
   const ellipse=(a,b,rx,ry,fill)=>{ctx.beginPath();ctx.ellipse(a,b,rx,ry,0,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill()};
   ctx.save();
   ellipse(-.74,1.055,.078,.12,'#c9a387');if(!interaction?.tapped)ellipse(.74,1.055,.078,.12,'#c9a387');
-  shape([[-.18,.06],[.18,.06],[.13,.42],[0,.55],[-.13,.42]],'#c9a387');
+  shape([[-.18,.06],[.18,.06],[.37,.20],[.33,.66],[-.33,.66],[-.37,.20]],'#c9a387');
   drawJudogi(ctx,true,interaction);
   if(interaction?.tapped){
     const beat=Math.sin((interaction.time??0)/95)*.018;

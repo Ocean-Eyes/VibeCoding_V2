@@ -36,11 +36,16 @@ const assert=require('node:assert/strict');
     const f=JSON.parse(c.dataset.frame),d=c.width/c.getBoundingClientRect().width;
     return Array.from(c.getContext('2d').getImageData(Math.round((f.origin.x-f.scale*.26)*d),Math.round((f.origin.y-f.scale*.56)*d),Math.round(f.scale*.52*d),Math.round(f.scale*.51*d)).data);
   });
+  const fabricPixels=()=>page.locator('#partner').evaluate(c=>{
+    const f=JSON.parse(c.dataset.frame),d=c.width/c.getBoundingClientRect().width;
+    return Array.from(c.getContext('2d').getImageData(Math.round((f.origin.x+f.scale*.30)*d),Math.round((f.origin.y+f.scale*.37)*d),Math.round(f.scale*.09*d),Math.round(f.scale*.22*d)).data);
+  });
+  const restFabric=await fabricPixels();
   const fixedHead=await headPixels();
   const rest=await page.locator('#partner').evaluate(c=>c.toDataURL());
   assert.equal(await grabbed(),'0');assert.equal(await page.locator('#live-score-value').innerText(),'0');
   await phase('outside');assert.equal(await grabbed(),'0');
-  await phase('close');assert.equal(await grabbed(),'0','moving an already-closed hand onto a collar cannot acquire it');
+  await phase('close');assert.equal(await grabbed(),'2','prepared closed hands acquire the opposite collars without reopening');
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
   assert.equal(await page.locator('#live-score-value').innerText(),'50');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-grabbed.png'});
@@ -50,6 +55,7 @@ const assert=require('node:assert/strict');
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
   await phase('pull',250);await page.waitForFunction(()=>Number(document.querySelector('#overlay').dataset.tension)>.9);
   const pulled=await page.locator('#partner').evaluate(c=>c.toDataURL());assert.notEqual(pulled,rest);
+  const pulledFabric=await fabricPixels();assert.ok(restFabric.reduce((sum,v,i)=>sum+Math.abs(v-pulledFabric[i]),0)/restFabric.length>2,'fabric away from the collar must deform too');
   const currentHead=await headPixels();
   // One color level at an antialiased boundary may blend with the collar behind it.
   assert.ok(fixedHead.every((v,i)=>Math.abs(v-currentHead[i])<=1),'the head must remain fixed even during a bilateral pull');
@@ -65,7 +71,8 @@ const assert=require('node:assert/strict');
   await page.setViewportSize({width:390,height:950});await phase('open');await phase('close');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-mobile.png'});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  assert.ok(await page.evaluate(()=>document.querySelector('#live-score').getBoundingClientRect().top>=document.querySelector('#viewport').getBoundingClientRect().bottom),'score panel must not cover enlarged hands');
   await page.locator('#back-menu').click();assert.equal(await page.locator('#video').evaluate(v=>v.srcObject),null);
-  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: open/close collision, no closed-entry capture, two cloth attachments, one-hand pull rejected, bilateral pull deforms cloth and triggers tap/XP, release, tracking loss, mobile, cleanup. Synthetic camera landmarks.');
+  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: open/close collision, prepared closed-entry capture, two cloth attachments, one-hand pull rejected, bilateral pull deforms cloth and triggers tap/XP, release, tracking loss, mobile, cleanup. Synthetic camera landmarks.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

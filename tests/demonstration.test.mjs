@@ -74,3 +74,13 @@ test('Kodokan cross-grip variations retain their palm orientation and distinct f
     assert.equal(demonstrationAt(8,t).finish,0);assert.equal(demonstrationAt(9,t).finish,1);
   }
 });
+
+test('enlarged partner retains head, sleeves and belt within desktop and narrow viewports',()=>{
+ for(const [width,height]of [[954,596],[336,448],[266,355],[380,220]]){
+  const frame=opponentFrame(width,height),old=Math.min(width/2.6,height/3);
+  assert.ok(frame.scale>=old*1.24);
+  assert.ok(frame.origin.y-.55*frame.scale>=0);
+  assert.ok(frame.origin.y+1.68*frame.scale<=height);
+  assert.ok(frame.origin.x-.9*frame.scale>=0&&frame.origin.x+.9*frame.scale<=width);
+ }
+});
