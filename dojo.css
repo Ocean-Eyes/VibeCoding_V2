@@ -174,9 +174,10 @@ footer { color: #303e2e; }
   gap: 18px;
 }
 .founder-portrait {
+  align-self: flex-end;
   width: 106px;
-  margin: 0;
-  padding: 8px 8px 6px;
+  margin: 0 16px 0 0;
+  padding: 0;
   border: 6px ridge #443a2f;
   background: #eee9da;
   box-shadow: 3px 6px 8px #252a2933, inset 0 0 0 1px #fff9;
@@ -186,13 +187,6 @@ footer { color: #303e2e; }
   width: 100%;
   height: auto;
 }
-.founder-portrait figcaption {
-  margin-top: 6px;
-  font: 9px var(--serif);
-  color: #514b41;
-  text-align: center;
-  white-space: nowrap;
-}
 @media (max-width: 760px) {
   .dojo-room { --wall-height: 480px; }
   .ink-hero { padding-top: 110px; }
@@ -200,10 +194,9 @@ footer { color: #303e2e; }
   .founder-portrait {
     position: absolute;
     top: 12px;
-    right: 8px;
+    right: 0;
     width: 70px;
-    padding: 5px;
+    margin: 0;
     border-width: 4px;
   }
-  .founder-portrait figcaption { font-size: 7px; margin-top: 4px; }
 }
