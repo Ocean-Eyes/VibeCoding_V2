@@ -61,6 +61,19 @@ const assert=require('node:assert/strict');
    assert.ok(await page.locator('#partner').evaluate(c=>c.toDataURL())===partner,'free hand motion must not move the partner');
   }
   assert.equal(new Set(renders).size,4,'individual finger flexion and crossing change the live surface');
+  // The first-grip pose starts farther from the crossed pose. Wait for the
+  // synthetic approach to finish before comparing stationary detector order.
+  await page.evaluate(async()=>{
+   const start=performance.now();let previous=null,quiet=start;
+   while(performance.now()-start<8000){
+    await new Promise(r=>setTimeout(r,80));
+    const next=JSON.parse(document.querySelector('#overlay').dataset.displayWrists);
+    if(!previous||next.some((p,i)=>!p||!previous[i]||Math.hypot(p.x-previous[i].x,p.y-previous[i].y)>.0002))quiet=performance.now();
+    if(performance.now()-quiet>600)return;
+    previous=next;
+   }
+   throw Error('Synthetic crossing did not settle');
+  });
   const beforeOrder=await page.locator('#overlay').evaluate(c=>Array.from(c.getContext('2d').getImageData(0,0,c.width,c.height).data));
   await page.evaluate(()=>window.qaReversed=true);await page.waitForTimeout(2400);
   const afterOrder=await page.locator('#overlay').evaluate(c=>Array.from(c.getContext('2d').getImageData(0,0,c.width,c.height).data));

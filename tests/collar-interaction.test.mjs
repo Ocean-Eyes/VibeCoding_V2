@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CollarInteraction,lapelPoint,lapelRest,graspCenter,fingerExtension,clothPoint,cameraPalmNormal,gripPosture} from '../src/collar-interaction.js';
+import {CollarInteraction,lapelPoint,lapelRest,graspCenter,fingerExtension,clothPoint,cameraPalmNormal,gripPosture,openFingers} from '../src/collar-interaction.js';
 import {collarHands,collarArms,handAt} from './fixtures/collar-hands.mjs';
 function movedHands(amount){return collarHands('close').map((h,i)=>h.map(p=>({...p,x:p.x+(i?-1:1)*amount})))}
 function ramp(a,amount){let state;for(let i=1;i<=20;i++)state=a.step(movedHands(amount*i/20),40);return state}
@@ -152,7 +152,7 @@ test('brief false-open observations do not unlatch; sustained open hands do',()=
  const a=setup();a.step('close');ramp(a,.22);
  assert.equal(a.step('release',100).count,2);
  assert.equal(a.step('pull',100).count,2);
- const partial=collarHands('pull').map((h,i)=>handAt(graspCenter(h),.4,i===0));
+ const partial=collarHands('pull').map((h,i)=>handAt(graspCenter(h),.6,i===0));
  assert.equal(a.step(partial,400).count,2,'uncertain curl must not be treated as deliberate release');
  assert.equal(a.step('release',260).count,0);
 });
@@ -214,8 +214,8 @@ test('body translation, shrugging and raising wrists together with elbows cannot
  }
 });
 
-test('low grips, drifted hands, wrong facing and hidden elbows cannot complete even if elbows rise',()=>{
- for(const kind of ['low','wide','wrong-face','missing','low-confidence']){
+test('low grips, drifted hands and hidden elbows cannot complete even if elbows rise',()=>{
+ for(const kind of ['low','wide','missing','low-confidence']){
   const model=new CollarInteraction();
   const base=kind==='low'?[0,1].map(i=>handAt(lapelRest(i?-1:1,i?.62:.38),1,i===0)):collarHands('close');
   for(let now=0;now<=300;now+=20)model.update(base,now,{active:true,arms:collarArms()});
@@ -267,7 +267,7 @@ test('occlusion cannot hold a collar after the user leaves the camera',()=>{
  assert.equal(state.count,0);
 });
 
-test('open-looking landmarks under the opposite wrist never imply release',()=>{
+test('overlapping palms still release when extended fingers are visible',()=>{
  for(const hidden of [0,1]){
   const model=new CollarInteraction(),base=collarHands('close');
   let state;for(let t=0;t<=300;t+=20)state=model.update(base,t,{arms:collarArms()});
@@ -275,7 +275,7 @@ test('open-looking landmarks under the opposite wrist never imply release',()=>{
   mixed[hidden]=collarHands('open')[hidden];
   mixed[1-hidden][0]={...graspCenter(mixed[hidden]),z:0};
   for(let t=320;t<=2320;t+=20)state=model.update(mixed,t,{arms:collarArms('lift')});
-  assert.equal(state.count,2);assert.equal(state.tapped,false);assert.equal(state.trackingPaused,true);
+  assert.equal(state.grips[hidden],null);assert.equal(state.count,1);assert.equal(state.tapped,false);
   for(let t=2340;t<=2940;t+=20)state=model.update(collarHands('open'),t,{arms:collarArms()});
   assert.equal(state.count,0);
  }
@@ -353,4 +353,80 @@ test('camera identity, smoothing and collar state together survive long crossing
   for(let k=0;k<24;k++)tick(open,true);
   assert.equal(state.count,0,'intentional reopening still works after repeated occlusion');
  }
+});
+
+
+test('three naturally extended fingers release without requiring a straight little finger',()=>{
+ for(const up of [false,true])for(const mirror of [true,false]){
+  const model=new CollarInteraction(),directions=up?['↑','↑']:['↓','↓'];
+  const make=curl=>[0,1].map(i=>{
+   const h=handAt(lapelRest((i?-1:1)*(mirror?1:-1),i?.20:.12),curl,i===0,up);
+   // Reflect hand orientation about its own grip for the non-mirrored camera.
+   const center=graspCenter(h);return mirror?h:h.map(p=>({...p,x:center.x*2-p.x}));
+  });
+  let state;for(let t=0;t<=300;t+=20)state=model.update(make(1),t,{directions,mirrored:mirror});
+  assert.equal(state.count,2);
+  const open=make(.15),curled=make(1);
+  open.forEach((h,i)=>{for(let k=18;k<=20;k++)h[k]=curled[i][k]});
+  assert.ok(open.every(h=>openFingers(h).length===3));
+  for(let t=320;t<=1000;t+=20)state=model.update(open,t,{directions,mirrored:mirror});
+  assert.equal(state.count,0);assert.equal(state.hold,0);assert.equal(state.tapped,false);
+ }
+});
+
+test('visible pose wrists and elbows continue a held action through finger occlusion',()=>{
+ const model=new CollarInteraction(),hands=collarHands('close');
+ const arms=phase=>collarArms(phase).map((a,i)=>({...a,wrist:{...hands[i][0],visibility:1}}));
+ let state;for(let t=0;t<=300;t+=20)state=model.update(hands,t,{active:true,arms:arms('close')});
+ for(let t=320;t<=2100;t+=20)state=model.update([null,null],t,{active:true,arms:arms('lift'),bodyVisible:true});
+ assert.equal(state.count,2);assert.equal(state.completion,1);assert.equal(state.tapped,true);
+ for(let t=2120;t<=2800;t+=20)state=model.update(collarHands('open'),t,{active:true,arms:arms('lift'),bodyVisible:true});
+ assert.equal(state.count,0);assert.equal(state.tapped,false);
+});
+
+test('unseen or relocated pose wrists cannot stand in for held hands',()=>{
+ for(const kind of ['missing','uncertain','displaced']){
+  const model=new CollarInteraction(),hands=collarHands('close');let state;
+  for(let t=0;t<=300;t+=20)state=model.update(hands,t,{active:true,arms:collarArms()});
+  const arms=collarArms('lift').map((a,i)=>({...a,wrist:kind==='missing'?null:{...hands[i][0],x:hands[i][0].x+(kind==='displaced'?.3:0),visibility:kind==='uncertain'?.2:1}}));
+  for(let t=320;t<=2300;t+=20)state=model.update([null,null],t,{active:true,arms,bodyVisible:true});
+  assert.equal(state.count,2);assert.equal(state.completion,0);assert.equal(state.tapped,false);
+ }
+});
+
+test('turning the hands after a valid grip does not block the finishing arm action',()=>{
+ const model=new CollarInteraction(),hands=collarHands('close');let state;
+ for(let t=0;t<=300;t+=20)state=model.update(hands,t,{active:true,arms:collarArms()});
+ const turned=hands.map((h,i)=>handAt(graspCenter(h),1,i===0,true));
+ for(let t=320;t<=2100;t+=20)state=model.update(turned,t,{active:true,arms:collarArms('lift')});
+ assert.equal(state.count,2);assert.ok(state.completion>.95);assert.equal(state.tapped,true);
+});
+
+
+test('a forearm obscuring the extended fingers cannot establish a release',()=>{
+ for(const hidden of [0,1]){
+  const model=new CollarInteraction(),hands=collarHands('close');let state;
+  for(let t=0;t<=300;t+=20)state=model.update(hands,t,{arms:collarArms()});
+  const mixed=hands.map(h=>h.map(p=>({...p})));mixed[hidden]=collarHands('open')[hidden];
+  const center=graspCenter(mixed[hidden]),tips=[8,12,16,20].reduce((p,k)=>({x:p.x+mixed[hidden][k].x/4,y:p.y+mixed[hidden][k].y/4}),{x:0,y:0});
+  const d=Math.hypot(tips.x-center.x,tips.y-center.y),axis={x:(tips.x-center.x)/d,y:(tips.y-center.y)/d};
+  mixed[1-hidden][0]={x:center.x-axis.x*.08,y:center.y-axis.y*.08,z:0};
+  const arms=collarArms();arms[1-hidden].elbow={x:tips.x+axis.x*.10,y:tips.y+axis.y*.10,visibility:1};
+  for(let t=320;t<=2320;t+=20)state=model.update(mixed,t,{arms});
+  assert.equal(state.count,2);assert.equal(state.completion,0);assert.equal(state.tapped,false);
+ }
+});
+
+
+test('a continuously tracked open hand can release away from a pin frozen by occlusion without pulling cloth',()=>{
+ const model=new CollarInteraction(),closed=collarHands('close');let state;
+ for(let t=0;t<=300;t+=20)state=model.update(closed,t,{arms:collarArms()});
+ const pins=state.grips.map(g=>({...g.center}));
+ for(let t=320;t<=1300;t+=20)state=model.update([null,null],t,{arms:collarArms()});
+ const moved=collarHands('open').map((h,i)=>h.map(p=>({...p,x:p.x+(i?-.25:.25)})));
+ for(let t=1320;t<=2100;t+=20){
+  state=model.update(moved,t,{arms:collarArms(),continuousHands:[true,true]});
+  state.grips.forEach((g,i)=>{if(g)assert.deepEqual(g.center,pins[i])});
+ }
+ assert.equal(state.count,0);
 });

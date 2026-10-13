@@ -105,9 +105,10 @@ function draw(now){
     const arms=[0,1].map(i=>{
       const shoulder=shown?.[11+i],elbow=shown?.[13+i];
       if(!frame||!shoulder||!elbow||(shoulder.visibility??1)<.65||(elbow.visibility??1)<.65)return null;
-      const [s,e]=projectHand([shoulder,elbow],frame,unit,mirrored);return {shoulder:s,elbow:e};
+      const [s,e]=projectHand([shoulder,elbow],frame,unit,mirrored);
+      const wrist=shown?.[15+i];return {shoulder:s,elbow:e,wrist:wrist&&(wrist.visibility??1)>=.75?projectHand([wrist],frame,unit,mirrored)[0]:null};
     });
-    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body});
+    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body,continuousHands:observations.map(Boolean)});
     const phase=Math.min(2,gripState.count);
     if(selected!==phase){selected=phase;updatePose()}
   }
@@ -118,7 +119,7 @@ function draw(now){
   canvas.dataset.displayWrists=JSON.stringify(displayHands.map(h=>h?.[0]??null));
   canvas.dataset.liveHands=String(state?.visible??0);canvas.dataset.grabbed=String(state?.count??0);
   canvas.dataset.completion=String(state?.completion??0);canvas.dataset.elbows=JSON.stringify(state?.elbowLevels??[]);canvas.dataset.grips=JSON.stringify(state?.grips??[]);
-  score=state?.visible?state.score:null;armScore=state?.elbowLevels.every(v=>v!==null)?Math.round(Math.min(...state.elbowLevels)*100):null;
+  score=state&&(state.visible||state.count)?state.score:null;armScore=state?.elbowLevels.every(v=>v!==null)?Math.round(Math.min(...state.elbowLevels)*100):null;
   hold=state?.hold??0;
   let instruction;
   if(demonstrating){
@@ -140,11 +141,11 @@ function draw(now){
     }
   }else drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected],{finish:selected===2?finishAt(((now-guideStarted)/1000)%4):0});
   const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:
-    state?.trackingPaused?'깃은 잡고 있습니다. 어깨·팔꿈치·양손이 보이면 판정을 이어갑니다.':!state?.visible?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
+    state?.trackingPaused?'깃은 잡고 있습니다. 어깨·팔꿈치·양손이 보이면 판정을 이어갑니다.':!state?.visible&&!state?.count?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
     state.posture?.some(p=>p==='palm'||p==='turn')?`카메라에 왼손 ${activeTechnique.directions[0]==='↓'?'손바닥':'손등'}, 오른손 ${activeTechnique.directions[1]==='↓'?'손바닥':'손등'}이 보이게 해 주세요.`:state.posture?.some(Boolean)?'각 손으로 반대편 깃을 잡으세요.':
     state.count===0?'손가락을 굽히고 손목을 교차해 반대편 깃을 잡으세요.':state.count===1?'한쪽 깃이 잡혔습니다. 다른 손으로 반대쪽 깃을 잡으세요.':
-    !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.issue==='height'?'가슴 아래쪽이 아닌 목 가까운 위쪽 깃을 잡으세요.':state.issue==='spread'?'손을 멀리 벌리지 말고 잡은 위치 가까이에 유지하세요.':state.issue==='orientation'?'잡은 손의 앞뒤 방향을 다시 맞춰 주세요.':state.completion<.7?'잡은 손은 유지하고 양 팔꿈치를 조금 올려 보세요.':'깃 위치와 올라온 팔꿈치를 잠깐 유지하세요.';
-  $('tracking-label').textContent=demonstrating?'시연 중':state?.visible?`${state.visible}개 손 인식 · ${state.count}개 깃 잡힘`:stream?'인식 대기':'대기';
+    !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.issue==='height'?'가슴 아래쪽이 아닌 목 가까운 위쪽 깃을 잡으세요.':state.issue==='spread'?'손을 멀리 벌리지 말고 잡은 위치 가까이에 유지하세요.':state.completion<.7?'잡은 손은 유지하고 양 팔꿈치를 조금 올려 보세요.':'깃 위치와 올라온 팔꿈치를 잠깐 유지하세요.';
+  $('tracking-label').textContent=demonstrating?'시연 중':state?.visible?`${state.visible}개 손 인식 · ${state.count}개 깃 잡힘`:state?.count?`${state.count}개 그립 유지 · ${state.trackingPaused?'관절 인식 대기':'팔 동작 인식'}`:stream?'인식 대기':'대기';
   $('feedback').textContent=feedback;$('live-feedback').textContent=feedback;
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':score>=GRIP_PASS_SCORE?'good':score>=25?'near':'adjust';
   $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'깃 위치·팔꿈치 동작 / 100';

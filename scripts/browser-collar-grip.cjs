@@ -11,7 +11,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    const context=HTMLCanvasElement.prototype.getContext;
    HTMLCanvasElement.prototype.getContext=function(kind,options){return context.call(this,kind,kind==='2d'&&this.id==='partner'?{...options,willReadFrequently:true}:options)};
    window.qaGripPhase='open';const Original=Worker;
-   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;d.swap=window.qaSwap;d.ghostOpen=window.qaGhostOpen;}super.postMessage(d,t)}};
+   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;d.swap=window.qaSwap;d.ghostOpen=window.qaGhostOpen;d.wristVisibility=window.qaWristVisibility;}super.postMessage(d,t)}};
   });
   await page.route('**/tests/fixtures/collar-hands.mjs',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('tests/fixtures/collar-hands.mjs','utf8')}));
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
@@ -36,14 +36,20 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      const w=data.bitmap.width,h=data.bitmap.height;data.bitmap.close();
      const frame={origin:{x:w*.5,y:h*.32},scale:w*.18,x:{x:1,y:0},y:{x:0,y:1}},pose=targetPose(frame,POSES[0]);
      for(const [i,id]of [13,14].entries()){
-      pose[id].y=frame.origin.y+frame.scale*(.70-(['lift','hands-only'].includes(data.phase)||(data.phase==='one-lift'&&i===0)?.15:0));
+      pose[id].y=frame.origin.y+frame.scale*(.70-(['lift','hands-only','hidden-lift'].includes(data.phase)||(data.phase==='one-lift'&&i===0)?.15:0));
       if(data.phase==='no-elbows')pose[id].visibility=.1;
      }
-     let hands=collarHands(data.phase).map((hand,i)=>{
+     let hands=collarHands(data.phase==='relaxed-open'?'open':data.phase).map((hand,i)=>{
       if(!hand)return null;
       if(data.palmUp){
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
-       hand=handAt(center,data.phase==='open'?0:1,i===0,true);
+       hand=handAt(center,['open','relaxed-open'].includes(data.phase)?0:1,i===0,true);
+      }
+      if(data.phase==='relaxed-open'){
+       const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
+       hand=handAt(center,.15,i===0,!!data.palmUp);
+       const closed=handAt(center,1,i===0,!!data.palmUp);
+       for(let k=18;k<=20;k++)hand[k]=closed[k];
       }
       if(data.edge){
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
@@ -58,7 +64,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      if(data.swap){[pose[15],pose[16]]=[pose[16],pose[15]];hands.reverse()}
      if(data.phase==='hidden-left')hands[0]=null;
      if(data.phase==='hidden-right')hands[1]=null;
-     if(data.phase==='hidden-both'||data.phase==='body-lost')hands=[null,null];
+     if(['hidden-both','hidden-lift','body-lost'].includes(data.phase))hands=[null,null];
+     if(data.wristVisibility!==undefined)for(const id of [15,16])pose[id].visibility=data.wristVisibility;
      self.postMessage({type:'result',points:['hands-only','body-lost'].includes(data.phase)?null:pose.map(p=>p?{...p,x:p.x/w,y:p.y/h,z:(p.z??0)/w}:{x:0,y:0,visibility:0}),hands:hands.filter(Boolean),time:data.time});
     }
    };`}));
@@ -85,12 +92,18 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await phase('close');assert.equal(await grabbed(),'2','prepared closed hands acquire the opposite collars without reopening');
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
   assert.equal(await page.locator('#live-score-value').innerText(),'50');
+  await phase('relaxed-open',1400);assert.equal(await grabbed(),'0','three relaxed straight fingers must release');
+  await phase('close',1100);assert.equal(await grabbed(),'2');
+  await page.evaluate(()=>window.qaWristVisibility=.1);await phase('hidden-lift',1600);
+  assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0','low-confidence pose wrists cannot substitute for hidden hands');
+  assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
+  await page.evaluate(()=>window.qaWristVisibility=1);await phase('close',700);
   await page.locator('#viewport').screenshot({path:'.test-output/collar-grabbed.png'});
   const heldStarts=JSON.parse(await page.locator('#overlay').getAttribute('data-grips')).map(g=>g.start);
   for(const hidden of ['hidden-left','hidden-right','hidden-both']){
    await phase(hidden,2200);
    assert.equal(await grabbed(),'2',hidden+' cannot release established grips');
-   assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0');
+   assert.ok(Number(await page.locator('#overlay').getAttribute('data-completion'))<1e-6);
    assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
    assert.deepEqual(JSON.parse(await page.locator('#overlay').getAttribute('data-grips')).map(g=>g.start),heldStarts);
    await phase('close',650);assert.equal(await grabbed(),'2');
@@ -105,7 +118,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   assert.equal(await page.locator('#overlay').getAttribute('data-live-hands'),'2','both hands recover despite swapped pose wrists');
   await page.evaluate(()=>window.qaSwap=false);
   await page.locator('#viewport').screenshot({path:'.test-output/collar-occlusion-recovered.png'});
-  await phase('pull',1500);assert.equal(await grabbed(),'2');assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0');
+  await phase('pull',1500);assert.equal(await grabbed(),'2');assert.ok(Number(await page.locator('#overlay').getAttribute('data-completion'))<1e-6);
   assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false','wide lateral pulling must not complete');
   const beforeSpike=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));
   await phase('lost',200);assert.equal(await grabbed(),'2');
@@ -129,7 +142,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await phase('lift',150);assert.equal(await grabbed(),'2');
   await page.locator('#show-skeleton').check();await phase('hands-only',250);
   assert.equal(await grabbed(),'2');assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0','no invented elbow score when pose landmarks disappear');
-  await page.locator('#show-skeleton').uncheck();await phase('lift',250);
+  await page.locator('#show-skeleton').uncheck();await phase('hidden-lift',250);
   await page.waitForFunction(()=>document.querySelector('#opponent-status').dataset.tap==='true');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-tap.png'});
   await page.locator('#result-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#xp').innerText(),'20 XP');
@@ -165,9 +178,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='0');
    await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
    await phase('hidden-both',1400);assert.equal(await grabbed(),'2',lesson+' mirrored occlusion');
-   await phase('close',600);await phase('open');assert.equal(await grabbed(),'0');
+   await phase('close',600);await phase('relaxed-open',1400);assert.equal(await grabbed(),'0');
    await page.locator('#mirror').check();await page.locator('#back-menu').click();
   }
-  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: prepared capture, wide lateral pull rejected, stationary hands plus bilateral elbow rise triggers completion/XP, single elbow rejected, pose loss pauses score, cloth folds, fixed head, release, mobile, palm/back and edge-on rejection with mirroring. Prolonged left/right/both-hand occlusion preserves grips; body loss releases. Synthetic camera landmarks.');
+  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: prepared capture, wide lateral pull rejected, stationary hands plus bilateral elbow rise triggers completion/XP, single elbow rejected, pose loss pauses score, cloth folds, fixed head, release, mobile, palm/back and edge-on rejection with mirroring. Prolonged occlusion preserves grips; reliable pose wrists continue the elbow finish, uncertain wrists cannot score, relaxed three-finger opening releases, body loss releases. Synthetic camera landmarks.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
