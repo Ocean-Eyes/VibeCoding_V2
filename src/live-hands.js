@@ -79,21 +79,21 @@ const palmSize=h=>Math.max(distance(h[0],h[9]),distance(h[5],h[17]),.015);
 const handCenter=h=>[0,5,9,13,17].reduce((a,i)=>({x:a.x+h[i].x/5,y:a.y+h[i].y/5}),{x:0,y:0});
 const copyHand=h=>h.map(p=>({...p}));
 // Pose wrists may swap at a crossing. Keep short-lived anatomical tracks and
-// prefer their predicted motion while the palms overlap; uncertain matches
+// preserve held tracks through long occlusion and prefer their predicted motion; uncertain matches
 // are missing observations, never a fabricated second hand.
 export class HandIdentityTracker{
  constructor(){this.reset()}
  reset(){this.tracks=[null,null]}
- update(hands,points,time){
-  this.tracks=this.tracks.map(t=>t&&time-t.time<=500?t:null);
+ update(hands,points,time,{held=[false,false]}={}){
+  this.tracks=this.tracks.map((t,i)=>t&&(held[i]||time-t.time<=500)?t:null);
   const valid=(hands??[]).filter(h=>h?.length===21&&h.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y))).slice(0,2);
   if(!valid.length)return [null,null];
-  const predictions=this.tracks.map(t=>t?{x:t.hand[0].x+t.vx*Math.min(100,time-t.time),y:t.hand[0].y+t.vy*Math.min(100,time-t.time)}:null);
+  const predictions=this.tracks.map(t=>t?{x:t.hand[0].x+t.vx*(time-t.time>500?0:Math.min(100,time-t.time)),y:t.hand[0].y+t.vy*(time-t.time>500?0:Math.min(100,time-t.time))}:null);
   // Crossed wrists alone are not occlusion: compare palm centers and widths.
   const near=(a,b)=>a&&b&&distance(handCenter(a),handCenter(b))<Math.max(distance(a[5],a[17]),distance(b[5],b[17]),.015)*1.8;
   const overlap=near(valid[0],valid[1])||near(this.tracks[0]?.hand,this.tracks[1]?.hand);
   const continuous=valid.length===2&&predictions.every(p=>p&&valid.some(h=>distance(h[0],p)<Math.min(.025,palmSize(h)*.35)));
-  const trustHistory=overlap||continuous;
+  const trustHistory=held.some(Boolean)||overlap||continuous;
   const cost=(h,i)=>{
    const anchor=points?.[15+i],hasPose=anchor&&(anchor.visibility??1)>=.65,old=this.tracks[i];
    const temporal=predictions[i]?distance(h[0],predictions[i]):null,poseCost=hasPose?distance(h[0],anchor):null;
@@ -134,10 +134,11 @@ export class HandIdentityTracker{
 export class HandStream{
  constructor(){this.filter=new LandmarkStream();this.reset()}
  reset(){this.filter.reset();this.accepted=null;this.lastSeen=null;this.observed=false;this.missingSince=null;this.bridge=null;this.recovery=null;this.fadeStarted=null}
- update(hand,time,{reacquire=false}={}){
+ update(hand,time,{reacquire=false,held=false}={}){
   if(!hand){this.observed=false;this.recovery=null;this.missingSince??=time;return}
-  // After a longer absence, do not compare a new distance/scale to an expired hand.
-  if(this.missingSince!==null&&time-this.missingSince>600)this.reset();
+  // Free hands may reacquire after absence. A held hand retains its last trusted
+  // location so a returned outlier cannot teleport the glove or cloth.
+  if(!held&&this.missingSince!==null&&time-this.missingSince>600)this.reset();
   this.missingSince=null;
   const old=this.accepted,visible=this.at(time),size=old?palmSize(old):0;
   const step=Math.max(.035,Math.min(.05,size))*Math.min(1,Math.max(.5,(time-(this.lastSeen??time))/65));

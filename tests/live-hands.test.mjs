@@ -162,3 +162,19 @@ test('unsteady outliers cannot establish a replacement hand track',()=>{
   assert.equal(stream.trackedAt(i*65),null);
  }
 });
+
+
+test('held hand identity survives a long occlusion and swapped pose wrists on return',()=>{
+ const tracker=new HandIdentityTracker(),held=[true,true];
+ tracker.update([hand(.3),hand(.7)],pose(.3,.7),0,{held});
+ for(let t=65;t<6000;t+=65)assert.deepEqual(tracker.update([],pose(.7,.3),t,{held}),[null,null]);
+ const recovered=tracker.update([hand(.7),hand(.3)],pose(.7,.3),6000,{held});
+ assert.equal(recovered[0][0].x,.3);assert.equal(recovered[1][0].x,.7);
+});
+test('held hands cannot teleport after a long missing interval',()=>{
+ const stream=new HandStream();stream.update(hand(.3),0,{held:true});
+ for(let t=65;t<6000;t+=65)stream.update(null,t,{held:true});
+ stream.update(hand(.7),6000,{held:true});assert.equal(stream.trackedAt(6000),null);
+ stream.update(hand(.3),6065,{held:true});
+ assert.equal(stream.at(6065)[0].x,.3);
+});

@@ -11,7 +11,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    const context=HTMLCanvasElement.prototype.getContext;
    HTMLCanvasElement.prototype.getContext=function(kind,options){return context.call(this,kind,kind==='2d'&&this.id==='partner'?{...options,willReadFrequently:true}:options)};
    window.qaGripPhase='open';const Original=Worker;
-   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;}super.postMessage(d,t)}};
+   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;d.swap=window.qaSwap;d.ghostOpen=window.qaGhostOpen;}super.postMessage(d,t)}};
   });
   await page.route('**/tests/fixtures/collar-hands.mjs',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('tests/fixtures/collar-hands.mjs','utf8')}));
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
@@ -54,6 +54,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      });
      if(data.phase!=='fast')hands=gradual(hands);
      hands.forEach((hand,i)=>{if(hand)pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
+     if(data.ghostOpen)hands=collarHands('open').map(hand=>hand.map(p=>({x:(frame.origin.x-p.x*frame.scale)/w+.35,y:(frame.origin.y+p.y*frame.scale)/h,z:p.z*frame.scale/w})));
+     if(data.swap){[pose[15],pose[16]]=[pose[16],pose[15]];hands.reverse()}
      if(data.phase==='hidden-left')hands[0]=null;
      if(data.phase==='hidden-right')hands[1]=null;
      if(data.phase==='hidden-both'||data.phase==='body-lost')hands=[null,null];
@@ -93,6 +95,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    assert.deepEqual(JSON.parse(await page.locator('#overlay').getAttribute('data-grips')).map(g=>g.start),heldStarts);
    await phase('close',650);assert.equal(await grabbed(),'2');
   }
+  await phase('hidden-both',1800);
+  await page.evaluate(()=>{window.qaSwap=true;window.qaGhostOpen=true});
+  await phase('close',800);
+  assert.equal(await grabbed(),'2','returned false-open detections cannot release held collars');
+  assert.deepEqual(JSON.parse(await page.locator('#overlay').getAttribute('data-grips')).map(g=>g.start),heldStarts);
+  await page.evaluate(()=>window.qaGhostOpen=false);await phase('close',900);
+  assert.equal(await grabbed(),'2');
+  assert.equal(await page.locator('#overlay').getAttribute('data-live-hands'),'2','both hands recover despite swapped pose wrists');
+  await page.evaluate(()=>window.qaSwap=false);
   await page.locator('#viewport').screenshot({path:'.test-output/collar-occlusion-recovered.png'});
   await phase('pull',1500);assert.equal(await grabbed(),'2');assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0');
   assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false','wide lateral pulling must not complete');

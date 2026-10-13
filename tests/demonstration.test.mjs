@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {POSES,targetPose,bodyFrame} from '../src/pose.js';
-import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,sceneHands,gripPlacement,guideElbow} from '../src/demonstration.js';
+import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,sceneHands,gripPlacement,guideElbow,guideArm} from '../src/demonstration.js';
 
 test('grips finish on the upper lapels, preparation stays below the shoulders',()=>{
   assert.ok(GRIP_STEPS[0].every(p=>p.y>.5));
@@ -88,7 +88,23 @@ test('enlarged partner retains head, sleeves and belt within desktop and narrow 
 test('finish raises both demonstrated elbows while keeping upper-collar hand positions fixed',()=>{
  for(const mirrored of [true,false])for(const index of [0,1]){
   const start=guideElbow(index,0,mirrored),finish=guideElbow(index,1,mirrored);
-  assert.equal(start.x,finish.x);assert.ok(finish.y<start.y-.20);
+  assert.ok(finish.y<start.y-.20);
  }
  assert.deepEqual(demonstrationAt(8).hands,demonstrationAt(9).hands);
+});
+
+
+test('every demonstration frame joins the wrist to a forward-facing forearm without a reverse bend',()=>{
+ for(const mirror of [true,false])for(let frame=0;frame<=720;frame++){
+  const state=demonstrationAt(frame/60);
+  state.hands.forEach((p,i)=>{
+   const a=guideArm(p,i,state.finish??0,mirror),dx=a.wrist.x-a.elbow.x,dy=a.wrist.y-a.elbow.y;
+   const length=Math.hypot(dx,dy);
+   assert.ok(length>=.419&&length<=.781);
+   assert.ok((dx*Math.sin(a.angle)-dy*Math.cos(a.angle))/length>.999);
+   assert.ok(a.shoulder.y>a.elbow.y);
+   const next=demonstrationAt((frame+1)/60),b=guideArm(next.hands[i],i,next.finish??0,mirror);
+   assert.ok(Math.hypot(a.elbow.x-b.elbow.x,a.elbow.y-b.elbow.y)<.035);
+  });
+ }
 });

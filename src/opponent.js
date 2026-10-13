@@ -1,7 +1,7 @@
 import {drawIllustratedCoat} from './cloth-renderer.js';
 import {lapelPoint} from './collar-interaction.js';
 import {drawAnatomicalArm} from './hand-renderer.js';
-import {GRIP_STEPS,gripPlacement,guideElbow} from './demonstration.js';
+import {GRIP_STEPS,gripPlacement,guideArm} from './demonstration.js';
 // Game input only: RGB positions cannot measure pressure or grip effectiveness.
 export function crossedGrip(points, target, frame) {
   if (!frame || !points || [15,16].some(i=>!points[i] || (points[i].visibility??1)<.65)) return false;
@@ -186,6 +186,7 @@ export function drawOpponent(ctx, frame,interaction=null) {
   ctx.restore();
 }
 
+const guideLayers=new WeakMap();
 // White translucent instructor hands belong to the demonstration, not to the partner.
 export function drawGripGuides(ctx,frame,hands,directions,mirrored=true,targets=null,{actions=[],finish=0}={}){
   const sign=mirrored?-1:1;
@@ -195,15 +196,19 @@ export function drawGripGuides(ctx,frame,hands,directions,mirrored=true,targets=
     ctx.fillStyle='#ffffff14';ctx.fill();ctx.strokeStyle='#e6f1f785';ctx.lineWidth=.012;ctx.setLineDash([.025,.025]);ctx.stroke();ctx.setLineDash([]);
   }
   drawGrippedLapels(ctx,hands.map((p,i)=>[(i?-1:1)*(mirrored?1:-1),collarContact(p,i)]));
+  // Composite the pair once: the nearer limb hides the rear limb internally,
+  // while the pair remains translucent over the opponent.
+  let layer=guideLayers.get(ctx.canvas);
+  if(!layer){layer=document.createElement('canvas');layer.id='guide-arms';guideLayers.set(ctx.canvas,layer)}
+  if(layer.width!==ctx.canvas.width||layer.height!==ctx.canvas.height){layer.width=ctx.canvas.width;layer.height=ctx.canvas.height}
+  const ink=layer.getContext('2d');ink.resetTransform();ink.clearRect(0,0,layer.width,layer.height);ink.setTransform(ctx.getTransform());
   for(const [i,p]of hands.entries()){
-    const {angle,wrist}=gripPlacement(p,i,mirrored);
-    ctx.save();ctx.globalAlpha=.7;
+    const {angle,wrist,elbow,shoulder}=guideArm(p,i,finish,mirrored);
     const contact=collarContact(p,i);
-    drawAnatomicalArm(ctx,wrist,angle,i===0,directions[i]==='↑',true,!mirrored,contact>.8,guideElbow(i,finish,mirrored));
-    if(directions[i]==='↑')drawCollarFront(ctx,wrist,angle,i===0,true,!mirrored,contact);
-    ctx.restore();
-
+    drawAnatomicalArm(ink,wrist,angle,i===0,directions[i]==='↑',true,!mirrored,contact>.8,elbow,shoulder);
+    if(directions[i]==='↑')drawCollarFront(ink,wrist,angle,i===0,true,!mirrored,contact);
   }
+  ctx.save();ctx.resetTransform();ctx.globalAlpha=.7;ctx.drawImage(layer,0,0);ctx.restore();
   ctx.restore();
 }
 export function drawTrackedHands(ctx,frame,hands,mirrored=true){

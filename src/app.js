@@ -67,8 +67,8 @@ function connectTracker(){
       if(data.type==='result'){
         clearTimeout(frameTimer);busy=false;const now=performance.now();fps=lastResult?1000/(now-lastResult):0;lastResult=now;
         poseStream.update(data.points,now);
-        const assignedHands=handIdentity.update(data.hands,data.points,now);
-        assignedHands.forEach((h,i)=>handStreams[i].update(h,now,{reacquire:!collar.hands[i].grip}));
+        const assignedHands=handIdentity.update(data.hands,data.points,now,{held:collar.hands.map(h=>!!h.grip)});
+        assignedHands.forEach((h,i)=>handStreams[i].update(h,now,{reacquire:!collar.hands[i].grip,held:!!collar.hands[i].grip}));
       }
     };worker.postMessage({type:'init'});
   }catch(e){trackingFailed(`추적 모듈을 시작하지 못했습니다: ${e.message}`)}

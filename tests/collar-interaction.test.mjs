@@ -69,7 +69,7 @@ test('open hands, one-sided pulls and un-crossed grips cannot produce a tap',()=
 });
 test('opening or losing a tracked hand releases the cloth and resets the completion hold',()=>{
  const a=setup();a.step('open');a.step('close');a.step('lift',800);
- const release=a.step('release');assert.equal(release.count,0);assert.equal(release.hold,0);assert.equal(release.completion,0);
+ const release=a.step('open');assert.equal(release.count,0);assert.equal(release.hold,0);assert.equal(release.completion,0);
  assert.equal(a.step('release',800).deformation.length,0);
  a.step('open');a.step('close');assert.equal(a.step('lost',20).count,2);assert.equal(a.step('lost',900).count,0);
  assert.equal(a.step('close').count,2,'a newly tracked prepared grip reacquires after stable contact');
@@ -300,4 +300,57 @@ test('flickering open estimates after occlusion do not accumulate release time',
  }
  for(let t=3020;t<=3660;t+=20)state=model.update(collarHands('open'),t,{arms});
  assert.equal(state.count,0);
+});
+
+
+test('an open hand hallucinated away from a held wrist never releases the collar',()=>{
+ const model=new CollarInteraction(),closed=collarHands('close'),arms=collarArms();
+ let state;for(let t=0;t<=300;t+=20)state=model.update(closed,t,{arms});
+ const pins=state.grips.map(g=>({...g.center}));
+ const wrong=collarHands('open').map(h=>h.map(p=>({...p,x:p.x+.5})));
+ for(let t=320;t<=3320;t+=20){
+  state=model.update(wrong,t,{arms});assert.equal(state.count,2);assert.equal(state.completion,0);
+  assert.deepEqual(state.grips.map(g=>g.center),pins);
+ }
+ for(let t=3340;t<=3600;t+=20)state=model.update(closed,t,{arms});
+ assert.equal(state.count,2);assert.equal(state.trackingPaused,false);
+ for(let t=3620;t<=4100;t+=20)state=model.update(collarHands('open'),t,{arms});
+ assert.equal(state.count,0,'a visible hand opening at its actual held wrist releases');
+});
+
+
+import {HandIdentityTracker,HandStream} from '../src/live-hands.js';
+test('camera identity, smoothing and collar state together survive long crossing occlusions',()=>{
+ for(const directions of [['↓','↓'],['↑','↑'],['↑','↓']])for(const hidden of [0,1,2]){
+  const model=new CollarInteraction(),identity=new HandIdentityTracker(),streams=[new HandStream(),new HandStream()];
+  const bodyHands=[0,1].map(i=>handAt(lapelRest(i?-1:1,i?.20:.12),1,i===0,directions[i]==='↑'));
+  const camera=h=>h.map(p=>({...p,x:.5-p.x*.18,y:.32+p.y*.18,z:p.z*.18}));
+  const closed=bodyHands.map(camera),pose=Array.from({length:33},()=>({x:0,y:0,visibility:1}));
+  let now=0,state;
+  const tick=(detected,swapped=false)=>{
+   now+=65;[15,16].forEach((k,i)=>pose[k]={...closed[swapped?1-i:i][0],visibility:1});
+   const held=model.hands.map(h=>!!h.grip),assigned=identity.update(detected,pose,now,{held});
+   assigned.forEach((h,i)=>streams[i].update(h,now,{held:held[i],reacquire:!held[i]}));
+   const observations=streams.map(stream=>stream.trackedAt(now)?.map(p=>({...p,x:(.5-p.x)/.18,y:(p.y-.32)/.18,z:p.z/.18})));
+   state=model.update(observations,now,{directions,arms:collarArms(),bodyVisible:true});
+   return state;
+  };
+  for(let k=0;k<12;k++)tick(closed);
+  assert.equal(state.count,2);const pins=state.grips.map(g=>({...g.center}));
+  for(let cycle=0;cycle<8;cycle++){
+   for(let k=0;k<40;k++){
+    tick(closed.filter((_,i)=>hidden!==2&&hidden!==i),true);
+    assert.equal(state.count,2);assert.equal(state.completion,0);
+   }
+   // Both detectors may first attach to other image regions and report open fingers.
+   const falseOpen=bodyHands.map((h,i)=>camera(handAt(graspCenter(h),0,i===0,directions[i]==='↑')).map(p=>({...p,x:p.x+.4})));
+   for(let k=0;k<10;k++){tick(falseOpen,true);assert.equal(state.count,2)}
+   for(let k=0;k<16;k++)tick(k%2?closed.toReversed():closed,true);
+   assert.equal(state.count,2);assert.equal(state.trackingPaused,false);
+   state.grips.forEach((g,i)=>assert.ok(Math.hypot(g.center.x-pins[i].x,g.center.y-pins[i].y)<1e-8));
+  }
+  const open=bodyHands.map((h,i)=>camera(handAt(graspCenter(h),0,i===0,directions[i]==='↑')));
+  for(let k=0;k<24;k++)tick(open,true);
+  assert.equal(state.count,0,'intentional reopening still works after repeated occlusion');
+ }
 });

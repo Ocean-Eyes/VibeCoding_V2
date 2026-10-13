@@ -5,9 +5,20 @@ export const GRIP_STEPS=POSES.map(p=>{const target=targetPose(unit,p);return [ta
 // Upper collar positions for the visible practice guide, independent of body pose targets.
 GRIP_STEPS[1][0]={x:-.17,y:.18};
 GRIP_STEPS[2]=[{x:-.17,y:.18},{x:.17,y:.205}];
-export function guideElbow(index,finish=0,mirrored=true){
- return {x:(index?1:-1)*(mirrored?1:-1)*.67,y:.70-.25*finish};
+// Solve each forearm from its own hand axis; a waiting hand cannot bend back
+// toward a fixed elbow. Shorter projected length depicts the elbow lifting in depth.
+export function guideArm(hand,index,finish=0,mirrored=true){
+ const sign=mirrored?-1:1,x=sign*hand.x,y=hand.y;
+ const progress=((index?hand.x:-hand.x)+.55)/.72;
+ const angle=-sign*(index?-1:1)*.95*ease(progress);
+ const wrist={x:x-Math.sin(angle)*.219,y:y+Math.cos(angle)*.219};
+ const placement={x,y,angle,wrist};
+ const length=.78-.36*Math.max(0,Math.min(1,finish));
+ const elbow={x:wrist.x-Math.sin(angle)*length,y:wrist.y+Math.cos(angle)*length};
+ const side=(index?1:-1)*(mirrored?1:-1);
+ return {...placement,elbow,shoulder:{x:elbow.x+side*.18,y:elbow.y+.50}};
 }
+export function guideElbow(index,finish=0,mirrored=true){return guideArm(GRIP_STEPS[2][index],index,finish,mirrored).elbow}
 const REST=[{x:.55,y:1.05},{x:-.55,y:1.05}];
 const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*t*(t*(t*6-15)+10)};
 const blend=(a,b,t)=>t===1?b:a.map((p,i)=>({x:p.x+(b[i].x-p.x)*t,y:p.y+(b[i].y-p.y)*t}));

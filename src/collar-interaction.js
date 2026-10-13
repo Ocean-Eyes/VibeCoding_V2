@@ -128,6 +128,9 @@ export class CollarInteraction{
    const center=graspCenter(hand);
    if(extension>.96)h.closed=false;else if(extension<.92)h.closed=true;
    if(h.grip){
+    // Validate identity/position BEFORE interpreting fingers as a release.
+    // An open hallucination at another wrist is still an occluded observation.
+    if(Math.hypot(center.x-h.grip.center.x,center.y-h.grip.center.y)>.12){suspend(i);continue}
     const open=deliberatelyOpen(hand),covered=palmCovered(hand,observations[1-i],arms[1-i]);
     // A hidden/overlapped palm cannot establish a deliberate release or score.
     if(covered){suspend(i);continue}
@@ -142,10 +145,6 @@ export class CollarInteraction{
      continue;
     }else{h.releaseSince=null;h.closed=true;h.wasOccluded=false;h.resumeSince=null}
     const dx=center.x-h.grip.start.x,dy=center.y-h.grip.start.y;
-    // A rejected observation never becomes an implicit release of both grips.
-    if(Math.hypot(center.x-h.grip.center.x,center.y-h.grip.center.y)>.12){
-     suspend(i);continue;
-    }
     h.missingSince=null;h.tracked=h.releaseSince===null;
     h.grip.dx=h.grip.offset.x+dx;h.grip.dy=h.grip.offset.y+dy;h.grip.travelX=dx;h.grip.center=center;continue;
    }

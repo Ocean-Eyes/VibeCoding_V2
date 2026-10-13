@@ -25,7 +25,7 @@ const assert=require('node:assert/strict');
    assert.deepEqual(calls.map(c=>c.asset),[`left-${faces[0]}-skin${faces[0]==='back'?'-grip':''}.png`,`right-${faces[1]}-skin${faces[1]==='back'?'-grip':''}.png`]);
    renders.push(await page.locator('#grip-preview').evaluate(c=>c.toDataURL()));
    await page.locator('#mirror').uncheck();await page.evaluate(()=>window.handDraws=[]);await page.waitForTimeout(150);
-   const reflected=await page.evaluate(()=>window.handDraws.filter(d=>d.canvas==='overlay'));
+   const reflected=await page.evaluate(()=>window.handDraws.filter(d=>d.canvas==='guide-arms'));
    assert.ok(reflected.some(d=>d.asset===`left-${faces[0]}-glove.png`&&d.det<0));
    assert.ok(reflected.some(d=>d.asset===`right-${faces[1]}-glove.png`&&d.det<0));
    await page.locator('#mirror').check();await page.locator('#back-menu').click();
