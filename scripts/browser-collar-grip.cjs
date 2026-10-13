@@ -37,7 +37,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      const frame={origin:{x:w*.5,y:h*.32},scale:w*.18,x:{x:1,y:0},y:{x:0,y:1}},pose=targetPose(frame,POSES[0]);
      for(const [i,id]of [13,14].entries()){
       pose[id].y=frame.origin.y+frame.scale*(.70-(['lift','hands-only','hidden-lift'].includes(data.phase)||(data.phase==='one-lift'&&i===0)?.15:0));
-      if(data.phase==='no-elbows')pose[id].visibility=.1;
+      if(data.phase==='no-elbows'||data.phase.startsWith('wrist-'))pose[id].visibility=.1;
      }
      let hands=collarHands(['relaxed-open','recover-open'].includes(data.phase)?'open':data.phase).map((hand,i)=>{
       if(!hand)return null;
@@ -59,6 +59,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
        const closed=handAt(center,1,i===0,!!data.palmUp);
        for(let k=18;k<=20;k++)hand[k]=closed[k];
       }
+      if(data.phase==='wrist-turn'){
+       const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
+       const a=i?-.55:.55,c=Math.cos(a),s=Math.sin(a);
+       hand=hand.map(p=>({...p,x:center.x+(p.x-center.x)*c-(p.y-center.y)*s,y:center.y+(p.x-center.x)*s+(p.y-center.y)*c}));
+      }
       if(data.edge){
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
        hand=hand.map(p=>({x:center.x,y:p.y,z:p.x-center.x}));
@@ -72,7 +77,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      if(data.swap){[pose[15],pose[16]]=[pose[16],pose[15]];hands.reverse()}
      if(data.phase==='hidden-left')hands[0]=null;
      if(data.phase==='hidden-right')hands[1]=null;
-     if(['hidden-both','hidden-lift','body-lost'].includes(data.phase))hands=[null,null];
+     if(data.phase.startsWith('wrist-')||['hidden-both','hidden-lift','body-lost'].includes(data.phase))hands=[null,null];
      if(data.wristVisibility!==undefined)for(const id of [15,16])pose[id].visibility=data.wristVisibility;
      self.postMessage({type:'result',points:['hands-only','body-lost'].includes(data.phase)?null:pose.map(p=>p?{...p,x:p.x/w,y:p.y/h,z:(p.z??0)/w}:{x:0,y:0,visibility:0}),hands:hands.filter(Boolean),time:data.time});
     }
@@ -128,6 +133,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   for(const hidden of ['hidden-left','hidden-right','hidden-both']){
    await phase(hidden,2200);
    assert.equal(await grabbed(),'2',hidden+' cannot release established grips');
+   assert.ok(Number(await page.locator('#overlay').getAttribute('data-wrist-hands'))>=1,'a visible wrist keeps the occluded glove on screen');
    assert.ok(Number(await page.locator('#overlay').getAttribute('data-completion'))<1e-6);
    assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
    assert.deepEqual(JSON.parse(await page.locator('#overlay').getAttribute('data-grips')).map(g=>g.start),heldStarts);
@@ -172,6 +178,20 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.locator('#viewport').screenshot({path:'.test-output/collar-tap.png'});
   await page.locator('#result-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#xp').innerText(),'20 XP');
   await page.locator('#result-again').click();await page.locator('#play').click();
+  await phase('open',1600);await phase('close',1800);assert.equal(await grabbed(),'2');
+  await phase('wrist-still',2200);
+  assert.equal(await page.locator('#overlay').getAttribute('data-live-hands'),'0');
+  assert.equal(await page.locator('#overlay').getAttribute('data-wrist-hands'),'2');
+  assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false','stationary wrists do not tap');
+  const beforeWrists=JSON.parse(await page.locator('#overlay').getAttribute('data-display-wrists'));
+  await phase('wrist-turn',1000);
+  assert.equal(await page.locator('#overlay').getAttribute('data-wrist-hands'),'2');
+  assert.notDeepEqual(JSON.parse(await page.locator('#overlay').getAttribute('data-display-wrists')),beforeWrists,'gloves follow the pose wrists after full hand loss');
+  await page.locator('#viewport').screenshot({path:'.test-output/wrist-only-finish.png'});
+  await page.waitForFunction(()=>document.querySelector('#opponent-status').dataset.tap==='true');
+  await phase('relaxed-open',800);assert.equal(await grabbed(),'0','real finger opening releases the wrist-followed grip');
+  await page.locator('#result-dialog').waitFor({state:'visible'});
+  await page.locator('#result-again').click();await page.locator('#play').click();
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
   await phase('lost',300);assert.equal(await grabbed(),'2');
   await phase('lost',1000);assert.equal(await grabbed(),'2');
@@ -206,6 +226,6 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    await phase('close',600);await phase('relaxed-open',1400);assert.equal(await grabbed(),'0');
    await page.locator('#mirror').check();await page.locator('#back-menu').click();
   }
-  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: prepared capture, wide lateral pull rejected, stationary hands plus bilateral elbow rise triggers completion/XP, single elbow rejected, pose loss pauses score, cloth folds, fixed head, release, mobile, palm/back and edge-on rejection with mirroring. Prolonged occlusion preserves grips; reliable pose wrists continue the elbow finish, uncertain wrists cannot score, relaxed three-finger opening releases; a lost hand returns at a new position, releases, regrips and completes without camera reset; rotated held-hand recovery does not move cloth; body loss releases. Synthetic camera landmarks.');
+  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: prepared capture, wide lateral pull rejected, stationary hands plus bilateral elbow rise triggers completion/XP, single elbow rejected, pose loss pauses score, cloth folds, fixed head, release, mobile, palm/back and edge-on rejection with mirroring. Prolonged occlusion preserves grips; reliable pose wrists continue the elbow finish, uncertain wrists cannot score, relaxed three-finger opening releases; a lost hand returns at a new position, releases, regrips and completes without camera reset; rotated held-hand recovery does not move cloth; body loss releases. Wrist-only gloves remain visible with hidden fingers and elbows; opposing wrist turns reach tap, and reopening releases. Synthetic camera landmarks.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

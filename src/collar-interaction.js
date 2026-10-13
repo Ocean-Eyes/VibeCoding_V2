@@ -1,3 +1,4 @@
+import {HeldWrist,wristTurn,gloveAtWrist} from './held-wrist.js';
 import {ClothMotion} from './cloth-motion.js';
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const ease=t=>{t=clamp(t);return t*t*(3-2*t)};
@@ -127,7 +128,7 @@ export class CollarInteraction{
   const preserveGrip=visibleBody&&this.hands.every(h=>h.grip);
   const suspend=i=>{
    const h=this.hands[i];h.releaseSince=null;h.resumeSince=null;h.wasOccluded=true;
-   if(preserveGrip){h.missingSince=null;return}
+   if(preserveGrip||(h.grip&&arms[i]?.wrist&&(arms[i].wrist.visibility??1)>=.65)){h.missingSince=null;return}
    h.missingSince??=now;if(now-h.missingSince>=GRIP_OCCLUSION_MS)this.release(i,now);
   };
   for(let i=0;i<2;i++){
@@ -146,7 +147,7 @@ export class CollarInteraction{
     if(recoveredHands[i]&&!open){
      // Reacquisition changes the input origin, never the already attached cloth.
      const g=h.grip,previousWrist=g.wrist;
-     g.start={...center};g.center={...center};g.offset={x:g.dx,y:g.dy};g.travelX=0;g.wrist={...hand[0]};
+     g.start={...center};g.center={...center};g.offset={x:g.dx,y:g.dy};g.travelX=0;g.wrist={...hand[0]};h.wristTrack=new HeldWrist(hand[0]);h.wristStart={...hand[0]};
      const pin=lapelPoint(g.side,g.t,this.deformation(now));g.contactOffset={x:pin.x-center.x,y:pin.y-center.y};
      if(this.elbowBaseline&&previousWrist)this.elbowBaseline[i].gap+=previousWrist.y-hand[0].y;
     }
@@ -171,7 +172,7 @@ export class CollarInteraction{
     }else{h.releaseSince=null;h.closed=true;h.wasOccluded=false;h.resumeSince=null}
     const dx=center.x-h.grip.start.x,dy=center.y-h.grip.start.y;
     h.missingSince=null;h.tracked=h.releaseSince===null;
-    h.grip.dx=h.grip.offset.x+dx;h.grip.dy=h.grip.offset.y+dy;h.grip.travelX=dx;h.grip.center=center;h.grip.wrist={...hand[0]};continue;
+    h.grip.dx=h.grip.offset.x+dx;h.grip.dy=h.grip.offset.y+dy;h.grip.travelX=dx;h.grip.center=center;h.grip.wrist={...hand[0]};h.shape=hand.map(p=>({...p}));h.wristTrack=new HeldWrist(hand[0]);continue;
    }
    h.missingSince=null;h.tracked=true;
    h.hover=collarHit(center,this.deformation(now),this.hands.map(s=>s.grip?.side).filter(Boolean));
@@ -185,22 +186,36 @@ export class CollarInteraction{
    if(now-h.pending.since>=100){
     // Keep the fabric where contact occurred; acquisition tolerance is not a pull.
     const hit=h.hover,rest=lapelRest(hit.side,hit.t),offset={x:hit.point.x-rest.x,y:hit.point.y-rest.y},contactOffset={x:hit.point.x-center.x,y:hit.point.y-center.y};
-    h.grip={side:hit.side,t:hit.t,start:center,center,wrist:{...hand[0]},offset,contactOffset,dx:offset.x,dy:offset.y,travelX:0};h.pending=null;
+    h.grip={side:hit.side,t:hit.t,start:center,center,wrist:{...hand[0]},offset,contactOffset,dx:offset.x,dy:offset.y,travelX:0};h.pending=null;h.shape=hand.map(p=>({...p}));h.wristTrack=new HeldWrist(hand[0]);h.wristStart={...hand[0]};
    }
   }
   const grips=this.hands.map(h=>h.grip),count=grips.filter(Boolean).length;
   const crossed=count===2&&grips.every((g,i)=>g.side===(i?-1:1)*(mirrored?1:-1));
   const armVisible=a=>a&&[a.elbow,a.shoulder].every(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&(p.visibility??1)>=.65);
   const armsTracked=arms.length===2&&arms.every(armVisible);
-  // A held hand can hide behind the other forearm. Visible pose wrists may
-  // continue the arm exercise only when they agree with the last trusted grip.
+  // Finger occlusion does not hide the whole limb. Accept a continuous pose
+  // wrist independently of elbow visibility, keeping finger evidence separate.
   const scoringWrists=this.hands.map((h,i)=>{
    if(!h.grip||h.openObserved||h.releaseSince!==null)return null;
-   if(h.tracked)return observations[i]?.[0]??null;
-   const wrist=arms[i]?.wrist,anchor=h.grip.wrist;
-   return armVisible(arms[i])&&wrist&&anchor&&(wrist.visibility??1)>=.75&&Math.hypot(wrist.x-anchor.x,wrist.y-anchor.y)<.10?wrist:null;
+   const pose=arms[i]?.wrist;
+   if(h.tracked){
+    const wrist=observations[i]?.[0];
+    // Hand and body detectors place the wrist joint slightly differently.
+    // Calibrate while both are visible, so switching sources is not an action.
+    if(wrist&&pose&&(pose.visibility??1)>=.65&&Math.hypot(wrist.x-pose.x,wrist.y-pose.y)<.12)h.poseOffset={x:wrist.x-pose.x,y:wrist.y-pose.y};
+    return wrist??null;
+   }
+   const wrist=pose?{...pose,x:pose.x+(h.poseOffset?.x??0),y:pose.y+(h.poseOffset?.y??0)}:null;
+   return h.wristTrack?.update(wrist,now)??null;
   });
-  const trackingPaused=count>0&&(this.hands.some((h,i)=>h.grip&&!scoringWrists[i])||(count===2&&!armsTracked));
+  const wristTurns=this.hands.map((h,i)=>h.grip?wristTurn(h.wristStart,scoringWrists[i],h.grip.center,h.grip.start):null);
+  // Opposing turns around the held grips approximate the crossed-forearm action
+  // in 2D. Lateral pulling, translation and one moving wrist cannot complete it.
+  const wristTravel=this.hands.map((h,i)=>scoringWrists[i]&&h.wristStart?scoringWrists[i].x-h.grip.center.x-(h.wristStart.x-h.grip.start.x):0);
+  const wristRise=this.hands.map((h,i)=>scoringWrists[i]&&h.wristStart?scoringWrists[i].y-h.grip.center.y-(h.wristStart.y-h.grip.start.y):0);
+  const wristCompletion=wristRise.every(v=>Math.abs(v)>.015)&&wristTravel[0]*wristTravel[1]<0&&wristTravel.every(v=>Math.abs(v)>.015)&&wristTurns.every(v=>v!==null)&&wristTurns[0]*wristTurns[1]<0?clamp(Math.min(...wristTurns.map(Math.abs))/.40):0;
+  const trackingPaused=count>0&&(this.hands.some((h,i)=>h.grip&&!scoringWrists[i])||(count===2&&!armsTracked&&wristCompletion===0));
+  const wristHands=this.hands.map((h,i)=>!h.tracked&&h.grip?gloveAtWrist(h.shape,scoringWrists[i]):null);
   const measures=count===2&&scoringWrists.every(Boolean)&&armsTracked?arms.map((a,i)=>({height:a.elbow.y-a.shoulder.y,gap:a.elbow.y-scoringWrists[i].y})):null;
   if(count!==2){this.elbowBaseline=null;this.armMissingSince=null}
   if(count===2&&measures&&!this.elbowBaseline)this.elbowBaseline=measures;
@@ -213,7 +228,7 @@ export class CollarInteraction{
   // Palm orientation is checked at acquisition. Rotating a held grip is the
   // intended finish and must not require showing the same face to the camera.
   const aligned=crossed&&upper&&stable;
-  const completion=aligned&&!trackingPaused?Math.min(...elbowLevels.map(v=>v??0)):0;
+  const completion=aligned&&!trackingPaused?Math.max(wristCompletion,Math.min(...elbowLevels.map(v=>v??0))):0;
   const issue=trackingPaused?'tracking':!stable?'spread':!upper?'height':completion<.7?'lift':'hold';
   // A small illustrated gather responds to the arm action without moving the
   // collar pins away from the hands or depicting the neck as stretching.
@@ -227,7 +242,7 @@ export class CollarInteraction{
   if(!trackingPaused)this.armMissingSince=null;
   if(this.hold>=GRIP_HOLD_SECONDS)this.tapped=true;
   const score=Math.round(count*25+50*completion);
-  return {grips,trackingPaused,issue,elbowLift,elbowLevels,completion,aligned,deformation:this.deformation(now),count,crossed,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
+  return {grips,trackingPaused,scoringWrists,wristHands,wristCompletion,issue,elbowLift,elbowLevels,completion,aligned,deformation:this.deformation(now),count,crossed,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
    posture:this.hands.map(h=>h.posture),hover:this.hands.map(h=>h.hover),armed:this.hands.map(h=>h.armed),closed:this.hands.map(h=>h.closed)};
  }
 }
