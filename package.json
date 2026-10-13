@@ -6,8 +6,9 @@
   "description": "Judo learning dojo with grip missions and solo webcam position practice",
   "scripts": {
     "start": "node scripts/serve.mjs",
-    "test": "node --test tests/pose.test.mjs tests/curriculum.test.mjs tests/demonstration.test.mjs tests/hand-rig.test.mjs tests/live-hands.test.mjs tests/collar-interaction.test.mjs tests/cloth-stability.test.mjs tests/hand-recovery.test.mjs tests/held-wrist.test.mjs",
-    "build": "node scripts/build.mjs"
+    "test": "node --test tests/pose.test.mjs tests/curriculum.test.mjs tests/demonstration.test.mjs tests/hand-rig.test.mjs tests/live-hands.test.mjs tests/collar-interaction.test.mjs tests/cloth-stability.test.mjs tests/hand-recovery.test.mjs tests/held-wrist.test.mjs tests/finish-recovery.test.mjs tests/finish-corpus.test.mjs",
+    "build": "node scripts/build.mjs",
+    "test:fit": "node scripts/fit-grip.mjs"
   },
   "engines": {
     "node": ">=20"

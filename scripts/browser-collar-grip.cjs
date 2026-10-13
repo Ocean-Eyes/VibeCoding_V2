@@ -59,9 +59,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
        const closed=handAt(center,1,i===0,!!data.palmUp);
        for(let k=18;k<=20;k++)hand[k]=closed[k];
       }
-      if(data.phase==='wrist-turn'){
+      if(data.phase==='wrist-turn'||data.phase==='wrist-return'){
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
-       const a=i?-.55:.55,c=Math.cos(a),s=Math.sin(a);
+       const angle=data.phase==='wrist-return'?.7:.55,a=i?-angle:angle,c=Math.cos(a),s=Math.sin(a);
        hand=hand.map(p=>({...p,x:center.x+(p.x-center.x)*c-(p.y-center.y)*s,y:center.y+(p.x-center.x)*s+(p.y-center.y)*c}));
       }
       if(data.edge){
@@ -71,7 +71,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
       const mapped=hand.map(p=>({x:frame.origin.x-p.x*frame.scale,y:frame.origin.y+p.y*frame.scale,z:p.z*frame.scale,visibility:1}));
       pose[15+i]=mapped[0];return mapped.map(p=>({...p,x:p.x/w,y:p.y/h,z:p.z/w}));
      });
-     if(data.phase!=='fast'&&!data.phase.startsWith('recover-'))hands=gradual(hands);
+     if(data.phase!=='fast'&&data.phase!=='wrist-return'&&!data.phase.startsWith('recover-'))hands=gradual(hands);
      hands.forEach((hand,i)=>{if(hand)pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
      if(data.ghostOpen)hands=collarHands('open').map(hand=>hand.map(p=>({x:(frame.origin.x-p.x*frame.scale)/w+.35,y:(frame.origin.y+p.y*frame.scale)/h,z:p.z*frame.scale/w})));
      if(data.swap){[pose[15],pose[16]]=[pose[16],pose[15]];hands.reverse()}
@@ -166,7 +166,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   assert.ok(fixedHead.every((v,i)=>Math.abs(v-currentHead[i])<=1),'opponent head remains fixed');
   const grips=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));
   assert.ok(grips.every(g=>Math.abs(g.travelX)<.01),'elbows rise while hands stay at their grips');
-  assert.match(await page.locator('#live-hold').innerText(),/왼 팔꿈치 .*% · 오른 팔꿈치 .*%/);
+  assert.match(await page.locator('#live-hold').innerText(),/왼 동작 .*% · 오른 동작 .*%/);
   await page.locator('#viewport').screenshot({path:'.test-output/collar-elbows-raised.png'});
   await phase('no-elbows',300);assert.equal(await grabbed(),'2');assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
   assert.match(await page.locator('#live-feedback').innerText(),/팔꿈치/);
@@ -179,6 +179,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.locator('#result-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#xp').innerText(),'20 XP');
   await page.locator('#result-again').click();await page.locator('#play').click();
   await phase('open',1600);await phase('close',1800);assert.equal(await grabbed(),'2');
+  await page.evaluate(()=>window.qaWristVisibility=.1);await phase('wrist-still',1200);
+  assert.equal(await page.locator('#live-score-value').innerText(),'50');
+  assert.equal(await page.locator('#overlay').getAttribute('data-wrist-hands'),'0');
+  assert.match(await page.locator('#live-feedback').innerText(),/손목.*인식 대기/);
+  await page.evaluate(()=>window.qaWristVisibility=.55);await phase('wrist-return',1200);
+  assert.equal(await page.locator('#overlay').getAttribute('data-wrist-hands'),'2','moderate-confidence relocated wrists must recover from 50-point waiting state');
+  assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false','recovery itself is not a finish');
+  await phase('relaxed-open',1300);assert.equal(await grabbed(),'0');
+  await phase('close',1100);assert.equal(await grabbed(),'2');
   await phase('wrist-still',2200);
   assert.equal(await page.locator('#overlay').getAttribute('data-live-hands'),'0');
   assert.equal(await page.locator('#overlay').getAttribute('data-wrist-hands'),'2');

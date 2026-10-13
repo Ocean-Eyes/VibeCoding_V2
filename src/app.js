@@ -107,16 +107,16 @@ function draw(now){
   if(mode==='live'&&!demonstrating){
     const arms=[0,1].map(i=>{
       if(!frame)return null;
-      const joint=k=>{const p=shown?.[k];return p&&(p.visibility??1)>=.65?projectHand([p],frame,unit,mirrored)[0]:null};
+      const joint=k=>{const p=shown?.[k];return p&&(k>=15||(p.visibility??1)>=.65)?{...projectHand([p],frame,unit,mirrored)[0],visibility:p.visibility??1}:null};
       return {shoulder:joint(11+i),elbow:joint(13+i),wrist:joint(15+i)};
     });
-    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body,continuousHands:observations.map(Boolean),recoveredHands});
+    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body,continuousHands:observations.map(Boolean),recoveredHands,poseSampleTime:poseStream.time});
     const phase=Math.min(2,gripState.count);
     if(selected!==phase){selected=phase;updatePose()}
   }
   const state=mode==='live'&&!demonstrating?{...gripState,time:now}:null;
   if(state)state.wristHands.forEach((h,i)=>{if(h)displayHands[i]=h});
-  canvas.dataset.wristHands=String(state?.wristHands.filter(Boolean).length??0);
+  canvas.dataset.wristHands=String(state?.wristHands.filter(Boolean).length??0);canvas.dataset.wristStatus=JSON.stringify(state?.wristStatus??[]);
   partnerCtx.setTransform(dpr,0,0,dpr,0,0);partnerCtx.clearRect(0,0,box.width,box.height);drawOpponent(partnerCtx,scene,state);
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,box.width,box.height);
   canvas.dataset.aligned=String(!!frame);canvas.dataset.skeleton=String($('show-skeleton').checked);
@@ -138,22 +138,22 @@ function draw(now){
       const e=shown?.[13+i],elbow=e&&(e.visibility??1)>=.65?projectHand([e],frame,scene,mirrored)[0]:null;
       return {hand,elbow,index:i,depth:shown?.[15+i]?.z??0};
     }).filter(Boolean).sort((a,b)=>b.depth-a.depth);
-    for(const h of live)drawLiveGlove(ctx,h.hand,palmFacing(h.hand,h.index===0,mirrored),h.elbow,!!state.grips[h.index]&&activeTechnique.directions[h.index]==='↓',.78*(state.wristHands[h.index]?1:handStreams[h.index].opacityAt(now)));
+    for(const h of live)drawLiveGlove(ctx,h.hand,palmFacing(h.hand,h.index===0,mirrored),h.elbow,!!state.grips[h.index]&&activeTechnique.directions[h.index]==='↓',.78*(state.wristHands[h.index]?state.wristOpacity[h.index]:handStreams[h.index].opacityAt(now)));
     if($('show-skeleton').checked&&frame&&shown){
       const projected=shown.map(p=>p?projectHand([p],frame,scene,mirrored)[0]:null);skeleton(ctx,projected,cyan,1.5);
       for(const h of live)for(const [a,b]of HAND_BONES)line(ctx,h.hand[a],h.hand[b],cyan,1);
     }
   }else drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected],{finish:selected===2?finishAt(((now-guideStarted)/1000)%4):0});
   const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:
-    state?.trackingPaused?(state.scoringWrists.every(Boolean)?'깃은 잡고 있습니다. 교차한 손목이나 팔꿈치의 움직임을 확인 중입니다.':'깃은 잡고 있습니다. 손목이 보이면 판정을 이어갑니다.'):!state?.visible&&!state?.count?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
+    state?.trackingPaused?(state.scoringWrists.every(Boolean)?'깃은 잡고 있습니다. 교차한 손목이나 팔꿈치의 움직임을 확인 중입니다.':`깃은 잡고 있습니다. ${state.wristStatus.map((s,i)=>s==='tracked'?null:`${i?'오른':'왼'} 손목 ${s==='recovering'||s==='ambiguous'?'다시 찾는 중':'인식 대기'}`).filter(Boolean).join(' · ')}. 손목을 카메라 안에 잠깐 보여 주세요.`):!state?.visible&&!state?.count?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
     state.posture?.some(p=>p==='palm'||p==='turn')?`카메라에 왼손 ${activeTechnique.directions[0]==='↓'?'손바닥':'손등'}, 오른손 ${activeTechnique.directions[1]==='↓'?'손바닥':'손등'}이 보이게 해 주세요.`:state.posture?.some(Boolean)?'각 손으로 반대편 깃을 잡으세요.':
     state.count===0?'손가락을 굽히고 손목을 교차해 반대편 깃을 잡으세요.':state.count===1?'한쪽 깃이 잡혔습니다. 다른 손으로 반대쪽 깃을 잡으세요.':
-    !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.issue==='height'?'가슴 아래쪽이 아닌 목 가까운 위쪽 깃을 잡으세요.':state.issue==='spread'?'손을 멀리 벌리지 말고 잡은 위치 가까이에 유지하세요.':state.completion<.7?'깃 가까이에서 교차한 양 손목과 전완을 함께 비틀어 보세요.':'교차한 양팔의 마무리 자세를 잠깐 유지하세요.';
+    !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.issue==='height'?'가슴 아래쪽이 아닌 목 가까운 위쪽 깃을 잡으세요.':state.issue==='spread'?'손을 멀리 벌리지 말고 잡은 위치 가까이에 유지하세요.':state.issue==='lift'?'깃 가까이에서 교차한 양 손목과 전완을 함께 비틀어 보세요.':'교차한 양팔의 마무리 자세를 잠깐 유지하세요.';
   $('tracking-label').textContent=demonstrating?'시연 중':state?.wristHands.some(Boolean)?`${state.count}개 깃 잡힘 · 손목으로 추적 중`:state?.visible?`${state.visible}개 손 인식 · ${state.count}개 깃 잡힘`:state?.count?`${state.count}개 그립 유지 · ${state.trackingPaused?'관절 인식 대기':'팔 동작 인식'}`:stream?'인식 대기':'대기';
   $('feedback').textContent=feedback;$('live-feedback').textContent=feedback;
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':score>=GRIP_PASS_SCORE?'good':score>=25?'near':'adjust';
   $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'깃 위치·교차 동작 / 100';
-  $('live-hold').textContent=demonstrating?'연습 버튼을 누르면 채점합니다':state?.count===2?`손목 교차 ${Math.round(state.wristCompletion*100)}% · 왼 팔꿈치 ${state.elbowLevels[0]===null?'—':Math.round(state.elbowLevels[0]*100)+'%'} · 오른 팔꿈치 ${state.elbowLevels[1]===null?'—':Math.round(state.elbowLevels[1]*100)+'%'} · 유지 ${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`:'목 가까운 깃 잡기 → 교차한 손목·전완 비틀기';
+  $('live-hold').textContent=demonstrating?'연습 버튼을 누르면 채점합니다':state?.count===2?`왼 동작 ${Math.round(state.finishLevels[0]*100)}% · 오른 동작 ${Math.round(state.finishLevels[1]*100)}% · 유지 ${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`:'목 가까운 깃 잡기 → 교차한 손목·전완 비틀기';
   $('opponent-status').dataset.tap=String(!!tapUntil||!!state?.tapped);
   $('opponent-status').textContent=tapUntil||state?.tapped?'TAP! · 손을 펴서 놓기':demonstrating?instruction.label:state?.trackingPaused?'깃 잡기 유지 · 관절 인식 대기':state?.count===2?`양쪽 깃 잡힘 · 동작 일치 ${Math.round(state.completion*100)}%`:state?.count===1?'한쪽 깃 잡힘':'깃 위에서 손을 쥐세요';
 }

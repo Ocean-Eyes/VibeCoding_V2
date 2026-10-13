@@ -1,11 +1,22 @@
+import {GRIP_TUNING} from './grip-tuning.js';
 // Pose wrists continue an established grip; they never invent finger observations.
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export class HeldWrist {
- constructor(wrist){this.anchor={...wrist};this.last={...wrist};this.time=null}
- update(wrist,now){
-  if(!wrist||!Number.isFinite(wrist.x)||!Number.isFinite(wrist.y)||(wrist.visibility??1)<.65)return null;
-  // Reject identity swaps and teleports instead of slowly following a bad detection.
-  if(distance(wrist,this.last)>.075||distance(wrist,this.anchor)>.24)return null;
+ constructor(wrist,tuning=GRIP_TUNING){this.tuning=tuning;this.last={...wrist};this.time=null;this.candidate=null;this.revision=0;this.status='tracked';this.recoveredAt=null}
+ update(wrist,now,{recover=false,sampleTime=now}={}){
+  if(!wrist||!Number.isFinite(wrist.x)||!Number.isFinite(wrist.y)){this.status='missing';this.candidate=null;return null}
+  if((wrist.visibility??1)<this.tuning.wristVisibility){this.status='uncertain';this.candidate=null;return null}
+  // Continuous travel has no permanent radius limit. Abrupt changes must first
+  // establish a stable, unambiguous nearby wrist; they are never scored as motion.
+  if(distance(wrist,this.last)>.075){
+   this.status='recovering';
+   if(!recover||distance(wrist,this.last)>.28){this.candidate=null;return null}
+   if(!this.candidate||distance(wrist,this.candidate.wrist)>.025)this.candidate={wrist:{...wrist},since:now,sampleTime,samples:0};
+   if(this.candidate.sampleTime!==sampleTime||this.candidate.samples===0){this.candidate.samples++;this.candidate.sampleTime=sampleTime;}
+   if(now-this.candidate.since<this.tuning.wristRecoveryMs||this.candidate.samples<3)return null;
+   this.last={...wrist};this.time=now;this.candidate=null;this.revision++;this.recoveredAt=now;this.status='tracked';return {...this.last};
+  }
+  this.candidate=null;this.status='tracked';
   const dt=this.time===null?0:Math.min(.1,Math.max(0,(now-this.time)/1000));
   const d=distance(wrist,this.last),u=d?Math.min(1,Math.max(.003,dt*.65)/d):1;
   this.last={...wrist,x:this.last.x+(wrist.x-this.last.x)*u,y:this.last.y+(wrist.y-this.last.y)*u};this.time=now;

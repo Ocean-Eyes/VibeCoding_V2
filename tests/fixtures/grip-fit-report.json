@@ -1,0 +1,1748 @@
+{
+  "scope": "Synthetic post-tracker landmark trajectories; not measured webcam accuracy",
+  "split": "Independent deterministic seeds; held-out cases excluded from parameter selection",
+  "grid": {
+    "wristVisibility": [
+      0.45,
+      0.5,
+      0.6
+    ],
+    "wristRecoveryMs": [
+      200,
+      300,
+      450
+    ],
+    "finishEnter": [
+      0.6,
+      0.7,
+      0.8
+    ],
+    "finishExit": [
+      0.45,
+      0.55,
+      0.65
+    ],
+    "finishGraceMs": [
+      150,
+      300,
+      450
+    ],
+    "wristAngle": [
+      0.3,
+      0.4,
+      0.5
+    ],
+    "elbowRise": [
+      0.1,
+      0.125,
+      0.15
+    ]
+  },
+  "baseline": {
+    "tuning": {
+      "wristVisibility": 0.5,
+      "wristRecoveryMs": 300,
+      "finishEnter": 0.7,
+      "finishExit": 0.55,
+      "finishGraceMs": 300,
+      "wristAngle": 0.4,
+      "elbowRise": 0.15
+    },
+    "metrics": {
+      "cases": 360,
+      "positive": 108,
+      "negative": 252,
+      "success": 79,
+      "falseTap": 0,
+      "missed": 29,
+      "meanTapMs": 2934,
+      "failures": [
+        "train/mixed/1002",
+        "train/occluded/1003",
+        "train/occluded/1034",
+        "train/recovery/1035",
+        "train/threshold/1036",
+        "train/threshold/1067",
+        "train/elbow/1124",
+        "train/elbow/1155",
+        "train/mixed/1157",
+        "train/mixed/1188",
+        "train/occluded/1189",
+        "train/recovery/1190",
+        "train/recovery/1221",
+        "train/threshold/1222",
+        "train/wrist/1249",
+        "train/elbow/1310",
+        "train/mixed/1312",
+        "train/mixed/1343",
+        "train/occluded/1344",
+        "train/recovery/1345",
+        "train/recovery/1376",
+        "train/threshold/1377",
+        "train/elbow/1465",
+        "train/mixed/1498",
+        "train/occluded/1499",
+        "train/wrist/1528",
+        "train/occluded/1530",
+        "train/recovery/1531",
+        "train/threshold/1532"
+      ]
+    }
+  },
+  "selected": {
+    "tuning": {
+      "wristVisibility": 0.5,
+      "wristRecoveryMs": 200,
+      "finishEnter": 0.8,
+      "finishExit": 0.55,
+      "finishGraceMs": 150,
+      "wristAngle": 0.3,
+      "elbowRise": 0.1
+    },
+    "metrics": {
+      "cases": 360,
+      "positive": 108,
+      "negative": 252,
+      "success": 108,
+      "falseTap": 0,
+      "missed": 0,
+      "meanTapMs": 2830,
+      "failures": []
+    }
+  },
+  "heldOut": {
+    "cases": 480,
+    "positive": 144,
+    "negative": 336,
+    "success": 144,
+    "falseTap": 0,
+    "missed": 0,
+    "meanTapMs": 2825,
+    "failures": []
+  },
+  "candidates": 43,
+  "trainingSequenceRuns": 15480,
+  "trials": [
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 300,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 300,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 79,
+        "falseTap": 0,
+        "missed": 29,
+        "meanTapMs": 2934,
+        "failures": [
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1124",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/wrist/1249",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/elbow/1465",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.45,
+        "wristRecoveryMs": 300,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 300,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 79,
+        "falseTap": 0,
+        "missed": 29,
+        "meanTapMs": 2934,
+        "failures": [
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1124",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/wrist/1249",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/elbow/1465",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.6,
+        "wristRecoveryMs": 300,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 300,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 67,
+        "falseTap": 0,
+        "missed": 41,
+        "meanTapMs": 3255,
+        "failures": [
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/occluded/1065",
+          "train/recovery/1066",
+          "train/threshold/1067",
+          "train/occluded/1096",
+          "train/recovery/1097",
+          "train/elbow/1124",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/wrist/1249",
+          "train/recovery/1252",
+          "train/occluded/1282",
+          "train/recovery/1283",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/occluded/1313",
+          "train/recovery/1314",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/elbow/1465",
+          "train/occluded/1468",
+          "train/recovery/1469",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/recovery/1500",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 300,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 79,
+        "falseTap": 0,
+        "missed": 29,
+        "meanTapMs": 2934,
+        "failures": [
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1124",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/wrist/1249",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/elbow/1465",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 450,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 300,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 79,
+        "falseTap": 0,
+        "missed": 29,
+        "meanTapMs": 2934,
+        "failures": [
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1124",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/wrist/1249",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/elbow/1465",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 300,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 103,
+        "falseTap": 0,
+        "missed": 5,
+        "meanTapMs": 2907,
+        "failures": [
+          "train/threshold/1067",
+          "train/elbow/1155",
+          "train/mixed/1188",
+          "train/recovery/1221",
+          "train/occluded/1530"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 300,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 52,
+        "falseTap": 0,
+        "missed": 56,
+        "meanTapMs": 2919,
+        "failures": [
+          "train/wrist/1001",
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/recovery/1004",
+          "train/threshold/1005",
+          "train/mixed/1033",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1093",
+          "train/elbow/1124",
+          "train/wrist/1125",
+          "train/mixed/1126",
+          "train/occluded/1127",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/occluded/1158",
+          "train/recovery/1159",
+          "train/threshold/1160",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/threshold/1191",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/elbow/1248",
+          "train/wrist/1249",
+          "train/elbow/1279",
+          "train/wrist/1280",
+          "train/mixed/1281",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/occluded/1313",
+          "train/recovery/1314",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/threshold/1346",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/wrist/1404",
+          "train/elbow/1434",
+          "train/mixed/1436",
+          "train/elbow/1465",
+          "train/mixed/1467",
+          "train/occluded/1468",
+          "train/recovery/1469",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/recovery/1500",
+          "train/threshold/1501",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.45,
+        "finishGraceMs": 300,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 103,
+        "falseTap": 0,
+        "missed": 5,
+        "meanTapMs": 2893,
+        "failures": [
+          "train/threshold/1067",
+          "train/elbow/1155",
+          "train/mixed/1188",
+          "train/recovery/1221",
+          "train/occluded/1530"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 103,
+        "falseTap": 0,
+        "missed": 5,
+        "meanTapMs": 2907,
+        "failures": [
+          "train/threshold/1067",
+          "train/elbow/1155",
+          "train/mixed/1188",
+          "train/recovery/1221",
+          "train/occluded/1530"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 450,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 103,
+        "falseTap": 0,
+        "missed": 5,
+        "meanTapMs": 2907,
+        "failures": [
+          "train/threshold/1067",
+          "train/elbow/1155",
+          "train/mixed/1188",
+          "train/recovery/1221",
+          "train/occluded/1530"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 103,
+        "falseTap": 0,
+        "missed": 5,
+        "meanTapMs": 2879,
+        "failures": [
+          "train/threshold/1067",
+          "train/elbow/1155",
+          "train/mixed/1188",
+          "train/recovery/1221",
+          "train/occluded/1530"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.5,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 97,
+        "falseTap": 0,
+        "missed": 11,
+        "meanTapMs": 2959,
+        "failures": [
+          "train/threshold/1067",
+          "train/wrist/1125",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/recovery/1221",
+          "train/wrist/1249",
+          "train/wrist/1404",
+          "train/mixed/1436",
+          "train/wrist/1528",
+          "train/occluded/1530"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2718,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.125
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2803,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.45,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2718,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.6,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 93,
+        "falseTap": 0,
+        "missed": 15,
+        "meanTapMs": 3016,
+        "failures": [
+          "train/occluded/1065",
+          "train/recovery/1066",
+          "train/occluded/1096",
+          "train/recovery/1097",
+          "train/recovery/1252",
+          "train/occluded/1282",
+          "train/recovery/1283",
+          "train/occluded/1313",
+          "train/recovery/1314",
+          "train/occluded/1468",
+          "train/recovery/1469",
+          "train/occluded/1499",
+          "train/recovery/1500",
+          "train/occluded/1530",
+          "train/recovery/1531"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 300,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2717,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 450,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2717,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 105,
+        "falseTap": 0,
+        "missed": 3,
+        "meanTapMs": 2798,
+        "failures": [
+          "train/mixed/1157",
+          "train/wrist/1249",
+          "train/wrist/1528"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 98,
+        "falseTap": 0,
+        "missed": 10,
+        "meanTapMs": 2880,
+        "failures": [
+          "train/wrist/1001",
+          "train/mixed/1033",
+          "train/wrist/1125",
+          "train/mixed/1157",
+          "train/wrist/1249",
+          "train/wrist/1280",
+          "train/mixed/1312",
+          "train/wrist/1404",
+          "train/mixed/1436",
+          "train/wrist/1528"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.45,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2717,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 300,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2718,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 450,
+        "wristAngle": 0.4,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2718,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2679,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.5,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 102,
+        "falseTap": 0,
+        "missed": 6,
+        "meanTapMs": 2767,
+        "failures": [
+          "train/wrist/1125",
+          "train/mixed/1157",
+          "train/wrist/1249",
+          "train/wrist/1404",
+          "train/mixed/1436",
+          "train/wrist/1528"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.125
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2771,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.6,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.5,
+        "elbowRise": 0.125
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 102,
+        "falseTap": 0,
+        "missed": 6,
+        "meanTapMs": 2851,
+        "failures": [
+          "train/wrist/1125",
+          "train/mixed/1157",
+          "train/wrist/1249",
+          "train/wrist/1404",
+          "train/mixed/1436",
+          "train/wrist/1528"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2748,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.125
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 107,
+        "falseTap": 0,
+        "missed": 1,
+        "meanTapMs": 2847,
+        "failures": [
+          "train/recovery/1221"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 81,
+        "falseTap": 0,
+        "missed": 27,
+        "meanTapMs": 2883,
+        "failures": [
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1124",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/elbow/1465",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.125
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 104,
+        "falseTap": 0,
+        "missed": 4,
+        "meanTapMs": 2893,
+        "failures": [
+          "train/mixed/1157",
+          "train/recovery/1221",
+          "train/wrist/1249",
+          "train/wrist/1528"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 79,
+        "falseTap": 0,
+        "missed": 29,
+        "meanTapMs": 2934,
+        "failures": [
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1124",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/wrist/1249",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/elbow/1465",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.5,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 95,
+        "falseTap": 0,
+        "missed": 13,
+        "meanTapMs": 2839,
+        "failures": [
+          "train/wrist/1001",
+          "train/mixed/1033",
+          "train/wrist/1125",
+          "train/wrist/1156",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/wrist/1249",
+          "train/wrist/1280",
+          "train/mixed/1312",
+          "train/wrist/1404",
+          "train/mixed/1436",
+          "train/mixed/1467",
+          "train/wrist/1528"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.5,
+        "elbowRise": 0.125
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 94,
+        "falseTap": 0,
+        "missed": 14,
+        "meanTapMs": 2938,
+        "failures": [
+          "train/wrist/1001",
+          "train/mixed/1033",
+          "train/wrist/1125",
+          "train/wrist/1156",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/recovery/1221",
+          "train/wrist/1249",
+          "train/wrist/1280",
+          "train/mixed/1312",
+          "train/wrist/1404",
+          "train/mixed/1436",
+          "train/mixed/1467",
+          "train/wrist/1528"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.7,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.5,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 71,
+        "falseTap": 0,
+        "missed": 37,
+        "meanTapMs": 2989,
+        "failures": [
+          "train/wrist/1001",
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/mixed/1033",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1124",
+          "train/wrist/1125",
+          "train/elbow/1155",
+          "train/wrist/1156",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/wrist/1249",
+          "train/wrist/1280",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/wrist/1404",
+          "train/mixed/1436",
+          "train/elbow/1465",
+          "train/mixed/1467",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 108,
+        "falseTap": 0,
+        "missed": 0,
+        "meanTapMs": 2830,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.125
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 89,
+        "falseTap": 0,
+        "missed": 19,
+        "meanTapMs": 2886,
+        "failures": [
+          "train/mixed/1002",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1067",
+          "train/elbow/1155",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/elbow/1310",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/elbow/1465",
+          "train/mixed/1498",
+          "train/occluded/1530",
+          "train/recovery/1531"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 60,
+        "falseTap": 0,
+        "missed": 48,
+        "meanTapMs": 2853,
+        "failures": [
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/recovery/1004",
+          "train/threshold/1005",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1093",
+          "train/elbow/1124",
+          "train/mixed/1126",
+          "train/occluded/1127",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/occluded/1158",
+          "train/recovery/1159",
+          "train/threshold/1160",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/threshold/1191",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/elbow/1248",
+          "train/elbow/1279",
+          "train/mixed/1281",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/occluded/1313",
+          "train/recovery/1314",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/threshold/1346",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/elbow/1434",
+          "train/elbow/1465",
+          "train/mixed/1467",
+          "train/occluded/1468",
+          "train/recovery/1469",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/recovery/1500",
+          "train/threshold/1501",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.125
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 79,
+        "falseTap": 0,
+        "missed": 29,
+        "meanTapMs": 2928,
+        "failures": [
+          "train/wrist/1001",
+          "train/mixed/1002",
+          "train/mixed/1033",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1067",
+          "train/wrist/1125",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/wrist/1249",
+          "train/wrist/1280",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/wrist/1404",
+          "train/mixed/1436",
+          "train/elbow/1465",
+          "train/mixed/1498",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.4,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 52,
+        "falseTap": 0,
+        "missed": 56,
+        "meanTapMs": 2919,
+        "failures": [
+          "train/wrist/1001",
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/recovery/1004",
+          "train/threshold/1005",
+          "train/mixed/1033",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/threshold/1067",
+          "train/elbow/1093",
+          "train/elbow/1124",
+          "train/wrist/1125",
+          "train/mixed/1126",
+          "train/occluded/1127",
+          "train/elbow/1155",
+          "train/mixed/1157",
+          "train/occluded/1158",
+          "train/recovery/1159",
+          "train/threshold/1160",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/threshold/1191",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/elbow/1248",
+          "train/wrist/1249",
+          "train/elbow/1279",
+          "train/wrist/1280",
+          "train/mixed/1281",
+          "train/elbow/1310",
+          "train/mixed/1312",
+          "train/occluded/1313",
+          "train/recovery/1314",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/threshold/1346",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/wrist/1404",
+          "train/elbow/1434",
+          "train/mixed/1436",
+          "train/elbow/1465",
+          "train/mixed/1467",
+          "train/occluded/1468",
+          "train/recovery/1469",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/recovery/1500",
+          "train/threshold/1501",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.5,
+        "elbowRise": 0.1
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 87,
+        "falseTap": 0,
+        "missed": 21,
+        "meanTapMs": 2926,
+        "failures": [
+          "train/wrist/1001",
+          "train/wrist/1032",
+          "train/mixed/1033",
+          "train/mixed/1064",
+          "train/wrist/1125",
+          "train/wrist/1156",
+          "train/mixed/1157",
+          "train/wrist/1187",
+          "train/mixed/1188",
+          "train/mixed/1219",
+          "train/wrist/1249",
+          "train/wrist/1280",
+          "train/wrist/1311",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/wrist/1404",
+          "train/wrist/1435",
+          "train/mixed/1436",
+          "train/mixed/1467",
+          "train/mixed/1498",
+          "train/wrist/1528"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.5,
+        "elbowRise": 0.125
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 71,
+        "falseTap": 0,
+        "missed": 37,
+        "meanTapMs": 2980,
+        "failures": [
+          "train/wrist/1001",
+          "train/mixed/1002",
+          "train/wrist/1032",
+          "train/mixed/1033",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/mixed/1064",
+          "train/threshold/1067",
+          "train/wrist/1125",
+          "train/elbow/1155",
+          "train/wrist/1156",
+          "train/mixed/1157",
+          "train/wrist/1187",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/mixed/1219",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/wrist/1249",
+          "train/wrist/1280",
+          "train/elbow/1310",
+          "train/wrist/1311",
+          "train/mixed/1312",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/wrist/1404",
+          "train/wrist/1435",
+          "train/mixed/1436",
+          "train/elbow/1465",
+          "train/mixed/1467",
+          "train/mixed/1498",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531"
+        ]
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.5,
+        "elbowRise": 0.15
+      },
+      "metrics": {
+        "cases": 360,
+        "positive": 108,
+        "negative": 252,
+        "success": 45,
+        "falseTap": 0,
+        "missed": 63,
+        "meanTapMs": 2984,
+        "failures": [
+          "train/wrist/1001",
+          "train/mixed/1002",
+          "train/occluded/1003",
+          "train/recovery/1004",
+          "train/threshold/1005",
+          "train/wrist/1032",
+          "train/mixed/1033",
+          "train/occluded/1034",
+          "train/recovery/1035",
+          "train/threshold/1036",
+          "train/mixed/1064",
+          "train/threshold/1067",
+          "train/elbow/1093",
+          "train/elbow/1124",
+          "train/wrist/1125",
+          "train/mixed/1126",
+          "train/occluded/1127",
+          "train/elbow/1155",
+          "train/wrist/1156",
+          "train/mixed/1157",
+          "train/occluded/1158",
+          "train/recovery/1159",
+          "train/threshold/1160",
+          "train/wrist/1187",
+          "train/mixed/1188",
+          "train/occluded/1189",
+          "train/recovery/1190",
+          "train/threshold/1191",
+          "train/mixed/1219",
+          "train/recovery/1221",
+          "train/threshold/1222",
+          "train/elbow/1248",
+          "train/wrist/1249",
+          "train/elbow/1279",
+          "train/wrist/1280",
+          "train/mixed/1281",
+          "train/elbow/1310",
+          "train/wrist/1311",
+          "train/mixed/1312",
+          "train/occluded/1313",
+          "train/recovery/1314",
+          "train/mixed/1343",
+          "train/occluded/1344",
+          "train/recovery/1345",
+          "train/threshold/1346",
+          "train/recovery/1376",
+          "train/threshold/1377",
+          "train/wrist/1404",
+          "train/elbow/1434",
+          "train/wrist/1435",
+          "train/mixed/1436",
+          "train/elbow/1465",
+          "train/mixed/1467",
+          "train/occluded/1468",
+          "train/recovery/1469",
+          "train/mixed/1498",
+          "train/occluded/1499",
+          "train/recovery/1500",
+          "train/threshold/1501",
+          "train/wrist/1528",
+          "train/occluded/1530",
+          "train/recovery/1531",
+          "train/threshold/1532"
+        ]
+      }
+    }
+  ]
+}
