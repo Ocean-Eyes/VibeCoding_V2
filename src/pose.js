@@ -1,9 +1,9 @@
 // All geometry uses image pixels, avoiding aspect-ratio distortion.
 export const PASS_SCORE = 50;
 export const POSES = [
-  {name:'그립 준비',short:'가슴 앞 · 양손 준비',description:'양손을 가슴 앞에 두고 팔꿈치를 편하게 내려 화면의 준비 위치를 따라하세요.',angles:[1.2,Math.PI,Math.PI-1.2,0],gesture:'fist'},
-  {name:'첫 손 교차',short:'왼손을 반대편으로',description:'왼손을 가슴 앞에서 반대편으로 옮깁니다. 손바닥은 선택한 기술의 방향을 직접 확인하세요.',angles:[1.8,-2.5,Math.PI-1.2,0],gesture:'fist'},
-  {name:'팔꿈치 올리기',short:'깃 위치 유지 · 팔꿈치 상승',description:'양손으로 목 가까운 깃을 잡고 손 위치를 유지한 채 양 팔꿈치를 조금 올립니다. 화면의 동작을 1.2초 유지하면 가상 미션을 완료합니다.',angles:[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5],gesture:'fist'},
+  {name:'첫 깃 잡기',short:'왼손을 반대편 깃으로',description:'왼손으로 반대편 위쪽 깃을 바로 잡습니다.',angles:[1.8,-2.5,Math.PI/2,Math.PI/2],gesture:'fist'},
+  {name:'반대 깃 잡기',short:'오른손을 교차해 잡기',description:'첫 손의 그립을 유지하고 오른손으로 반대편 깃을 잡아 교차합니다.',angles:[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5],gesture:'fist'},
+  {name:'교차한 팔 비틀기',short:'그립 유지 · 양 전완 회전',description:'양손의 교차와 깃 위치를 유지하며 손목과 전완을 함께 회전하는 시연을 확인합니다.',angles:[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5],gesture:'fist'},
 ];
 export const BONES=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24]];
 export const HAND_BONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];

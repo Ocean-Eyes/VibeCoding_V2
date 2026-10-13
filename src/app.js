@@ -3,7 +3,7 @@ import {LandmarkStream,HandStream,HandIdentityTracker,GripProjection,projectHand
 import {drawLiveGlove} from './live-glove.js';
 import {prepareHands} from './hand-renderer.js';
 import {drawOpponent,drawGripStudy,drawGripGuides,drawCollarTargets} from './opponent.js';
-import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide} from './demonstration.js';
+import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,finishAt} from './demonstration.js';
 import {TECHNIQUES} from './curriculum.js';
 import {POSES,BONES,HAND_BONES,bodyFrame} from './pose.js';
 await prepareHands();
@@ -25,9 +25,9 @@ const notify=(message,error=false)=>{$('notice').textContent=message;$('notice')
 function line(context,a,b,color,width=3,dash=[]){if(!a||!b)return;context.beginPath();context.strokeStyle=color;context.lineWidth=width;context.lineCap='round';context.setLineDash(dash);context.moveTo(a.x,a.y);context.lineTo(b.x,b.y);context.stroke();context.setLineDash([])}
 function circle(context,p,r,color,fill=true){if(!p)return;context.beginPath();context.arc(p.x,p.y,r,0,Math.PI*2);context.fillStyle=color;context.strokeStyle=color;context.lineWidth=2;fill?context.fill():context.stroke()}
 function skeleton(context,p,color,width=3){for(const[a,b]of BONES){if(p[a]&&p[b]&&(p[a].visibility??1)>=.65&&(p[b].visibility??1)>=.65)line(context,p[a],p[b],color,width)}for(const i of[11,12,13,14,15,16,23,24])if(p[i]&&(p[i].visibility??1)>=.65)circle(context,p[i],width*1.25,color)}
-function preview(canvas,index){const context=canvas.getContext('2d'),w=canvas.width,h=canvas.height;context.clearRect(0,0,w,h);const frame=opponentFrame(w,h);drawOpponent(context,frame);drawGripGuides(context,frame,GRIP_STEPS[index],activeTechnique.directions,true)}
+function preview(canvas,index){const context=canvas.getContext('2d'),w=canvas.width,h=canvas.height;context.clearRect(0,0,w,h);const frame=opponentFrame(w,h);drawOpponent(context,frame);drawGripGuides(context,frame,GRIP_STEPS[index],activeTechnique.directions,true,null,{finish:index===2?1:0})}
 function updatePose(index=selected){
-  const p=POSES[index];$('step-label').textContent=`0${index+1} / 03`;$('pose-number').textContent=`0${index+1}`;$('pose-name').textContent=p.name;$('pose-description').textContent=activeTechnique.cues[index];$('gesture-label').textContent=['손목을 교차해 반대편 깃으로','깃 위에서 쥐면 잡힙니다','깃 위치 유지 · 양 팔꿈치 올리기'][index];preview($('preview'),index);
+  const p=POSES[index];$('step-label').textContent=`0${index+1} / 03`;$('pose-number').textContent=`0${index+1}`;$('pose-name').textContent=p.name;$('pose-description').textContent=activeTechnique.cues[index];$('gesture-label').textContent=['왼손으로 반대편 위쪽 깃 잡기','오른손도 교차해 반대편 깃 잡기','그립 유지 · 교차한 양 전완 비틀기'][index];preview($('preview'),index);
   document.querySelectorAll('.pose-card').forEach((button,i)=>{preview(button.querySelector('canvas'),i);button.classList.toggle('selected',i===index);button.setAttribute('aria-pressed',String(i===index));button.querySelector('.completion').textContent=completed.has(i)?'✓':''});
 }
 POSES.forEach((p,i)=>{const button=document.createElement('button');button.className='pose-card';button.innerHTML=`<canvas width="140" height="110" aria-hidden="true"></canvas><span class="card-copy"><small>STEP 0${i+1}</small><strong>${p.name}</strong><span>${p.short}</span></span><span class="completion" aria-label="완료 여부"></span>`;button.onclick=()=>choose(i);$('pose-list').append(button);preview(button.querySelector('canvas'),i)});
@@ -138,7 +138,7 @@ function draw(now){
       const projected=shown.map(p=>p?projectHand([p],frame,scene,mirrored)[0]:null);skeleton(ctx,projected,cyan,1.5);
       for(const h of live)for(const [a,b]of HAND_BONES)line(ctx,h.hand[a],h.hand[b],cyan,1);
     }
-  }else drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected]);
+  }else drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected],{finish:selected===2?finishAt(((now-guideStarted)/1000)%4):0});
   const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:
     state?.trackingPaused?'깃은 잡고 있습니다. 어깨·팔꿈치·양손이 보이면 판정을 이어갑니다.':!state?.visible?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
     state.posture?.some(p=>p==='palm'||p==='turn')?`카메라에 왼손 ${activeTechnique.directions[0]==='↓'?'손바닥':'손등'}, 오른손 ${activeTechnique.directions[1]==='↓'?'손바닥':'손등'}이 보이게 해 주세요.`:state.posture?.some(Boolean)?'각 손으로 반대편 깃을 잡으세요.':
@@ -173,7 +173,7 @@ function tick(now){
   $('stage-hint').textContent=demonstrating?'흰색 손: 시연 · 상대는 고정됩니다':countdown?'잠시 후 시작합니다':mode==='live'?'흰색 장갑: 내 손 · 쥐면 잡기 · 펴면 놓기':'내 동작 연습을 누르세요';requestAnimationFrame(tick);
 }
 $('start').onclick=start;
-$('demo').onclick=()=>{stop();demonstrating=true;demoStarted=performance.now();demoStep=-1;controls();notify('흰색 손이 준비 → 왼손 교차 → 오른손 교차 → 유지 → 풀기를 반복합니다.')};
+$('demo').onclick=()=>{stop();demonstrating=true;demoStarted=performance.now();demoStep=-1;controls();notify('흰색 손이 첫 깃 잡기 → 반대 깃 잡기 → 교차한 팔 비틀기 → 풀기를 반복합니다.')};
 $('retry-tracking').onclick=()=>{if(stream)connectTracker()};
 $('stop').onclick=()=>{stop();notify('연결을 종료했습니다. 카메라는 꺼져 있습니다.')};
 function openVideo(){autoStart=false;running=false;hold=countdown=0;tapUntil=0;$('countdown').hidden=true;controls();$('video-title').textContent=activeTechnique.name;$('video-external').href=`https://www.youtube.com/watch?v=${activeTechnique.video}`;$('kodokan-player').src=`https://www.youtube-nocookie.com/embed/${activeTechnique.video}?rel=0`;$('video-dialog').showModal()}
