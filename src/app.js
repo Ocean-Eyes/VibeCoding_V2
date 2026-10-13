@@ -1,5 +1,5 @@
 import {CollarInteraction,GRIP_PASS_SCORE,GRIP_HOLD_SECONDS} from './collar-interaction.js';
-import {LandmarkStream,HandStream,HandIdentityTracker,GripProjection,projectHand,palmFacing} from './live-hands.js';
+import {LandmarkStream,HandStream,HandIdentityTracker,GripProjection,projectHand,palmFacing,poseConfirmsHand} from './live-hands.js';
 import {drawLiveGlove} from './live-glove.js';
 import {prepareHands} from './hand-renderer.js';
 import {drawOpponent,drawGripStudy,drawGripGuides,drawCollarTargets} from './opponent.js';
@@ -12,7 +12,8 @@ let gripState=collar.update([null,null],performance.now());
 const gripProjection=new GripProjection();
 const poseStream=new LandmarkStream(),handStreams=[new HandStream(),new HandStream()];
 const handIdentity=new HandIdentityTracker();
-function resetTrackingDisplay(){gripProjection.reset();collar.reset();gripState=collar.update([null,null],performance.now());poseStream.reset();handStreams.forEach(s=>s.reset());handIdentity.reset()}
+let consumedRecovery=[0,0];
+function resetTrackingDisplay(){consumedRecovery=[0,0];gripProjection.reset();collar.reset();gripState=collar.update([null,null],performance.now());poseStream.reset();handStreams.forEach(s=>s.reset());handIdentity.reset()}
 const pixel=p=>p?{...p,x:p.x*video.videoWidth,y:p.y*video.videoHeight,z:(p.z??0)*video.videoWidth}:null;
 const $=id=>document.getElementById(id),video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d');
 const cyan='#80baff',partner=$('partner'),partnerCtx=partner.getContext('2d');
@@ -67,8 +68,9 @@ function connectTracker(){
       if(data.type==='result'){
         clearTimeout(frameTimer);busy=false;const now=performance.now();fps=lastResult?1000/(now-lastResult):0;lastResult=now;
         poseStream.update(data.points,now);
-        const assignedHands=handIdentity.update(data.hands,data.points,now,{held:collar.hands.map(h=>!!h.grip)});
-        assignedHands.forEach((h,i)=>handStreams[i].update(h,now,{reacquire:!collar.hands[i].grip,held:!!collar.hands[i].grip}));
+        const assignedHands=handIdentity.update(data.hands,data.points,now,{held:collar.hands.map(h=>!!h.grip),stalled:handStreams.map(s=>s.lastSeen!==null&&now-s.lastSeen>450)});
+        assignedHands.forEach((h,i)=>handStreams[i].update(h,now,{reacquire:!collar.hands[i].grip,held:!!collar.hands[i].grip,poseConfirmed:poseConfirmsHand(h,data.points,i)}));
+        canvas.dataset.detectedHands=String(data.hands?.length??0);canvas.dataset.assignedHands=String(assignedHands.filter(Boolean).length);
       }
     };worker.postMessage({type:'init'});
   }catch(e){trackingFailed(`추적 모듈을 시작하지 못했습니다: ${e.message}`)}
@@ -101,6 +103,7 @@ function draw(now){
     const raw=fresh&&frame?s[method](now)?.map(pixel):null;return raw?projectHand(raw,frame,unit,mirrored):null;
   });
   const observations=projectedHands('trackedAt'),displayHands=projectedHands('at');
+  const recoveredHands=observations.map((h,i)=>{if(!h||consumedRecovery[i]===handStreams[i].recoveryRevision)return false;consumedRecovery[i]=handStreams[i].recoveryRevision;return true});
   if(mode==='live'&&!demonstrating){
     const arms=[0,1].map(i=>{
       const shoulder=shown?.[11+i],elbow=shown?.[13+i];
@@ -108,7 +111,7 @@ function draw(now){
       const [s,e]=projectHand([shoulder,elbow],frame,unit,mirrored);
       const wrist=shown?.[15+i];return {shoulder:s,elbow:e,wrist:wrist&&(wrist.visibility??1)>=.75?projectHand([wrist],frame,unit,mirrored)[0]:null};
     });
-    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body,continuousHands:observations.map(Boolean)});
+    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body,continuousHands:observations.map(Boolean),recoveredHands});
     const phase=Math.min(2,gripState.count);
     if(selected!==phase){selected=phase;updatePose()}
   }

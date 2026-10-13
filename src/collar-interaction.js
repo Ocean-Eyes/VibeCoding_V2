@@ -118,7 +118,7 @@ export class CollarInteraction{
   const targets=[...live,...this.released.filter(g=>!live.some(l=>l.side===g.side)).map(g=>({...g,dx:g.dx*Math.exp(-(now-g.releasedAt)/110),dy:g.dy*Math.exp(-(now-g.releasedAt)/110),engagement:(g.engagement??0)*Math.exp(-(now-g.releasedAt)/110)}))];
   return this.clothMotion.update(targets,now);
  }
- update(observations,now,{active=false,mirrored=true,directions=['↓','↓'],arms=[null,null],bodyVisible=null,continuousHands=[false,false]}={}){
+ update(observations,now,{active=false,mirrored=true,directions=['↓','↓'],arms=[null,null],bodyVisible=null,continuousHands=[false,false],recoveredHands=[false,false]}={}){
   if(this.lastMirror!==null&&this.lastMirror!==mirrored)this.reset();
   const dt=this.lastTime===null?0:Math.min(.1,Math.max(0,(now-this.lastTime)/1000));
   if(this.lastTime!==null&&now-this.lastTime>GRIP_OCCLUSION_MS)this.reset();
@@ -143,6 +143,13 @@ export class CollarInteraction{
    const extended=openFingers(hand),open=extended.length>=3;
    if(open)h.closed=false;else if(extension<.92)h.closed=true;
    if(h.grip){
+    if(recoveredHands[i]&&!open){
+     // Reacquisition changes the input origin, never the already attached cloth.
+     const g=h.grip,previousWrist=g.wrist;
+     g.start={...center};g.center={...center};g.offset={x:g.dx,y:g.dy};g.travelX=0;g.wrist={...hand[0]};
+     const pin=lapelPoint(g.side,g.t,this.deformation(now));g.contactOffset={x:pin.x-center.x,y:pin.y-center.y};
+     if(this.elbowBaseline&&previousWrist)this.elbowBaseline[i].gap+=previousWrist.y-hand[0].y;
+    }
     // Unfiltered teleports cannot release a grip. A continuously tracked open
     // hand CAN release after leaving the frozen cloth pin during occlusion;
     // opening never drags that pin to its new position.

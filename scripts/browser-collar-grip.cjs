@@ -11,7 +11,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    const context=HTMLCanvasElement.prototype.getContext;
    HTMLCanvasElement.prototype.getContext=function(kind,options){return context.call(this,kind,kind==='2d'&&this.id==='partner'?{...options,willReadFrequently:true}:options)};
    window.qaGripPhase='open';const Original=Worker;
-   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;d.swap=window.qaSwap;d.ghostOpen=window.qaGhostOpen;d.wristVisibility=window.qaWristVisibility;}super.postMessage(d,t)}};
+   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;d.swap=window.qaSwap;d.ghostOpen=window.qaGhostOpen;d.wristVisibility=window.qaWristVisibility;d.recoverySide=window.qaRecoverySide??0;}super.postMessage(d,t)}};
   });
   await page.route('**/tests/fixtures/collar-hands.mjs',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('tests/fixtures/collar-hands.mjs','utf8')}));
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
@@ -39,11 +39,19 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
       pose[id].y=frame.origin.y+frame.scale*(.70-(['lift','hands-only','hidden-lift'].includes(data.phase)||(data.phase==='one-lift'&&i===0)?.15:0));
       if(data.phase==='no-elbows')pose[id].visibility=.1;
      }
-     let hands=collarHands(data.phase==='relaxed-open'?'open':data.phase).map((hand,i)=>{
+     let hands=collarHands(['relaxed-open','recover-open'].includes(data.phase)?'open':data.phase).map((hand,i)=>{
       if(!hand)return null;
       if(data.palmUp){
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
-       hand=handAt(center,['open','relaxed-open'].includes(data.phase)?0:1,i===0,true);
+       hand=handAt(center,['open','relaxed-open','recover-open'].includes(data.phase)?0:1,i===0,true);
+      }
+      if(data.phase.startsWith('recover-')){
+       const base=collarHands('close')[i],center=[5,9,13,17].reduce((p,k)=>({x:p.x+base[k].x/4,y:p.y+base[k].y/4}),{x:0,y:0});
+       hand=handAt(center,data.phase==='recover-open'&&i===data.recoverySide?0:1,i===0,!!data.palmUp);
+       if(i===data.recoverySide){
+        if(data.phase==='recover-open')hand=hand.map(p=>({...p,x:p.x+(i?-.45:.45)}));
+        else{const a=2.4,c=Math.cos(a),s=Math.sin(a);hand=hand.map(p=>({...p,x:center.x+(p.x-center.x)*c-(p.y-center.y)*s,y:center.y+(p.x-center.x)*s+(p.y-center.y)*c}))}
+       }
       }
       if(data.phase==='relaxed-open'){
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
@@ -58,7 +66,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
       const mapped=hand.map(p=>({x:frame.origin.x-p.x*frame.scale,y:frame.origin.y+p.y*frame.scale,z:p.z*frame.scale,visibility:1}));
       pose[15+i]=mapped[0];return mapped.map(p=>({...p,x:p.x/w,y:p.y/h,z:p.z/w}));
      });
-     if(data.phase!=='fast')hands=gradual(hands);
+     if(data.phase!=='fast'&&!data.phase.startsWith('recover-'))hands=gradual(hands);
      hands.forEach((hand,i)=>{if(hand)pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
      if(data.ghostOpen)hands=collarHands('open').map(hand=>hand.map(p=>({x:(frame.origin.x-p.x*frame.scale)/w+.35,y:(frame.origin.y+p.y*frame.scale)/h,z:p.z*frame.scale/w})));
      if(data.swap){[pose[15],pose[16]]=[pose[16],pose[15]];hands.reverse()}
@@ -98,6 +106,23 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   assert.equal(await page.locator('#overlay').getAttribute('data-completion'),'0','low-confidence pose wrists cannot substitute for hidden hands');
   assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
   await page.evaluate(()=>window.qaWristVisibility=1);await phase('close',700);
+  for(const side of [0,1]){
+   await page.evaluate(side=>window.qaRecoverySide=side,side);
+   await phase(side?'hidden-right':'hidden-left',1200);
+   await phase('recover-open',2200);
+   assert.equal(await page.locator('#overlay').getAttribute('data-detected-hands'),'2');
+   assert.equal(await page.locator('#overlay').getAttribute('data-live-hands'),'2','recovered open hand must reach release detection');
+   assert.equal(await grabbed(),'1','only the opened hand releases its held grip');
+   assert.equal(JSON.parse(await page.locator('#overlay').getAttribute('data-grips'))[side],null);
+   await phase('open',1800);assert.equal(await grabbed(),'0');
+   await phase('close',1200);assert.equal(await grabbed(),'2','restart without resetting the camera');
+   const before=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));
+   await phase(side?'hidden-right':'hidden-left',1200);await phase('recover-turn',2200);
+   assert.equal(await page.locator('#overlay').getAttribute('data-live-hands'),'2','rotated held wrist must not remain rejected indefinitely');
+   const after=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));
+   after.forEach((g,i)=>{assert.ok(g);assert.ok(Math.hypot(g.dx-before[i].dx,g.dy-before[i].dy)<.001,'recovery cannot pull cloth')});
+   await phase('close',2200);
+  }
   await page.locator('#viewport').screenshot({path:'.test-output/collar-grabbed.png'});
   const heldStarts=JSON.parse(await page.locator('#overlay').getAttribute('data-grips')).map(g=>g.start);
   for(const hidden of ['hidden-left','hidden-right','hidden-both']){
@@ -125,7 +150,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await phase('fast',400);assert.equal(await grabbed(),'2');
   const fastGrips=JSON.parse(await page.locator('#overlay').getAttribute('data-grips'));assert.ok(fastGrips.every((g,i)=>Math.abs(g.dx-beforeSpike[i].dx)<.005),'abrupt input cannot move the held cloth');
   await phase('release',1400);assert.equal(await grabbed(),'0');
-  assert.ok(await page.locator('#partner').evaluate(c=>c.toDataURL())===rest,'released cloth returns to rest');
+  await page.waitForFunction(rest=>document.querySelector('#partner').toDataURL()===rest,rest,{timeout:3000});
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');
   await phase('one-lift',1400);assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
   await phase('close');
@@ -181,6 +206,6 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    await phase('close',600);await phase('relaxed-open',1400);assert.equal(await grabbed(),'0');
    await page.locator('#mirror').check();await page.locator('#back-menu').click();
   }
-  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: prepared capture, wide lateral pull rejected, stationary hands plus bilateral elbow rise triggers completion/XP, single elbow rejected, pose loss pauses score, cloth folds, fixed head, release, mobile, palm/back and edge-on rejection with mirroring. Prolonged occlusion preserves grips; reliable pose wrists continue the elbow finish, uncertain wrists cannot score, relaxed three-finger opening releases, body loss releases. Synthetic camera landmarks.');
+  assert.deepEqual(errors,[]);console.log('PASS actual grip flow: prepared capture, wide lateral pull rejected, stationary hands plus bilateral elbow rise triggers completion/XP, single elbow rejected, pose loss pauses score, cloth folds, fixed head, release, mobile, palm/back and edge-on rejection with mirroring. Prolonged occlusion preserves grips; reliable pose wrists continue the elbow finish, uncertain wrists cannot score, relaxed three-finger opening releases; a lost hand returns at a new position, releases, regrips and completes without camera reset; rotated held-hand recovery does not move cloth; body loss releases. Synthetic camera landmarks.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
