@@ -1,4 +1,5 @@
 const {chromium}=require(process.argv[2]||'playwright');
+const gyakuOnly=process.argv.includes('--gyaku');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
@@ -13,9 +14,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    window.qaGripPhase='open';const Original=Worker;
    window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;d.swap=window.qaSwap;d.ghostOpen=window.qaGhostOpen;d.wristVisibility=window.qaWristVisibility;d.recoverySide=window.qaRecoverySide??0;}super.postMessage(d,t)}};
   });
-  await page.route('**/tests/fixtures/collar-hands.mjs',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('tests/fixtures/collar-hands.mjs','utf8')}));
+  for(const name of ['collar-hands','gyaku-hands'])await page.route(`**/tests/fixtures/${name}.mjs`,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(`tests/fixtures/${name}.mjs`,'utf8')}));
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
-   const deps=Promise.all([import('./pose.js'),import('/tests/fixtures/collar-hands.mjs')]);
+   const deps=Promise.all([import('./pose.js'),import('/tests/fixtures/collar-hands.mjs'),import('/tests/fixtures/gyaku-hands.mjs')]);
    let previous=null;
    function gradual(target){
     if(!previous){previous=target.map(h=>h?.map(p=>({...p}))??null);return target}
@@ -30,13 +31,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     return result;
    }
    self.onmessage=async({data})=>{
-    const [{POSES,targetPose},{collarHands,handAt}]=await deps;
+    const [{POSES,targetPose},{collarHands,handAt},{gyakuHands}]=await deps;
     if(data.type==='init')self.postMessage({type:'ready'});
     if(data.type==='frame'){
      const w=data.bitmap.width,h=data.bitmap.height;data.bitmap.close();
      const frame={origin:{x:w*.5,y:h*.32},scale:w*.18,x:{x:1,y:0},y:{x:0,y:1}},pose=targetPose(frame,POSES[0]);
      for(const [i,id]of [13,14].entries()){
-      pose[id].y=frame.origin.y+frame.scale*(.70-(['lift','hands-only','hidden-lift'].includes(data.phase)||(data.phase==='one-lift'&&i===0)?.15:0));
+      pose[id].y=frame.origin.y+frame.scale*(.70-(['lift','hands-only','hidden-lift','gyaku-lift'].includes(data.phase)||(data.phase==='one-lift'&&i===0)?.15:0));
       if(data.phase==='no-elbows'||data.phase.startsWith('wrist-'))pose[id].visibility=.1;
      }
      let hands=collarHands(['relaxed-open','recover-open'].includes(data.phase)?'open':data.phase).map((hand,i)=>{
@@ -68,6 +69,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
        hand=hand.map(p=>({x:center.x,y:p.y,z:p.x-center.x}));
       }
+      if(data.phase.startsWith('gyaku-'))hand=gyakuHands({curl:['gyaku-edge','gyaku-lift','gyaku-collapsed','gyaku-open'].includes(data.phase)?0:1,roll:data.phase==='gyaku-open'?.85:data.phase==='gyaku-collapsed'?.2:1.4,collapsed:data.phase==='gyaku-collapsed'?.3:false})[i];
       const mapped=hand.map(p=>({x:frame.origin.x-p.x*frame.scale,y:frame.origin.y+p.y*frame.scale,z:p.z*frame.scale,visibility:1}));
       pose[15+i]=mapped[0];return mapped.map(p=>({...p,x:p.x/w,y:p.y/h,z:p.z/w}));
      });
@@ -83,7 +85,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     }
    };`}));
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
-  await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();
+  await page.evaluate(up=>window.qaPalmUp=up,gyakuOnly);
+  await page.locator('[data-category="katame"]').click();await page.locator(`[data-lesson="${gyakuOnly?'gyaku':'nami'}"]`).click();
   await page.waitForFunction(()=>document.querySelector('#pose-list').children.length===3);
   await page.locator('#play').click();await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='2');
   const phase=async(name,wait=900)=>{await page.evaluate(p=>window.qaGripPhase=p,name);await page.waitForTimeout(wait)};
@@ -101,6 +104,25 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   const fixedHead=await headPixels();
   const rest=await page.locator('#partner').evaluate(c=>c.toDataURL());
   assert.equal(await grabbed(),'0');assert.equal(await page.locator('#live-score-value').innerText(),'0');
+  if(gyakuOnly){
+   for(const mirror of [true,false]){
+    await page.locator('#mirror').setChecked(mirror);
+    await phase('open',1200);await phase('close',1400);assert.equal(await grabbed(),'2');
+    await page.evaluate(()=>window.qaWristVisibility=.1);
+    await phase('gyaku-roll',1200);assert.equal(await grabbed(),'2');
+    await phase('gyaku-edge',1800);assert.equal(await grabbed(),'2','self-occluded fingers cannot unlatch');
+    assert.equal(await page.locator('#overlay').getAttribute('data-wrist-hands'),'2','hand-detector wrists keep both gloves visible without body wrists');
+    assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false');
+    await page.locator('#viewport').screenshot({path:`.test-output/gyaku-occlusion-${mirror}.png`});
+    await phase('gyaku-collapsed',1600);assert.equal(await grabbed(),'2','collapsed finger estimates cannot unlatch');
+    await phase('gyaku-roll',1200);await phase('gyaku-edge',1000);await phase('gyaku-lift',600);
+    await page.waitForFunction(()=>document.querySelector('#opponent-status').dataset.tap==='true');
+    await phase('gyaku-open',1000);assert.equal(await grabbed(),'0','intentional opening still releases after a reverse-grip finish');
+    await page.locator('#result-dialog').waitFor({state:'visible'});
+    if(mirror){await page.locator('#result-again').click();await page.locator('#play').click();await page.waitForTimeout(3100)}
+   }
+   assert.deepEqual(errors,[]);console.log('PASS Gyaku actual app path, mirrored and unmirrored: 3D roll, self-occluded false-open estimates, collapsed fingertips, no body-model wrists, two visible gloves, finish -> tap -> deliberate tilted opening -> release. Synthetic landmarks.');return;
+  }
   await phase('outside');assert.equal(await grabbed(),'0');
   await phase('close');assert.equal(await grabbed(),'2','prepared closed hands acquire the opposite collars without reopening');
   await phase('open');await phase('close');await page.waitForFunction(()=>document.querySelector('#overlay').dataset.grabbed==='2');

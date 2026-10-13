@@ -1,0 +1,735 @@
+{
+  "scope": "Synthetic Gyaku 3D self-occlusion and release sequences, not real-camera accuracy",
+  "grid": {
+    "releaseFace": [
+      0.1,
+      0.15,
+      0.25
+    ],
+    "releaseReach": [
+      0.4,
+      0.55,
+      0.7
+    ],
+    "releaseAlignment": [
+      0.25,
+      0.4,
+      0.55
+    ]
+  },
+  "selected": {
+    "tuning": {
+      "wristVisibility": 0.5,
+      "wristRecoveryMs": 200,
+      "finishEnter": 0.8,
+      "finishExit": 0.55,
+      "finishGraceMs": 150,
+      "wristAngle": 0.3,
+      "elbowRise": 0.1,
+      "releaseFace": 0.1,
+      "releaseReach": 0.4,
+      "releaseAlignment": 0.25
+    },
+    "metrics": {
+      "cases": 384,
+      "passed": 384,
+      "gripLost": 0,
+      "ghostLost": 0,
+      "missedTap": 0,
+      "falseTap": 0,
+      "missedRelease": 0,
+      "falseAcquire": 0,
+      "failures": []
+    }
+  },
+  "heldOut": {
+    "cases": 512,
+    "passed": 512,
+    "gripLost": 0,
+    "ghostLost": 0,
+    "missedTap": 0,
+    "falseTap": 0,
+    "missedRelease": 0,
+    "falseAcquire": 0,
+    "failures": []
+  },
+  "candidates": 27,
+  "trainingSequenceRuns": 10368,
+  "trials": [
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.1,
+        "releaseReach": 0.4,
+        "releaseAlignment": 0.25
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.1,
+        "releaseReach": 0.4,
+        "releaseAlignment": 0.4
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.1,
+        "releaseReach": 0.4,
+        "releaseAlignment": 0.55
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.1,
+        "releaseReach": 0.55,
+        "releaseAlignment": 0.25
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.1,
+        "releaseReach": 0.55,
+        "releaseAlignment": 0.4
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.1,
+        "releaseReach": 0.55,
+        "releaseAlignment": 0.55
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.1,
+        "releaseReach": 0.7,
+        "releaseAlignment": 0.25
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.1,
+        "releaseReach": 0.7,
+        "releaseAlignment": 0.4
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.1,
+        "releaseReach": 0.7,
+        "releaseAlignment": 0.55
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.15,
+        "releaseReach": 0.4,
+        "releaseAlignment": 0.25
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.15,
+        "releaseReach": 0.4,
+        "releaseAlignment": 0.4
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.15,
+        "releaseReach": 0.4,
+        "releaseAlignment": 0.55
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.15,
+        "releaseReach": 0.55,
+        "releaseAlignment": 0.25
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.15,
+        "releaseReach": 0.55,
+        "releaseAlignment": 0.4
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.15,
+        "releaseReach": 0.55,
+        "releaseAlignment": 0.55
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.15,
+        "releaseReach": 0.7,
+        "releaseAlignment": 0.25
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.15,
+        "releaseReach": 0.7,
+        "releaseAlignment": 0.4
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.15,
+        "releaseReach": 0.7,
+        "releaseAlignment": 0.55
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.25,
+        "releaseReach": 0.4,
+        "releaseAlignment": 0.25
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.25,
+        "releaseReach": 0.4,
+        "releaseAlignment": 0.4
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.25,
+        "releaseReach": 0.4,
+        "releaseAlignment": 0.55
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.25,
+        "releaseReach": 0.55,
+        "releaseAlignment": 0.25
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.25,
+        "releaseReach": 0.55,
+        "releaseAlignment": 0.4
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.25,
+        "releaseReach": 0.55,
+        "releaseAlignment": 0.55
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.25,
+        "releaseReach": 0.7,
+        "releaseAlignment": 0.25
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.25,
+        "releaseReach": 0.7,
+        "releaseAlignment": 0.4
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    },
+    {
+      "tuning": {
+        "wristVisibility": 0.5,
+        "wristRecoveryMs": 200,
+        "finishEnter": 0.8,
+        "finishExit": 0.55,
+        "finishGraceMs": 150,
+        "wristAngle": 0.3,
+        "elbowRise": 0.1,
+        "releaseFace": 0.25,
+        "releaseReach": 0.7,
+        "releaseAlignment": 0.55
+      },
+      "metrics": {
+        "cases": 384,
+        "passed": 384,
+        "gripLost": 0,
+        "ghostLost": 0,
+        "missedTap": 0,
+        "falseTap": 0,
+        "missedRelease": 0,
+        "falseAcquire": 0,
+        "failures": []
+      }
+    }
+  ]
+}

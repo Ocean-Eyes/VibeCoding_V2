@@ -77,12 +77,14 @@ export function openFingers(hand){
 }
 // Camera-facing normal only: gravity/vertical tilt must not swap palm and back.
 // In projected mirrored coordinates a positive value means palm toward camera.
-export function cameraPalmNormal(hand,index,mirrored=true){
+function palmPlane(hand){
  const w=hand[0],a=hand[5],b=hand[17];
  const u={x:a.x-w.x,y:a.y-w.y,z:(a.z??0)-(w.z??0)},v={x:b.x-w.x,y:b.y-w.y,z:(b.z??0)-(w.z??0)};
- const nx=u.y*v.z-u.z*v.y,ny=u.z*v.x-u.x*v.z,nz=u.x*v.y-u.y*v.x,length=Math.hypot(nx,ny,nz);
- return length<.00001?0:nz*(index?-1:1)*(mirrored?-1:1)/length;
+ const n=[u.y*v.z-u.z*v.y,u.z*v.x-u.x*v.z,u.x*v.y-u.y*v.x],length=Math.hypot(...n);
+ return length<.00001?null:n.map(v=>v/length);
 }
+export function cameraPalmNormal(hand,index,mirrored=true){return (palmPlane(hand)?.[2]??0)*(index?-1:1)*(mirrored?-1:1)}
+
 export function gripPosture(hand,index,side,mirrored,direction){
  if(side!==(index?-1:1)*(mirrored?1:-1))return 'opposite';
  const normal=cameraPalmNormal(hand,index,mirrored);
@@ -134,7 +136,7 @@ export class CollarInteraction{
   };
   for(let i=0;i<2;i++){
    const hand=observations[i],h=this.hands[i],extension=fingerExtension(hand);
-   h.tracked=false;h.openObserved=false;
+   h.tracked=false;h.openObserved=false;h.wristObserved=null;
    if(extension===null){
     h.releaseSince=null;h.pending=null;
     if(h.grip)suspend(i)
@@ -156,6 +158,16 @@ export class CollarInteraction{
     // hand CAN release after leaving the frozen cloth pin during occlusion;
     // opening never drags that pin to its new position.
     if(Math.hypot(center.x-h.grip.center.x,center.y-h.grip.center.y)>.12&&!(open&&continuousHands[i])){suspend(i);continue}
+    // The hand detector can retain a reliable wrist while self-occluded fingers
+    // flatten into a misleading open shape. Keep wrist and release evidence apart.
+    h.wristObserved=hand[0];
+    const releaseFingers=extended.filter(k=>distance(hand[k],hand[k+3])/Math.max(.00001,distance(hand[0],hand[k]))>=this.tuning.releaseReach);
+    const plane=palmPlane(hand),alignment=plane&&h.releasePlane?Math.abs(plane.reduce((v,n,k)=>v+n*h.releasePlane[k],0)):0;
+    const face=Math.abs(cameraPalmNormal(hand,i,mirrored));
+    // A broad, visible palm/back can demonstrate opening even after a strongly
+    // tilted acquisition. Only oblique views need the original-plane check.
+    const releaseTrusted=face>=this.tuning.releaseFace&&(face>=.65||alignment>=this.tuning.releaseAlignment)&&releaseFingers.length>=3;
+    if(open&&!releaseTrusted){h.closed=true;suspend(i);continue}
     const covered=palmCovered(hand,observations[1-i],arms[1-i]);
     // Crossed palms can obscure one another while extended fingers remain visible.
     // Clear finger extension wins over palm overlap; actual hidden fingers stay held.
@@ -187,7 +199,7 @@ export class CollarInteraction{
    if(now-h.pending.since>=100){
     // Keep the fabric where contact occurred; acquisition tolerance is not a pull.
     const hit=h.hover,rest=lapelRest(hit.side,hit.t),offset={x:hit.point.x-rest.x,y:hit.point.y-rest.y},contactOffset={x:hit.point.x-center.x,y:hit.point.y-center.y};
-    h.grip={side:hit.side,t:hit.t,start:center,center,wrist:{...hand[0]},offset,contactOffset,dx:offset.x,dy:offset.y,travelX:0};h.pending=null;h.shape=hand.map(p=>({...p}));h.wristTrack=new HeldWrist(hand[0],this.tuning);h.wristStart={...hand[0]};
+    h.grip={side:hit.side,t:hit.t,start:center,center,wrist:{...hand[0]},offset,contactOffset,dx:offset.x,dy:offset.y,travelX:0};h.pending=null;h.releasePlane=palmPlane(hand);h.shape=hand.map(p=>({...p}));h.wristTrack=new HeldWrist(hand[0],this.tuning);h.wristStart={...hand[0]};
    }
   }
   const grips=this.hands.map(h=>h.grip),count=grips.filter(Boolean).length;
@@ -203,8 +215,9 @@ export class CollarInteraction{
   const scoringWrists=this.hands.map((h,i)=>{
    if(!h.grip||h.openObserved||h.releaseSince!==null)return null;
    const pose=arms[i]?.wrist;
-   if(h.tracked){
-    const wrist=observations[i]?.[0];
+   if(h.tracked||h.wristObserved){
+    const wrist=h.wristObserved??observations[i]?.[0];
+    if(!h.tracked&&wrist)h.wristTrack=new HeldWrist(wrist,this.tuning);
     // Hand and body detectors place the wrist joint slightly differently.
     // Calibrate while both are visible, so switching sources is not an action.
     if(wrist&&pose&&(pose.visibility??1)>=this.tuning.wristVisibility&&Math.hypot(wrist.x-pose.x,wrist.y-pose.y)<.12)h.poseOffset={x:wrist.x-pose.x,y:wrist.y-pose.y};
