@@ -30,6 +30,16 @@ export function wristTurn(start,wrist,center,startCenter=center){
  if(r<.06||s<r*.65||s>r*1.35)return null;
  return Math.atan2(a.x*b.y-a.y*b.x,a.x*b.x+a.y*b.y);
 }
+// A forearm turns out of the camera plane, so its projected length is not a
+// fixed wrist-circle radius. Use its direction while enough limb remains
+// visible; collapsed or implausibly stretched segments supply no angle.
+export function forearmTurn(startElbow,elbow,wrist,startWrist=wrist){
+ if(!startElbow||!elbow||!wrist||!startWrist)return null;
+ const a={x:startElbow.x-startWrist.x,y:startElbow.y-startWrist.y},b={x:elbow.x-wrist.x,y:elbow.y-wrist.y};
+ const r=Math.hypot(a.x,a.y),s=Math.hypot(b.x,b.y);
+ if(!Number.isFinite(r+s)||Math.min(r,s)<.18||s<r*.35||s>r*2)return null;
+ return Math.atan2(a.x*b.y-a.y*b.x,a.x*b.x+a.y*b.y);
+}
 // Keep the last observed closed shape rigid. No inferred opening, finger bending,
 // scaling or bone-length changes are introduced while fingers are hidden.
 export function gloveAtWrist(hand,wrist){

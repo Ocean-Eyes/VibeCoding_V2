@@ -1,5 +1,5 @@
 import {GRIP_TUNING} from './grip-tuning.js';
-import {HeldWrist,wristTurn,gloveAtWrist} from './held-wrist.js';
+import {HeldWrist,wristTurn,forearmTurn,gloveAtWrist} from './held-wrist.js';
 import {ClothMotion} from './cloth-motion.js';
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const ease=t=>{t=clamp(t);return t*t*(3-2*t)};
@@ -284,7 +284,7 @@ export class CollarInteraction{
    const wrist=base.source==='pose'?(usablePose?pose:offset?{x:hand.x-offset.x,y:hand.y-offset.y}:null):hand;
    if(!wrist)return null;
    if(usablePose)base.lastPose={wrist:{...pose},elbow:{...a.elbow},time:now};
-   const angle=wristTurn(base.elbow,a.elbow,wrist,base.wrist);
+   const angle=forearmTurn(base.elbow,a.elbow,wrist,base.wrist);
    if(angle===null){this.forearmSamples[i]=[];return null}
    // One actual pose sample gets one vote; repainting a cached frame cannot
    // outvote the preceding camera samples. Three-sample median rejects spikes.

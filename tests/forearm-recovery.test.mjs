@@ -59,3 +59,40 @@ test('repainting one pose sample does not add median votes',()=>{
  assert.ok(state.forearmLevels[1]>.8);
  step(.05,4);state=step(.05,5);assert.ok(state.forearmLevels[1]<.3);
 });
+
+// Perspective changes elbow-to-wrist length even though the anatomical arm
+// stays rigid. The old wrist-circle length gate discarded the forearm angle.
+for(const side of [0,1])for(const mirror of [true,false])for(const reverse of [true,false])for(const fps of [10,15,30])for(const ratio of [.6,.64,1.4,1.6]){
+ test(`Kata perspective turn: side=${side}, mirror=${mirror}, reverse=${reverse}, fps=${fps}, ratio=${ratio}`,()=>{
+  const model=new CollarInteraction(),hands=kataHands({mirror,reverse}),directions=reverse?['↓','↑']:['↑','↓'];let state;
+  for(let n=0;n<fps*5;n++){
+   const now=n*1000/fps,u=Math.min(1,Math.max(0,(now-700)/900)),angle=.36*u*(side?1:-1)*(mirror?1:-1);
+   const arms=kataArms(hands,{mirror,angles:[angle,angle]}),a=arms[side];
+   const scale=1+(ratio-1)*u+(u===1?(n%2?.008:-.008):0);
+   a.elbow.x=a.wrist.x+(a.elbow.x-a.wrist.x)*scale;a.elbow.y=a.wrist.y+(a.elbow.y-a.wrist.y)*scale;
+   const observed=hands.map((h,i)=>now>1200&&i===side&&n%4<2?null:h);
+   state=model.update(observed,now,{active:true,mirrored:mirror,directions,bodyVisible:true,arms,continuousHands:observed.map(Boolean)});
+   if(now>1900)assert.ok(state.forearmLevels[side]>.8,`side=${side}, score=${state.forearmLevels[side]}`);
+  }
+  assert.equal(state.count,2);assert.equal(state.tapped,true);
+ });
+}
+for(const side of [0,1])for(const kind of ['one-arm','still','collapsed','stretched','uncertain','unwind']){
+ test(`Kata perspective negative: ${kind}, side=${side}`,()=>{
+  const model=new CollarInteraction(),hands=kataHands();let state,tapped=false;
+  for(let n=0;n<80;n++){
+   const now=n*65,u=Math.min(1,Math.max(0,(now-700)/900));
+   let angle=kind==='still'?0:.36*u*(side?1:-1);
+   if(kind==='unwind'&&now>1900)angle=0;
+   const angles=[angle,angle];if(kind==='one-arm')angles[1-side]=0;
+   const arms=kataArms(hands,{angles}),a=arms[side],scale=1+((kind==='collapsed'?.1:kind==='stretched'?3:.64)-1)*u;
+   // A depth-only change must not earn elevation credit in this angle test.
+   if(['still','collapsed'].includes(kind))a.shoulder.y+=(a.elbow.y-a.wrist.y)*(scale-1);
+   a.elbow.x=a.wrist.x+(a.elbow.x-a.wrist.x)*scale;a.elbow.y=a.wrist.y+(a.elbow.y-a.wrist.y)*scale;
+   if(kind==='uncertain'&&now>700)a.elbow.visibility=.1;
+   state=model.update(hands,now,{active:true,directions:['↑','↓'],bodyVisible:true,arms});tapped||=state.tapped;
+  }
+  assert.equal(tapped,false);assert.equal(state.hold,0);
+  if(kind==='unwind')assert.ok(state.forearmLevels[side]<1e-10);
+ });
+}
