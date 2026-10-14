@@ -11,7 +11,7 @@ const assert=require('node:assert/strict');
   assert.equal(await page.getByText('도복 입는 법',{exact:true}).count(),0);
   assert.equal(await page.locator('.lesson-card').count(),2);
   await page.locator('[data-lesson="belt"]').click();
-  await page.waitForFunction(()=>document.querySelectorAll('[data-belt-step]').length===7);
+  await page.waitForFunction(()=>document.querySelectorAll('[data-belt-step]').length===7&&document.querySelector('#belt-canvas').dataset.sourceState==='ready');
   assert.equal(await page.evaluate(()=>window.qaStreams.length),0,'opening lesson does not request camera');
   for(let step=0;step<7;step++){
    await page.locator(`[data-belt-step="${step}"]`).click();
@@ -21,7 +21,7 @@ const assert=require('node:assert/strict');
   }
   assert.equal(await page.locator('#belt-next').isDisabled(),true);
   await page.locator('[data-belt-step="3"]').click();
-  for(const view of ['back','side','front']){
+  for(const view of ['front']){
    await page.locator(`[data-belt-view="${view}"]`).click();await page.waitForFunction(v=>document.querySelector('#belt-detail').dataset.view===v,view);
    assert.equal(await page.locator('[data-belt-view][aria-pressed="true"]').count(),1);
    await page.locator('#belt-detail').screenshot({path:`.test-output/belt-depth-${view}.png`});
@@ -54,7 +54,7 @@ const assert=require('node:assert/strict');
   // Denied permission is recoverable, and a late camera grant cannot survive leaving.
   for(const mode of ['denied','late']){
    const p=await browser.newPage();await p.addInitScript(mode=>{window.qaStopped=false;navigator.mediaDevices.getUserMedia=()=>mode==='denied'?Promise.reject(new DOMException('denied','NotAllowedError')):new Promise(resolve=>window.qaResolve=()=>resolve({getTracks:()=>[{stop:()=>window.qaStopped=true}]}))},mode);
-   await p.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');await p.locator('[data-category="basics"]').click();await p.locator('[data-lesson="belt"]').click();await p.waitForFunction(()=>document.querySelectorAll('[data-belt-step]').length===7);await p.locator('#belt-camera').click();
+   await p.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');await p.locator('[data-category="basics"]').click();await p.locator('[data-lesson="belt"]').click();await p.waitForFunction(()=>document.querySelectorAll('[data-belt-step]').length===7&&document.querySelector('#belt-canvas').dataset.sourceState==='ready');await p.locator('#belt-camera').click();
    if(mode==='denied'){await p.waitForFunction(()=>document.querySelector('#belt-notice').textContent.includes('거부'));assert.equal(await p.locator('#belt-camera').isDisabled(),false)}
    else{await p.locator('#back-menu').click();await p.evaluate(()=>window.qaResolve());await p.waitForFunction(()=>window.qaStopped);assert.ok(await p.locator('#home-screen').isVisible())}
    await p.close();

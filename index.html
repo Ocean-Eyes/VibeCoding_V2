@@ -49,7 +49,7 @@
       <div class="belt-workspace">
         <section class="studio belt-studio" aria-label="띠 매기 시연과 카메라 가이드">
           <div class="belt-toolbar"><span id="belt-view-label">DEMONSTRATION · GHOST BELT</span><span>01 — 07 / OBI</span></div>
-          <div class="belt-viewport"><div class="belt-film-caption"><span id="belt-film-status">동작 시연</span><strong id="belt-move">양끝 준비</strong></div><video id="belt-video" autoplay muted playsinline hidden></video><canvas id="belt-canvas" aria-label="허리에 감기고 매듭이 만들어지는 반투명 띠"></canvas><div id="belt-real-empty" class="belt-real-empty" hidden><strong>내 띠로 따라 하기</strong><p>양끝에 서로 다른 선명한 색 테이프를 붙인 뒤<br>카메라를 켜고 A·B 색을 등록하세요.</p></div><div class="belt-legend"><span><i class="belt-a"></i>A 끝</span><span><i class="belt-b"></i>B 끝</span><span>색 표시는 띠 끝</span></div></div>
+          <div class="belt-viewport"><div class="belt-film-caption"><span id="belt-film-status">동작 시연</span><strong id="belt-move">양끝 준비</strong></div><video id="belt-video" autoplay muted playsinline hidden></video><canvas id="belt-canvas" aria-label="허리에 감기고 매듭이 만들어지는 반투명 띠"></canvas><div id="belt-real-empty" class="belt-real-empty" hidden><strong>내 띠로 따라 하기</strong><p>양끝에 서로 다른 선명한 색 테이프를 붙인 뒤<br>카메라를 켜고 A·B 색을 등록하세요.</p></div><div class="belt-legend"><span><i class="belt-a"></i>A 끝</span><span><i class="belt-b"></i>B 끝</span><span>관측된 끝만 표시</span></div></div>
           <div class="belt-current"><span id="belt-step-number">01 / 07</span><div><h2 id="belt-step-title">가운데를 배꼽에</h2><p id="belt-cue"></p></div></div>
           <div class="belt-speed-control"><label>시연 속도<select id="belt-speed"><option value="0.5">0.5× 천천히</option><option value="1" selected>1× 기본</option><option value="1.5">1.5× 빠르게</option></select></label><span>통과 지점에서 잠깐 멈춰 보여줍니다</span></div><label class="belt-scrub">동작 천천히 보기<input id="belt-scrub" type="range" min="0" max="100" value="0" /></label><progress id="belt-progress" max="1" value="0" aria-label="현재 단계 시연 진행"></progress>
           <div class="transport"><div><button id="belt-prev" class="outline" aria-label="이전 단계">← 이전</button><button id="belt-play" class="primary">일시 정지 Ⅱ</button><button id="belt-next" class="outline">다음 →</button><button id="belt-restart" class="quiet">처음부터 ↻</button></div><button id="belt-camera" class="outline">카메라로 따라 하기</button></div>
@@ -60,10 +60,10 @@
             <div id="belt-pick-controls" hidden><p id="belt-pick-prompt" role="status"></p><button id="belt-sample-center" class="outline">화면 중앙에서 등록</button><button id="belt-pick-cancel" class="quiet">취소</button></div>
             <p id="belt-tracking-status" role="status">카메라를 켜면 색을 등록할 수 있습니다.</p><button id="belt-clear-colors" class="quiet">색 등록 초기화</button>
           </section>
-          <p class="notice" id="belt-notice" role="status">A·B는 양끝을 구분하는 표시입니다. 띠 끝의 색으로 A·B를 구분합니다.</p>
+          <button id="belt-retry" class="btn-quiet" type="button" hidden>다시 불러오기</button><p class="notice" id="belt-notice" role="status">A·B는 양끝을 구분하는 표시입니다. 띠 끝의 색으로 A·B를 구분합니다.</p>
         </section>
         <aside class="belt-aside">
-          <section class="belt-closeup"><div class="section-title"><h2>허리·매듭 확대</h2><span>띠의 겹침 확인</span></div><div class="belt-view-controls" role="group" aria-label="띠 확대 방향"><button data-belt-view="front" aria-pressed="true">앞쪽</button><button data-belt-view="back" aria-pressed="false">뒤쪽</button><button data-belt-view="side" aria-pressed="false">사선</button></div><canvas id="belt-detail" aria-label="띠 교차와 매듭 통과 순서 확대"></canvas><p id="belt-focus"></p></section>
+          <section class="belt-closeup"><div class="section-title"><h2>허리·매듭 확대</h2><span>띠의 겹침 확인</span></div><div class="belt-view-controls" role="group" aria-label="띠 확대 방향"><button data-belt-view="front" aria-pressed="true">앞쪽</button></div><canvas id="belt-detail" aria-label="띠 교차와 매듭 통과 순서 확대"></canvas><p id="belt-focus"></p></section>
           <nav id="belt-steps" class="belt-steps" aria-label="띠 매기 7단계"></nav>
           <p id="belt-mode-note" class="belt-note">카메라에서는 높이·크기를 조절해 가이드를 내 허리에 맞추세요. 매듭의 조임은 직접 확인하고, 단계는 버튼으로 넘깁니다.</p>
           <div class="belt-references"><span>참고 영상과 비교하기</span><a id="belt-source" class="source-link" target="_blank" rel="noopener noreferrer">참고 영상 1 ↗</a><a id="belt-source-2" class="source-link" target="_blank" rel="noopener noreferrer">참고 영상 2 ↗</a></div>

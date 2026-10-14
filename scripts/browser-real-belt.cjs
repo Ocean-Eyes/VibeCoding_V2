@@ -13,7 +13,7 @@ const assert=require('node:assert/strict');
    };
   });
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');await page.locator('[data-category="basics"]').click();await page.locator('[data-lesson="belt"]').click();
-  await page.waitForFunction(()=>document.querySelectorAll('[data-belt-step]').length===7);
+  await page.waitForFunction(()=>document.querySelectorAll('[data-belt-step]').length===7&&document.querySelector('#belt-canvas').dataset.sourceState==='ready');
   await page.locator('#belt-mode-real').click();assert.equal(await page.locator('#belt-mode-real').getAttribute('aria-pressed'),'true');assert.ok(await page.locator('#belt-real-empty').isVisible());assert.ok(await page.locator('#belt-register-a').isDisabled());
   await page.locator('#belt-camera').click();await page.waitForFunction(()=>!document.querySelector('#belt-register-a').disabled);
   async function pick(key,x){await page.locator('#belt-register-'+key).click();await page.locator('#belt-canvas').click({position:await page.locator('#belt-canvas').evaluate((c,x)=>({x:c.clientWidth*x,y:c.clientHeight*.65}),x)})}
