@@ -1,6 +1,7 @@
 import {CollarInteraction,GRIP_PASS_SCORE,GRIP_HOLD_SECONDS} from './collar-interaction.js';
 import {LandmarkStream,HandStream,HandIdentityTracker,GripProjection,projectHand,palmFacing,poseConfirmsHand} from './live-hands.js';
 import {drawLiveGlove} from './live-glove.js';
+import {selectGlove,hideCollarThumb} from './glove-display.js';
 import {prepareHands} from './hand-renderer.js';
 import {drawOpponent,drawGripStudy,drawGripGuides,drawCollarTargets} from './opponent.js';
 import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,finishAt} from './demonstration.js';
@@ -115,7 +116,9 @@ function draw(now){
     if(selected!==phase){selected=phase;updatePose()}
   }
   const state=mode==='live'&&!demonstrating?{...gripState,time:now}:null;
-  if(state)state.wristHands.forEach((h,i)=>{if(h)displayHands[i]=h});
+  const gloves=displayHands.map((hand,i)=>selectGlove(observations[i],hand,state?.wristHands[i]));
+  gloves.forEach((glove,i)=>displayHands[i]=glove.hand);
+  canvas.dataset.gloveSources=JSON.stringify(gloves.map(g=>g.source));
   canvas.dataset.wristHands=String(state?.wristHands.filter(Boolean).length??0);canvas.dataset.wristStatus=JSON.stringify(state?.wristStatus??[]);
   partnerCtx.setTransform(dpr,0,0,dpr,0,0);partnerCtx.clearRect(0,0,box.width,box.height);drawOpponent(partnerCtx,scene,state);
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,box.width,box.height);
@@ -136,9 +139,9 @@ function draw(now){
       if(!h)return null;
       const hand=h.map(p=>({...p,x:scene.origin.x+p.x*scene.scale,y:scene.origin.y+p.y*scene.scale}));
       const e=shown?.[13+i],elbow=e&&(e.visibility??1)>=.65?projectHand([e],frame,scene,mirrored)[0]:null;
-      return {hand,elbow,index:i,depth:shown?.[15+i]?.z??0};
+      return {hand,elbow,index:i,thumbInside:hideCollarThumb(h,!!state.grips[i]&&activeTechnique.directions[i]==='↓'),depth:shown?.[15+i]?.z??0};
     }).filter(Boolean).sort((a,b)=>b.depth-a.depth);
-    for(const h of live)drawLiveGlove(ctx,h.hand,palmFacing(h.hand,h.index===0,mirrored),h.elbow,!!state.grips[h.index]&&activeTechnique.directions[h.index]==='↓',.78*(state.wristHands[h.index]?state.wristOpacity[h.index]:handStreams[h.index].opacityAt(now)));
+    for(const h of live)drawLiveGlove(ctx,h.hand,palmFacing(h.hand,h.index===0,mirrored),h.elbow,h.thumbInside,.78*(gloves[h.index].source==='wrist'?state.wristOpacity[h.index]:handStreams[h.index].opacityAt(now)));
     if($('show-skeleton').checked&&frame&&shown){
       const projected=shown.map(p=>p?projectHand([p],frame,scene,mirrored)[0]:null);skeleton(ctx,projected,cyan,1.5);
       for(const h of live)for(const [a,b]of HAND_BONES)line(ctx,h.hand[a],h.hand[b],cyan,1);
@@ -149,7 +152,7 @@ function draw(now){
     state.posture?.some(p=>p==='palm'||p==='turn')?`카메라에 왼손 ${activeTechnique.directions[0]==='↓'?'손바닥':'손등'}, 오른손 ${activeTechnique.directions[1]==='↓'?'손바닥':'손등'}이 보이게 해 주세요.`:state.posture?.some(Boolean)?'각 손으로 반대편 깃을 잡으세요.':
     state.count===0?'손가락을 굽히고 손목을 교차해 반대편 깃을 잡으세요.':state.count===1?'한쪽 깃이 잡혔습니다. 다른 손으로 반대쪽 깃을 잡으세요.':
     !state.crossed?'손을 교차해 각각 반대편 깃을 잡으세요.':state.issue==='height'?'가슴 아래쪽이 아닌 목 가까운 위쪽 깃을 잡으세요.':state.issue==='spread'?'손을 멀리 벌리지 말고 잡은 위치 가까이에 유지하세요.':state.issue==='lift'?'깃 가까이에서 교차한 양 손목과 전완을 함께 비틀어 보세요.':'교차한 양팔의 마무리 자세를 잠깐 유지하세요.';
-  $('tracking-label').textContent=demonstrating?'시연 중':state?.wristHands.some(Boolean)?`${state.count}개 깃 잡힘 · 손목으로 추적 중`:state?.visible?`${state.visible}개 손 인식 · ${state.count}개 깃 잡힘`:state?.count?`${state.count}개 그립 유지 · ${state.trackingPaused?'관절 인식 대기':'팔 동작 인식'}`:stream?'인식 대기':'대기';
+  $('tracking-label').textContent=demonstrating?'시연 중':gloves.some(g=>g.source==='wrist')?`${state.count}개 깃 잡힘 · 손목으로 추적 중`:state?.visible?`${state.visible}개 손 인식 · ${state.count}개 깃 잡힘`:state?.count?`${state.count}개 그립 유지 · ${state.trackingPaused?'관절 인식 대기':'팔 동작 인식'}`:stream?'인식 대기':'대기';
   $('feedback').textContent=feedback;$('live-feedback').textContent=feedback;
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':score>=GRIP_PASS_SCORE?'good':score>=25?'near':'adjust';
   $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'깃 위치·교차 동작 / 100';
