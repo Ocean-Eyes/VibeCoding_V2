@@ -1,17 +1,20 @@
-export const BELT_SOURCE='https://www.britishjudo.org.uk/wp-content/uploads/2024/10/JudoKids-1st-Sho-Syllabus.pdf#page=4';
+export const BELT_SOURCE='https://www.youtube.com/watch?v=poG-fDcqUA0';
+export const BELT_REFERENCE_2='https://www.youtube.com/watch?v=IG5WBxopLJw';
+// Authored from the supplied videos. A is the end threaded first; the second
+// video's demonstrator uses the opposite hand, but the insertion order agrees.
 export const BELT_STEPS=[
- {title:'가운데를 배꼽에',cue:'띠의 가운데를 배꼽 앞에 대고 양끝 길이를 맞춥니다.',focus:'가운데 표시를 배꼽 앞에 맞추세요.'},
- {title:'등 뒤로 감기',cue:'양끝을 허리 뒤로 보내 교차한 뒤, 다시 앞으로 가져옵니다.',focus:'몸 뒤의 띠는 가려집니다. 확대 그림의 뒤쪽 보기로 확인하세요.'},
- {title:'앞에서 겹치기',cue:'앞으로 나온 양끝을 겹칩니다. 허리에 감긴 띠가 꼬이지 않았는지 확인하세요.',focus:'A 끝이 B 끝 위를 가로지릅니다.'},
- {title:'두 겹 밑으로 통과',cue:'A 끝을 허리에 감긴 띠 두 겹 모두의 아래로 넣고, 몸과 띠 사이로 위로 빼냅니다.',focus:'한 겹만 통과하지 않도록 확대 그림을 보세요.'},
- {title:'첫 조임',cue:'양끝을 당겨 허리 둘레를 정리합니다. A는 위쪽, B는 아래쪽에 둡니다.',focus:'두 겹을 함께 감싸는 첫 교차를 만듭니다.'},
- {title:'고리로 통과시키기',cue:'위쪽 A 끝을 B 위로 접고, 만들어진 고리 안으로 통과시킵니다.',focus:'접은 끝이 고리 안을 지나도록 확인하세요.'},
- {title:'양옆으로 조여 완성',cue:'양끝을 좌우로 당겨 평매듭을 조이고, 남은 양끝의 길이를 맞춥니다.',focus:'납작한 매듭과 가지런한 양끝을 확인하세요.'},
+ {title:'가운데를 허리 앞에',cue:'띠 가운데를 허리 앞에 대고 양끝을 같은 길이로 늘어뜨립니다.',focus:'띠를 비틀지 않고 넓은 면이 몸에 닿게 놓습니다.',move:'양끝 준비',reference:[5,0]},
+ {title:'뒤에서 교차해 앞으로',cue:'양끝을 등 뒤에서 교차해 앞으로 가져옵니다. 두 겹을 포개 허리에 밀착시킵니다.',focus:'뒤쪽 보기에서 교차와 겹침을 확인하세요.',move:'A · B 함께 이동',reference:[6.5,5.5]},
+ {title:'양끝 길이 맞추기',cue:'앞으로 나온 양끝을 들어 끝 위치를 맞춥니다. 긴 쪽을 조정해 길이를 같게 합니다.',focus:'매듭을 만들기 전에 양끝 길이를 확인합니다.',move:'A · B 길이 확인',reference:[8.5,11]},
+ {title:'A를 두 겹 밑으로',cue:'A를 교차한 띠와 허리에 감긴 두 겹 모두의 밑에서 위로 통과시킨 뒤 아래로 내립니다.',focus:'A가 두 겹을 함께 감쌉니다. 끝을 계속 위로 세워 두지 않습니다.',move:'A 통과 · B 유지',reference:[11,15]},
+ {title:'A를 끼워 고리 만들기',cue:'A를 다시 들어 반대편 허리띠의 겹 사이에 위에서 아래로 끼웁니다. 앞에는 고리를 남겨 둡니다.',focus:'이 단계에서는 A만 고리를 만듭니다. B는 아직 통과시키지 않습니다.',move:'A로 고리 · B 유지',reference:[13.5,20.5]},
+ {title:'B를 고리에 통과',cue:'남겨 둔 A의 고리와 띠 겹 사이의 통로로 B를 통과시킵니다. 고리를 놓치지 않고 양끝을 잡습니다.',focus:'새 고리를 두 개 만들지 않고, B 끝이 A의 고리를 지나갑니다.',move:'B 통과 · A 유지',reference:[15,24]},
+ {title:'양끝 당겨 매듭 정리',cue:'양끝을 좌우로 당겨 고리를 줄이고 매듭을 납작하게 정리합니다. 끝은 아래로 향하게 둡니다.',focus:'허리의 두 겹과 매듭이 꼬이지 않았는지 확인합니다.',move:'A · B 조이기',reference:[16.5,26]},
 ];
 // A single inextensible, stiff obi. Coordinates are in waist-width units.
 // The waist contact arc consumes material; only the remaining length is free.
 // Knot guides are folds in 3D, not independent 2D drawings morphed into loops.
-export const BELT_WIDTH=.105, BELT_LENGTH=7.6;
+export const BELT_WIDTH=.105, BELT_LENGTH=8.2;
 const RX=.46,RZ=.24,TAU=Math.PI*2;
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]);
 const mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
@@ -21,24 +24,26 @@ const lerp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
 const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
 export const pathLength=points=>points.slice(1).reduce((s,p,i)=>s+norm(sub(p,points[i])),0);
 // Local route after one full wrap: thread A beneath both standing layers,
-// set the first half knot, fold B into a bight, and pass A through that bight.
+// return A downward, tuck A between the layers, then thread B through its loop.
+// Reference 1: 8.5s ends aligned, 12s A returned downward, 14s A tucked
+// between the waist layers with a loop left open, 15s B entering that loop.
 const guides={
  a:[
- [[0,0,.30],[.12,.04,.35],[.22,.17,.35]],
- [[0,0,.30],[.10,.12,.38],[.10,.16,.27],[.08,-.14,.27],[-.09,-.22,.38]],
- [[0,0,.30],[.06,.10,.38],[.05,.12,.27],[.03,-.10,.27],[-.15,-.12,.38]],
- [[0,0,.30],[.06,.10,.38],[.05,.12,.27],[.03,-.10,.27],[-.20,-.13,.42],[-.29,.10,.48],[-.12,.25,.49],[.15,.05,.33],[.22,.13,.49]],
- [[0,0,.30],[.04,.08,.38],[.03,.09,.27],[.02,-.08,.27],[-.09,-.08,.39],[-.14,.04,.46],[-.06,.13,.46],[.08,.02,.34],[.12,.10,.46]],
+ [[0,0,.30],[.13,.08,.36],[.20,.16,.38],[.16,-.08,.40]],
+ [[0,0,.30],[.04,.07,.34],[.03,.08,.266],[.02,-.07,.266],[-.06,-.08,.34],[-.12,.10,.38]],
+ [[0,0,.30],[.04,.07,.34],[.03,.08,.266],[.02,-.07,.266],[-.06,-.08,.34],[-.18,.01,.45],[-.05,.16,.50],[.13,.09,.44],[.16,-.04,.282],[.16,.08,.282],[.17,.11,.38]],
+ [[0,0,.30],[.04,.07,.34],[.03,.08,.266],[.02,-.07,.266],[-.06,-.08,.34],[-.18,.01,.45],[-.05,.16,.50],[.13,.09,.44],[.16,-.04,.282],[.16,.08,.282],[.17,.11,.38]],
+ [[0,0,.30],[.04,.08,.38],[.03,.09,.266],[.02,-.08,.266],[-.06,-.09,.37],[-.14,.04,.45],[-.04,.13,.48],[.09,.07,.44],[.12,-.03,.282],[.12,.08,.282],[.15,.13,.42]],
  ],
  b:[
- [[0,0,.29],[-.12,.04,.34],[-.22,.17,.34]],
- [[0,0,.29],[.12,.08,.34],[.22,.16,.34]],
- [[0,0,.29],[.12,.06,.34],[.24,.12,.34]],
- [[0,0,.29],[.16,.10,.39],[.29,.13,.39],[.22,-.13,.42],[.08,-.15,.43],[-.05,.02,.51]],
- [[0,0,.29],[.10,.06,.39],[.13,.04,.39],[.07,-.07,.43],[-.03,-.05,.44],[-.12,.10,.49]],
+ [[0,0,.29],[-.13,.08,.35],[-.20,.16,.37],[-.16,-.08,.39]],
+ [[0,0,.29],[.13,.06,.35],[.28,.18,.36]],
+ [[0,0,.29],[.13,.06,.35],[.28,.18,.36]],
+ [[0,0,.29],[.12,.08,.36],[.20,-.08,.40],[.05,.03,.45],[-.04,.10,.53],[-.17,.16,.60]],
+ [[0,0,.29],[.08,.05,.36],[.11,-.05,.40],[.01,.01,.44],[-.04,.09,.51],[-.14,.13,.54]],
  ]
 };
-const directions={a:[[.18,1,0],[-.25,-1,0],[-1,-.12,0],[.42,.91,0],[.42,.91,0]],b:[[-.18,1,0],[.38,1,0],[1,.15,0],[-.42,.91,0],[-.42,.91,0]]};
+const directions={a:[[-.30,-1,0],[-.08,1,0],[.90,.18,0],[.90,.18,0],[.42,.91,0]],b:[[.30,-1,0],[.48,1,0],[.48,1,0],[-.9,.18,0],[-.42,.91,0]]};
 // Short, bounded bend radius at folds; long spans remain straight.
 function folded(points,radius=.025){
  const out=[points[0]];
@@ -60,21 +65,21 @@ function knotRoute(key,phase){
  return {points:a.map((p,i)=>lerp(p,b[i],t)),direction:unit(lerp(directions[key][index],directions[key][next],t))};
 }
 function halfRoute(key,phase){
- const side=key==='a'?-1:1,wrap=phase<=1?.25+.5*phase:phase<2?.75+.25*(phase-1):1;
+ const side=key==='a'?-1:1,wrap=phase<1?.25+.75*phase:1;
  const angle=TAU*wrap;
  const waist=Array.from({length:Math.max(2,Math.ceil(angle*40))},(_,i)=>{
   const t=angle*i/(Math.max(2,Math.ceil(angle*40))-1),layer=(key==='a'?.027:.012)*t/TAU;
   return [side*(RX+layer)*Math.sin(t),side*.008*t/TAU,(RZ+layer)*Math.cos(t)];
  });
  const end=waist.at(-1);let local,direction;
- if(phase<2){
-  const outward=Math.sign(end[0])||side;
+ if(phase<1){
+  const outward=side*Math.sin(angle);
   const hanging=[end,add(end,[outward*.06,.055,.07]),add(end,[outward*.10,.18,.10])];
   // Once the ends have returned around the hips, bring them to the front.
-  const t=ease(Math.max(0,phase-1)),target=knotRoute(key,2);
+  const t=ease(phase),target={points:resample([[0,0,key==='a'?.30:.29],[side*-.12,.06,.35],[side*-.22,.18,.36]],48),direction:unit([side*-.18,1,0])};
   const a=resample(hanging,48),delta=sub(end,target.points[0]);
-  local=a.map((p,i)=>lerp(p,add(target.points[i],delta),t));direction=unit(lerp([0,1,0],target.direction,t));
- }else{const route=knotRoute(key,phase),delta=sub(end,route.points[0]);local=route.points.map(p=>add(p,delta));direction=route.direction}
+  local=a.map((p,i)=>lerp(p,add(target.points[i],delta),t));direction=unit(lerp(unit([outward*.55,1,0]),target.direction,t));
+ }else{const route=knotRoute(key,Math.max(2,phase));if(phase<2){const rest=[[0,0,key==='a'?.30:.29],[side*-.12,.06,.35],[side*-.22,.18,.36]],t=ease(phase-1);route.points=resample(rest,48).map((p,i)=>lerp(p,route.points[i],t));route.direction=unit(lerp([side*-.18,1,0],route.direction,t))}const delta=sub(end,route.points[0]);local=route.points.map(p=>add(p,delta));direction=route.direction}
  return {waist,local:folded(local),direction,wrap};
 }
 function makeRibbon(points,key,waistLength){
@@ -96,8 +101,8 @@ export function beltPose(step,progress=1){
  const routes=['a','b'].map(key=>halfRoute(key,phase));
  const bases=routes.map(r=>[...r.waist,...r.local.slice(1)]),lengths=bases.map(pathLength);
  // Pulling the two ends adjusts the midpoint inside the wrap; total material
- // stays fixed while free ends become equal for the final square knot.
- const balance=ease(Math.max(0,Math.min(1,phase-2)))*(lengths[0]-lengths[1])/2;
+ // stays fixed while free ends become equal as the final interlocking knot tightens.
+ const balance=ease(Math.max(0,Math.min(1,phase-5)))*(lengths[0]-lengths[1])/2;
  const halves=bases.map((base,i)=>{
   const materialLength=BELT_LENGTH/2+(i?-balance:balance),remaining=materialLength-lengths[i];
   if(remaining<=0)throw new Error('Belt route exceeds available cloth');
@@ -116,6 +121,11 @@ export function project(p,view='front'){
 export function beltBounds(pose,view='front'){
  const p=pose.halves.flatMap(h=>h.ribbon.flatMap(v=>[project(v.left,view),project(v.right,view)]));
  return {minX:Math.min(...p.map(p=>p[0])),maxX:Math.max(...p.map(p=>p[0])),minY:Math.min(...p.map(p=>p[1])),maxY:Math.max(...p.map(p=>p[1]))};
+}
+export function cinematicPlacement(w,h,pose){
+ const start=demoPlacement(w,h,pose),b=beltBounds(pose),zoom=ease(pose.phase-2);
+ const target={x:w/2,y:h*.36,scale:Math.min((w-36)/(2*Math.max(.95,Math.abs(b.minX),Math.abs(b.maxX))),h*.55/Math.max(.8,b.maxY),h*.32/Math.max(.1,-b.minY))};
+ return {x:start.x,y:start.y+(target.y-start.y)*zoom,scale:start.scale+(target.scale-start.scale)*zoom};
 }
 export function demoPlacement(w,h,pose){
  const b=beltBounds(pose),minY=Math.min(-1.75,b.minY),maxY=Math.max(.45,b.maxY),spanX=Math.max(1.9,b.maxX-b.minX);
