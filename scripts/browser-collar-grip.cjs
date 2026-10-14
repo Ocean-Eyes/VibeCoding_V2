@@ -1,5 +1,5 @@
 const {chromium}=require(process.argv[2]||'playwright');
-const gyakuOnly=process.argv.includes('--gyaku');
+const gyakuOnly=process.argv.includes('--gyaku'),kataOnly=process.argv.includes('--kata');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
@@ -12,12 +12,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    const context=HTMLCanvasElement.prototype.getContext;
    HTMLCanvasElement.prototype.getContext=function(kind,options){return context.call(this,kind,kind==='2d'&&this.id==='partner'?{...options,willReadFrequently:true}:options)};
    window.qaGripPhase='open';const Original=Worker;
-   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;d.swap=window.qaSwap;d.ghostOpen=window.qaGhostOpen;d.wristVisibility=window.qaWristVisibility;d.recoverySide=window.qaRecoverySide??0;}super.postMessage(d,t)}};
+   window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.kata=window.qaKata;d.edge=window.qaEdge;d.swap=window.qaSwap;d.ghostOpen=window.qaGhostOpen;d.wristVisibility=window.qaWristVisibility;d.recoverySide=window.qaRecoverySide??0;}super.postMessage(d,t)}};
   });
   for(const name of ['collar-hands','gyaku-hands','acquisition-hands'])await page.route(`**/tests/fixtures/${name}.mjs`,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(`tests/fixtures/${name}.mjs`,'utf8')}));
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
    const deps=Promise.all([import('./pose.js'),import('/tests/fixtures/collar-hands.mjs'),import('/tests/fixtures/gyaku-hands.mjs'),import('/tests/fixtures/acquisition-hands.mjs')]);
-   let previous=null;
+   let previous=null,kataAngle=0;
    function gradual(target){
     if(!previous){previous=target.map(h=>h?.map(p=>({...p}))??null);return target}
     const result=target.map((hand,i)=>{
@@ -42,9 +42,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      }
      let hands=collarHands(['relaxed-open','recover-open'].includes(data.phase)?'open':data.phase).map((hand,i)=>{
       if(!hand)return null;
-      if(data.palmUp){
+      if(data.palmUp||data.kata){
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
-       hand=handAt(center,['open','relaxed-open','recover-open'].includes(data.phase)?0:1,i===0,true);
+       hand=handAt(center,['open','relaxed-open','recover-open'].includes(data.phase)?0:1,i===0,data.kata?i===0:true);
       }
       if(data.phase.startsWith('recover-')){
        const base=collarHands('close')[i],center=[5,9,13,17].reduce((p,k)=>({x:p.x+base[k].x/4,y:p.y+base[k].y/4}),{x:0,y:0});
@@ -76,6 +76,16 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      });
      if(data.phase!=='fast'&&data.phase!=='wrist-return'&&!data.phase.startsWith('recover-'))hands=gradual(hands);
      hands.forEach((hand,i)=>{if(hand)pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
+     if(data.kata){
+      const target=['kata-turn','kata-one','kata-hidden'].includes(data.phase)?.36:0;
+      kataAngle+=Math.max(-.018,Math.min(.018,target-kataAngle));
+      for(let i=0;i<2;i++){
+       const wrist=pose[15+i],wx=(frame.origin.x-wrist.x)/frame.scale,wy=(wrist.y-frame.origin.y)/frame.scale;
+       const a=data.phase==='kata-one'&&i===1?0:kataAngle,c=Math.cos(a),s=Math.sin(a),dx=(i?.67:-.67)-wx,dy=.70-wy;
+       pose[13+i]={x:frame.origin.x-(wx+dx*c-dy*s)*frame.scale,y:frame.origin.y+(wy+dx*s+dy*c)*frame.scale,visibility:1};
+      }
+      if(data.phase==='kata-hidden')hands=[null,null];
+     }
      if(data.ghostOpen)hands=collarHands('open').map(hand=>hand.map(p=>({x:(frame.origin.x-p.x*frame.scale)/w+.35,y:(frame.origin.y+p.y*frame.scale)/h,z:p.z*frame.scale/w})));
      if(data.swap){[pose[15],pose[16]]=[pose[16],pose[15]];hands.reverse()}
      if(data.phase==='hidden-left')hands[0]=null;
@@ -86,8 +96,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     }
    };`}));
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
-  await page.evaluate(up=>window.qaPalmUp=up,gyakuOnly);
-  await page.locator('[data-category="katame"]').click();await page.locator(`[data-lesson="${gyakuOnly?'gyaku':'nami'}"]`).click();
+  await page.evaluate(({up,kata})=>{window.qaPalmUp=up;window.qaKata=kata},{up:gyakuOnly,kata:kataOnly});
+  await page.locator('[data-category="katame"]').click();await page.locator(`[data-lesson="${kataOnly?'kata':gyakuOnly?'gyaku':'nami'}"]`).click();
   await page.waitForFunction(()=>document.querySelector('#pose-list').children.length===3);
   await page.locator('#play').click();await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='2');
   const phase=async(name,wait=900)=>{await page.evaluate(p=>window.qaGripPhase=p,name);await page.waitForTimeout(wait)};
@@ -105,6 +115,26 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   const fixedHead=await headPixels();
   const rest=await page.locator('#partner').evaluate(c=>c.toDataURL());
   assert.equal(await grabbed(),'0');assert.equal(await page.locator('#live-score-value').innerText(),'0');
+  if(kataOnly){
+   for(const mirror of [true,false]){
+    await page.locator('#mirror').setChecked(mirror);
+    await phase('open',1000);await phase('close',1400);assert.equal(await grabbed(),'2','mixed grip acquisition');
+    await phase('kata-one',2600);assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false','one forearm cannot tap');
+    await phase('close',1500);
+    await phase('kata-hidden',2600);
+    await page.waitForFunction(()=>document.querySelector('#opponent-status').dataset.tap==='true');
+    const elbows=JSON.parse(await page.locator('#overlay').getAttribute('data-elbows'));
+    const forearms=JSON.parse(await page.locator('#overlay').getAttribute('data-forearms'));
+    assert.ok(elbows.some(v=>v===0),'one elbow has no upward motion');
+    assert.ok(forearms.every(v=>v>.8),'both forearms contribute despite asymmetric elbow rise');
+    assert.equal(await page.locator('#overlay').getAttribute('data-wrist-hands'),'2','hidden fingers still show both gloves');
+    await page.locator('#viewport').screenshot({path:`.test-output/kata-finish-${mirror}.png`});
+    await phase('open',1200);assert.equal(await grabbed(),'0','mixed grip releases');
+    await page.locator('#result-dialog').waitFor({state:'visible'});
+    if(mirror){await page.locator('#result-again').click();await page.locator('#play').click();await page.waitForTimeout(3100)}
+   }
+   assert.deepEqual(errors,[]);console.log('PASS Kata mixed-grip acquisition, one-arm rejection, asymmetric forearm finish with hidden fingers, visible gloves, tap and release in both mirror modes. Synthetic camera landmarks.');return;
+  }
   if(gyakuOnly){
    for(const mirror of [true,false]){
     await page.locator('#mirror').setChecked(mirror);

@@ -121,10 +121,10 @@ const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSin
 // Camera posture exercise only: neither collar depth behind the neck nor pressure is observable.
 export class CollarInteraction{
  constructor(tuning={}){this.tuning={...GRIP_TUNING,...tuning};this.reset()}
- reset(){this.clothMotion=new ClothMotion();this.hands=[emptyHand(),emptyHand()];this.released=[];this.lastTime=null;this.hold=0;this.tapped=false;this.lastMirror=null;this.elbowBaseline=[null,null];this.armMissingSince=null;this.finishDipSince=null}
+ reset(){this.clothMotion=new ClothMotion();this.hands=[emptyHand(),emptyHand()];this.released=[];this.lastTime=null;this.hold=0;this.tapped=false;this.lastMirror=null;this.elbowBaseline=[null,null];this.forearmBaseline=[null,null];this.armMissingSince=null;this.finishDipSince=null}
  release(i,now){
   const h=this.hands[i];if(h.grip)this.released.push({...h.grip,releasedAt:now});
-  this.hands[i]=emptyHand();this.elbowBaseline[i]=null;this.hold=0;this.tapped=false;this.finishDipSince=null;
+  this.hands[i]=emptyHand();this.elbowBaseline[i]=null;this.forearmBaseline[i]=null;this.hold=0;this.tapped=false;this.finishDipSince=null;
  }
  deformation(now){
   this.released=this.released.filter(g=>now-g.releasedAt<700);
@@ -160,7 +160,7 @@ export class CollarInteraction{
     if(recoveredHands[i]&&!open){
      // Reacquisition changes the input origin, never the already attached cloth.
      const g=h.grip,previousWrist=g.wrist;
-     g.start={...center};g.center={...center};g.offset={x:g.dx,y:g.dy};g.travelX=0;g.wrist={...hand[0]};h.wristTrack=new HeldWrist(hand[0],this.tuning);h.wristStart={...hand[0]};
+     g.start={...center};g.center={...center};g.offset={x:g.dx,y:g.dy};g.travelX=0;g.wrist={...hand[0]};h.wristTrack=new HeldWrist(hand[0],this.tuning);h.wristStart={...hand[0]};this.forearmBaseline[i]=null;
      const pin=lapelPoint(g.side,g.t,this.deformation(now));g.contactOffset={x:pin.x-center.x,y:pin.y-center.y};
      if(this.elbowBaseline[i]&&previousWrist)this.elbowBaseline[i].gap+=previousWrist.y-hand[0].y;
     }
@@ -239,7 +239,7 @@ export class CollarInteraction{
    if(wrist&&revision!==h.wristTrack.revision){
     // A recovered location establishes a fresh reference, never a finishing turn.
     if(this.elbowBaseline[i])this.elbowBaseline[i].gap+=(h.wristStart?.y??wrist.y)-wrist.y;
-    h.wristStart={...wrist};this.hold=0;this.finishDipSince=null;
+    h.wristStart={...wrist};this.forearmBaseline[i]=null;this.hold=0;this.finishDipSince=null;
    }
    if(h.wristTrack?.recoveredAt!==null)wristOpacity[i]=clamp((now-h.wristTrack.recoveredAt)/200);
    return wrist;
@@ -257,7 +257,23 @@ export class CollarInteraction{
   measures.forEach((m,i)=>{if(!grips[i])this.elbowBaseline[i]=null;else if(m&&!this.elbowBaseline[i])this.elbowBaseline[i]=m});
   const elbowLift=measures.map((m,i)=>m&&this.elbowBaseline[i]?Math.max(0,Math.min(this.elbowBaseline[i].height-m.height,this.elbowBaseline[i].gap-m.gap)):null);
   const elbowLevels=elbowLift.map(v=>v===null?null:clamp(v/this.tuning.elbowRise));
-  const finishLevels=elbowLevels.map((v,i)=>Math.max(v??0,wristLevels[i]));
+  // Mixed grips need not produce matching vertical elbow motion. Measure each
+  // forearm turning about its held wrist as well, using only visible joints.
+  // This is a 2D motion cue, not a measurement of choking pressure.
+  const mixed=directions[0]!==directions[1];
+  const forearmMotion=arms.map((a,i)=>{
+   if(!grips[i])this.forearmBaseline[i]=null;
+   if(!mixed||!grips[i]||!scoringWrists[i]||!armVisible(a))return null;
+   const wrist=scoringWrists[i];
+   this.forearmBaseline[i]??={wrist:{...wrist},elbow:{...a.elbow}};
+   const base=this.forearmBaseline[i],angle=wristTurn(base.elbow,a.elbow,wrist,base.wrist);
+   return angle===null?null:{angle,dx:a.elbow.x-wrist.x-(base.elbow.x-base.wrist.x),dy:a.elbow.y-wrist.y-(base.elbow.y-base.wrist.y)};
+  });
+  const forearmLevels=forearmMotion.map(m=>m?clamp(Math.abs(m.angle)/this.tuning.wristAngle):0);
+  // Sliding both elbows together is translation, not two independently turning
+  // forearms. Both sides still need their own valid finishing observation.
+  if(forearmMotion.every(Boolean)&&Math.hypot(forearmMotion[0].dx-forearmMotion[1].dx,forearmMotion[0].dy-forearmMotion[1].dy)<.035)forearmLevels.fill(0);
+  const finishLevels=elbowLevels.map((v,i)=>Math.max(v??0,wristLevels[i],forearmLevels[i]));
   const trackingPaused=count>0&&this.hands.some((h,i)=>h.grip&&(!scoringWrists[i]||(count===2&&elbowLevels[i]===null&&wristLevels[i]===0)));
   const wristHands=this.hands.map((h,i)=>!h.tracked&&h.grip?gloveAtWrist(h.shape,scoringWrists[i]):null);
   // An upper-collar location is a visible proxy, NOT a claim to see a grip
@@ -282,7 +298,7 @@ export class CollarInteraction{
   if(!trackingPaused)this.armMissingSince=null;
   if(this.hold>=GRIP_HOLD_SECONDS)this.tapped=true;
   const score=Math.round(count*25+50*completion);
-  return {grips,trackingPaused,scoringWrists,wristHands,wristCompletion,wristStatus,wristOpacity,finishLevels,issue,elbowLift,elbowLevels,completion,aligned,deformation:this.deformation(now),count,crossed,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
+  return {grips,trackingPaused,scoringWrists,wristHands,wristCompletion,wristStatus,wristOpacity,forearmLevels,finishLevels,issue,elbowLift,elbowLevels,completion,aligned,deformation:this.deformation(now),count,crossed,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
    posture:this.hands.map(h=>h.posture),hover:this.hands.map(h=>h.hover),armed:this.hands.map(h=>h.armed),closed:this.hands.map(h=>h.closed)};
  }
 }

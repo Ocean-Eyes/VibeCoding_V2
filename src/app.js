@@ -122,7 +122,7 @@ function draw(now){
   canvas.dataset.aligned=String(!!frame);canvas.dataset.skeleton=String($('show-skeleton').checked);
   canvas.dataset.displayWrists=JSON.stringify(displayHands.map(h=>h?.[0]??null));
   canvas.dataset.liveHands=String(state?.visible??0);canvas.dataset.grabbed=String(state?.count??0);
-  canvas.dataset.completion=String(state?.completion??0);canvas.dataset.elbows=JSON.stringify(state?.elbowLevels??[]);canvas.dataset.grips=JSON.stringify(state?.grips??[]);
+  canvas.dataset.completion=String(state?.completion??0);canvas.dataset.elbows=JSON.stringify(state?.elbowLevels??[]);canvas.dataset.forearms=JSON.stringify(state?.forearmLevels??[]);canvas.dataset.grips=JSON.stringify(state?.grips??[]);
   score=state&&(state.visible||state.count)?state.score:null;armScore=state?.count===2&&!state.trackingPaused?Math.round(state.completion*100):null;
   hold=state?.hold??0;
   let instruction;
