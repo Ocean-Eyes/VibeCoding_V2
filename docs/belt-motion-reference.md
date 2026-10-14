@@ -18,8 +18,16 @@ The hands obscure parts of the internal passage. Those depths, the bend plane, a
 
 ## Review and checks
 
-The pre-change geometry at `6f19e10` was preserved as a comparator. Seven source/baseline/candidate events were captured at a common candidate scale; source images retain their aspect ratio. A local event-scrubbable report was built with the `animation-visual-qa` skill in `.test-output/motion-review/review.html`. Reference images are local review evidence, not product assets.
+The pre-change geometry at `5eec600` was preserved as a comparator. Seven source/baseline/candidate events were captured at a common candidate scale; source images retain their aspect ratio. A local event-scrubbable report was built with the `animation-visual-qa` skill in `.test-output/belt-redo/review.html`. Reference images are local review evidence, not product assets.
 
 `tests/belt-lesson.test.mjs` checks material length, strip width, tip-led insertion, held-end stability, B passage order, opening clearance, outward finish, continuous sampled motion and viewport bounds. `tests/belt-timeline.test.mjs` checks both insertion holds, seeking and cancellation. Browser scripts check playback speed, pauses, auto advance, camera overlay controls and mobile layout. These are distinct from reference comparison and do not validate live belt tracking accuracy.
 
 Retained requirements: black belt, total material length 6.4, existing shortened mannequin, seven stages without a separate end-length adjustment stage, and virtual/real belt modes.
+
+## Flat-fold revision
+
+The earlier version retained a circular ring at the front and turned the strip toward the camera. The inspected 15.5 s and 19.5 s frames instead show broad diagonal faces with localized bends. This revision uses straight spans connected by two small folds, a belt width of 0.101 waist units, and transported strip orientation. The face is constrained to the opening plane only after the tip arrives; it is not forced toward the viewer.
+
+Tightening reduces front-to-back space, preserving the opening's horizontal extent rather than shrinking the whole knot. Material released from the fold is added to the free tails. The opening normal and B's width orientation follow the changing depth. The final diagonal tail angle is approximately 15 degrees below horizontal, based on the visible pull direction.
+
+The old opening test used an ideal width vector and subtracted half the A belt width in every direction. It now intersects the actual rendered B ribbon edges with the opening plane and checks the resulting width/thickness corners. Edge-continuity tests additionally sample both visible boundaries, with finer samples around the two approach folds; centerline-only continuity did not catch face flips. These remain local geometric checks, not a full cloth self-collision simulation.

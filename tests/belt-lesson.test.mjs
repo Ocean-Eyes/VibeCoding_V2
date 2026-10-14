@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BELT_STEPS,beltInspectionPoints,BELT_THREADING,BELT_THICKNESS,BELT_SOURCE,BELT_REFERENCE_2,BELT_LENGTH,BELT_WIDTH,beltPose,beltAnchor,pathLength,demoPlacement,cinematicPlacement,project,drawGhostBelt} from '../src/belt-geometry.js';
+import {BELT_STEPS,beltOpening,beltInspectionPoints,BELT_THREADING,BELT_THICKNESS,BELT_SOURCE,BELT_REFERENCE_2,BELT_LENGTH,BELT_WIDTH,beltPose,beltAnchor,pathLength,demoPlacement,cinematicPlacement,project,drawGhostBelt} from '../src/belt-geometry.js';
 const SIZE=6.4/7.6;
 const dist=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
 test('all seven stages join without teleporting the cloth at their boundaries',()=>{
@@ -130,24 +130,41 @@ test('B enters the opposite waist gap downward before crossing the retained A op
  const segment=sub3(after,before),t=-dot3(sub3(before,center),normal)/dot3(segment,normal);
  assert.ok(dist(before.map((v,i)=>v+t*segment[i]),center)<1e-9,'B goes through the opening, not around it');
 });
-test('the retained aperture has room for the full belt width and thickness before and after tightening',()=>{
- const {opening,center,normal,tightenScale}=BELT_THREADING;
- const axis=unit3(sub3(opening.at(-1),opening[0])),up=unit3(cross3(normal,axis));
- for(const scale of [1,tightenScale]){
-  const boundary=opening.map(p=>sub3(p,center).map(v=>v*scale));boundary.push(boundary[0]);
-  for(const side of [-1,1])for(const face of [-1,1]){
-   const corner=axis.map((v,i)=>v*side*BELT_WIDTH/2+up[i]*face*BELT_THICKNESS/2);
-   const clearance=Math.min(...boundary.slice(1).map((p,i)=>segmentDistance(corner,boundary[i],p)));
-   assert.ok(clearance>BELT_WIDTH/2,`full strip clearance at scale ${scale}: ${clearance}`);
+test('the actual B ribbon section clears the flattened A opening at insertion and tightening',()=>{
+ let checked=0;
+ for(const step of [5,6])for(let f=0;f<=20;f++){
+  const pose=beltPose(step,f/20),{opening,center,normal}=beltOpening(pose.phase),ribbon=pose.halves[1].ribbon;
+  const boundary=[...opening,opening[0]],axis=unit3(sub3(opening.at(-1),opening[0])),up=unit3(cross3(normal,axis));
+  const xy=p=>[dot3(sub3(p,center),axis),dot3(sub3(p,center),up)];
+  const inside=p=>{const [x,y]=xy(p);let yes=false;for(let i=1;i<boundary.length;i++){const [ax,ay]=xy(boundary[i-1]),[bx,by]=xy(boundary[i]);if((ay>y)!==(by>y)&&x<(bx-ax)*(y-ay)/(by-ay)+ax)yes=!yes}return yes};
+  const section=['left','right'].map(edge=>{
+   const hits=[];
+   for(let i=1;i<ribbon.length;i++){
+    const a=ribbon[i-1],b=ribbon[i],da=dot3(sub3(a[edge],center),normal),db=dot3(sub3(b[edge],center),normal);
+    if(!(da<=0&&db>0))continue;
+    const t=-da/(db-da),point=a[edge].map((v,j)=>v+(b[edge][j]-v)*t);
+    if(dist(point,center)<.12)hits.push({point,face:unit3(a.normal.map((v,j)=>v+(b.normal[j]-v)*t))});
+   }
+   return hits.sort((a,b)=>dist(a.point,center)-dist(b.point,center))[0];
+  });
+  if(section.some(point=>!point))continue; // The complete strip has not emerged yet.
+  const plane=p=>p.map((v,j)=>v-normal[j]*dot3(sub3(p,center),normal));
+  for(const {point,face} of section)for(const side of [-1,1]){
+   const corner=plane(point.map((v,j)=>v+face[j]*side*BELT_THICKNESS/2));
+   assert.ok(inside(corner),`full-width B section is outside A at ${step}/${f}`);
+   const clearance=Math.min(...boundary.slice(1).map((p,j)=>segmentDistance(corner,boundary[j],p)));
+   assert.ok(clearance>BELT_THICKNESS,`cloth thickness clearance at ${step}/${f}: ${clearance}`);
   }
+  checked++;
  }
+ assert.ok(checked>=25,'check both fed-through and tightening poses');
 });
 test('reference finish pulls tips outward without lengthening the material or switching A/B',()=>{
  const before=beltPose(5),after=beltPose(6);
  assert.ok(after.a.at(-1)[0]<before.a.at(-1)[0]);assert.ok(after.b.at(-1)[0]>before.b.at(-1)[0]);
  for(const key of ['a','b']){
   const tail=after[key].slice(-10),delta=sub3([...tail.at(-1),0],[...tail[0],0]);
-  assert.ok(Math.abs(delta[0])>5*Math.abs(delta[1]),'pull is sideways as in reference 19.5s');
+  assert.ok(Math.abs(delta[0])>3*Math.abs(delta[1]),'pull is sideways as in reference 19.5s');
  }
 });
 test('inspection stops coincide with tip entry and B emergence through the held opening',()=>{
@@ -157,4 +174,33 @@ test('inspection stops coincide with tip entry and B emergence through the held 
  const tip=beltPose(5,stops[1]).halves[1].path.at(-1);
  assert.ok(dot3(sub3(tip,center),normal)>0);assert.ok(dist(tip,center)<.08);
  assert.equal(beltPose(5,stops[1]).halves[1].freeLength,0,'pause before drawing the free tail');
+});
+
+test('held opening is made of straight spans and localized folds, then flattened in depth',()=>{
+ const before=beltOpening(5),after=beltOpening(6),extent=(points,i)=>Math.max(...points.map(p=>p[i]))-Math.min(...points.map(p=>p[i]));
+ assert.ok(Math.abs(extent(before.opening,0)-extent(after.opening,0))<1e-9,'no wholesale knot scaling');
+ assert.ok(extent(after.opening,2)<extent(before.opening,2)*.7,'tightening closes front-to-back space');
+ const segments=before.opening.slice(1).map((p,i)=>dist(p,before.opening[i]));
+ assert.ok(Math.max(...segments)>pathLength(before.opening)*.35,'one broad, straight front span instead of a circular ring');
+ assert.ok(BELT_WIDTH>.095&&BELT_WIDTH<.11,'flat belt proportion to unchanged waist');
+});
+test('ribbon edges remain continuous through folds, entry, emergence and flattening',()=>{
+ const edgeDelta=(a,b)=>Math.min(Math.max(dist(a.left,b.left),dist(a.right,b.right)),Math.max(dist(a.left,b.right),dist(a.right,b.left)));
+ for(const step of [3,4,5,6]){
+  let previous=beltPose(step,0);
+  for(let i=1;i<=400;i++){
+   const pose=beltPose(step,i/400);
+   for(let h=0;h<2;h++)for(let n=0;n<480;n+=4)assert.ok(edgeDelta(pose.halves[h].ribbon[n],previous.halves[h].ribbon[n])<.045,`surface jump ${step}/${i}/${h}/${n}`);
+   previous=pose;
+  }
+ }
+ // Fine sampling distinguishes a rapid continuous fold from an instantaneous flip.
+ for(const [step,start,end] of [[4,.23,.27],[5,.55,.59]]){
+  let previous=beltPose(step,start);
+  for(let i=1;i<=200;i++){
+   const pose=beltPose(step,start+(end-start)*i/200);
+   for(let h=0;h<2;h++)for(let n=0;n<480;n+=4)assert.ok(edgeDelta(pose.halves[h].ribbon[n],previous.halves[h].ribbon[n])<.01,`fold discontinuity ${step}/${i}`);
+   previous=pose;
+  }
+ }
 });
