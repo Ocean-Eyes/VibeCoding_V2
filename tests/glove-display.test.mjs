@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectGlove,hideCollarThumb} from '../src/glove-display.js';
+import {selectGlove,hideCollarThumb,gloveElbow} from '../src/glove-display.js';
 import {CollarInteraction} from '../src/collar-interaction.js';
 import {gyakuHands} from './fixtures/gyaku-hands.mjs';
 import {collarArms,collarHands} from './fixtures/collar-hands.mjs';
@@ -48,4 +48,21 @@ test('collapsed hidden-joint estimates stay a fallback, while real curls and siz
  }
  const collapsed=gyakuHands({curl:0,collapsed:.3})[0];
  assert.equal(selectGlove(collapsed,collapsed,reference).source,'wrist');
+});
+
+test('forearm joins only a matching visible pose wrist, including real crossed wrists',()=>{
+ for(const mirror of [true,false])for(const crossed of [true,false]){
+  const hands=collarHands('open');
+  for(const [i,h]of hands.entries()){
+   const dx=(crossed?1:-1)*(i?-.3:.3)-h[0].x;
+   h.forEach(p=>{p.x=(p.x+dx)*(mirror?1:-1)});
+   const elbow={x:(i?.65:-.65)*(mirror?1:-1),y:.7,visibility:1};
+   const arm={wrist:{...h[0],visibility:1},elbow};
+   assert.deepEqual(gloveElbow(h,arm),elbow);
+   assert.equal(gloveElbow(h,{...arm,wrist:{...h[0],x:-h[0].x}}),null,'opposite wrist must not manufacture a crossed forearm');
+   assert.equal(gloveElbow(h,{...arm,wrist:{...h[0],visibility:.1}}),null);
+   assert.equal(gloveElbow(h,{...arm,elbow:{...elbow,visibility:.1}}),null);
+  }
+ }
+ assert.equal(gloveElbow(null,null),null);
 });

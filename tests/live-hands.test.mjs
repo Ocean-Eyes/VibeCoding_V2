@@ -178,3 +178,28 @@ test('held hands cannot teleport after a long missing interval',()=>{
  stream.update(hand(.3),6065,{held:true});
  assert.equal(stream.at(6065)[0].x,.3);
 });
+
+for(const reverse of [false,true]){
+ test(`initial uncertain pose cannot seed crossed hand identities: detector reversed=${reverse}`,()=>{
+  const tracker=new HandIdentityTracker(),left=hand(.62),right=hand(.38),hands=reverse?[right,left]:[left,right];
+  const uncertain=pose(.5,.5);uncertain[15].visibility=uncertain[16].visibility=.1;
+  for(let time=0;time<650;time+=65)assert.deepEqual(tracker.update(hands,uncertain,time),[null,null]);
+  assert.deepEqual(tracker.tracks,[null,null]);
+  assert.deepEqual(tracker.update(hands,pose(.62,.38),650),[left,right]);
+  assert.deepEqual(tracker.update(hands.toReversed(),pose(.62,.38),715),[left,right]);
+ });
+ test(`already crossed real hands initialize without forcing them apart: detector reversed=${reverse}`,()=>{
+  const tracker=new HandIdentityTracker(),left=hand(.35),right=hand(.65);
+  assert.deepEqual(tracker.update(reverse?[right,left]:[left,right],pose(.35,.65),0),[left,right]);
+ });
+}
+test('initial single reliable wrist can establish only its own hand',()=>{
+ const tracker=new HandIdentityTracker(),left=hand(.62),right=hand(.38),p=pose(.62,.38);p[16].visibility=.1;
+ assert.deepEqual(tracker.update([right,left],p,0),[left,null]);
+ assert.deepEqual(tracker.update([right,left],pose(.62,.38),65),[left,right]);
+});
+test('coincident or distant startup wrist guesses do not establish identities',()=>{
+ for(const p of [null,pose(.5,.5),pose(.9,.1)]){
+  const tracker=new HandIdentityTracker();assert.deepEqual(tracker.update([hand(.62),hand(.38)],p,0),[null,null]);
+ }
+});

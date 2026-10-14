@@ -1,5 +1,5 @@
 const {chromium}=require(process.argv[2]||'playwright');
-const gyakuOnly=process.argv.includes('--gyaku'),kataOnly=process.argv.includes('--kata'),edgeOnly=process.argv.includes('--edge');
+const gyakuOnly=process.argv.includes('--gyaku'),kataOnly=process.argv.includes('--kata'),edgeOnly=process.argv.includes('--edge'),startupOnly=process.argv.includes('--startup');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
@@ -32,7 +32,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    }
    self.onmessage=async({data})=>{
     const [{POSES,targetPose},{collarHands,handAt},{gyakuHands,rollHand},{acquisitionHands}]=await deps;
-    if(data.type==='init')self.postMessage({type:'ready'});
+    if(data.type==='init')setTimeout(()=>self.postMessage({type:'ready'}),${startupOnly?1800:0});
     if(data.type==='frame'){
      const w=data.bitmap.width,h=data.bitmap.height;data.bitmap.close();
      const frame={origin:{x:w*.5,y:h*.32},scale:w*.18,x:{x:1,y:0},y:{x:0,y:1}},pose=targetPose(frame,POSES[0]);
@@ -73,6 +73,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
       }
       if(data.phase.startsWith('gyaku-'))hand=gyakuHands({curl:['gyaku-edge','gyaku-lift','gyaku-collapsed','gyaku-open'].includes(data.phase)?0:1,roll:data.phase==='gyaku-open'?.85:data.phase==='gyaku-collapsed'?.2:1.4,collapsed:data.phase==='gyaku-collapsed'?.3:false})[i];
       if(data.phase==='hook-open'||data.phase==='hook-close')hand=acquisitionHands({hook:data.phase==='hook-open'?0:.55})[i];
+      if(data.phase==='uncrossed'){const dx=(i?.65:-.65)-hand[0].x,dy=.75-hand[0].y;hand=hand.map(p=>({...p,x:p.x+dx,y:p.y+dy}))}
       const mapped=hand.map(p=>({x:frame.origin.x-p.x*frame.scale,y:frame.origin.y+p.y*frame.scale,z:p.z*frame.scale,visibility:1}));
       pose[15+i]=mapped[0];return mapped.map(p=>({...p,x:p.x/w,y:p.y/h,z:p.z/w}));
      });
@@ -99,10 +100,17 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     }
    };`}));
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
-  await page.evaluate(({up,kata})=>{window.qaPalmUp=up;window.qaKata=kata},{up:gyakuOnly,kata:kataOnly});
+  await page.evaluate(({up,kata,startup})=>{window.qaPalmUp=up;window.qaKata=kata;if(startup){window.qaGripPhase='uncrossed';window.qaWristVisibility=.1}},{up:gyakuOnly,kata:kataOnly,startup:startupOnly});
   await page.locator('[data-category="katame"]').click();await page.locator(`[data-lesson="${kataOnly?'kata':gyakuOnly?'gyaku':'nami'}"]`).click();
   await page.waitForFunction(()=>document.querySelector('#pose-list').children.length===3);
-  await page.locator('#play').click();await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='2');
+  if(startupOnly)await page.locator('#pose-list .pose-card').nth(2).click();
+  await page.locator('#play').click();
+  if(startupOnly){
+   await page.waitForFunction(()=>document.querySelector('#mode-label').textContent==='CONNECTING'&&document.querySelector('#overlay').dataset.guideVisible==='false');
+   const empty=await page.locator('#overlay').evaluate(c=>{const pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data;for(let i=3;i<pixels.length;i+=4)if(pixels[i])return false;return true});
+   assert.ok(empty,'loading a camera from the crossed demonstration must clear its arms');
+  }
+  if(!startupOnly)await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='2');
   const phase=async(name,wait=900)=>{await page.evaluate(p=>window.qaGripPhase=p,name);await page.waitForTimeout(wait)};
   const grabbed=()=>page.locator('#overlay').getAttribute('data-grabbed');
   await page.waitForTimeout(3100);
@@ -114,6 +122,32 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     const f=JSON.parse(c.dataset.frame),d=c.width/c.getBoundingClientRect().width;
     return Array.from(c.getContext('2d').getImageData(Math.round((f.origin.x+f.scale*.30)*d),Math.round((f.origin.y+f.scale*.37)*d),Math.round(f.scale*.09*d),Math.round(f.scale*.22*d)).data);
   });
+  if(startupOnly){
+   await page.waitForFunction(()=>document.querySelector('#overlay').dataset.detectedHands==='2');
+   assert.equal(await page.locator('#overlay').getAttribute('data-guide-visible'),'false','camera startup cannot show old crossed demonstration arms');
+   assert.equal(await page.locator('#overlay').getAttribute('data-assigned-hands'),'0','uncertain initial pose must not guess detector order');
+   await page.evaluate(()=>window.qaWristVisibility=1);
+   await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='2');
+   for(const mirror of [true,false]){
+    await page.locator('#mirror').setChecked(mirror);await page.waitForTimeout(1000);
+    let wrists=JSON.parse(await page.locator('#overlay').getAttribute('data-display-wrists'));
+    let elbows=JSON.parse(await page.locator('#overlay').getAttribute('data-display-elbows'));
+    assert.ok(wrists.every(Boolean)&&elbows.every(Boolean));
+    assert.ok((wrists[0].x-wrists[1].x)*(elbows[0].x-elbows[1].x)>0,'separated hands connect to separated forearms');
+    assert.ok(mirror?wrists[0].x<wrists[1].x:wrists[0].x>wrists[1].x);
+    await page.evaluate(()=>window.qaSwap=true);await page.waitForTimeout(1000);
+    elbows=JSON.parse(await page.locator('#overlay').getAttribute('data-display-elbows'));
+    assert.deepEqual(elbows,[null,null],'swapped body wrists cannot draw opposite forearms');
+    await page.evaluate(()=>window.qaSwap=false);await page.waitForTimeout(1000);
+    elbows=JSON.parse(await page.locator('#overlay').getAttribute('data-display-elbows'));assert.ok(elbows.every(Boolean));
+    assert.equal(await grabbed(),'0');
+    await page.locator('#viewport').screenshot({path:`.test-output/startup-arms-${mirror}.png`});
+   }
+   await phase('close',2300);assert.equal(await grabbed(),'2','real crossing is still reflected and can acquire');
+   assert.deepEqual(errors,[]);
+   console.log('PASS camera startup: uncertain wrists do not seed identity, uncrossed hands/forearms stay uncrossed in both mirror modes, pose wrist swaps do not connect opposite elbows, real crossing still acquires. Synthetic camera landmarks.');
+   return;
+  }
   const restFabric=await fabricPixels();
   const fixedHead=await headPixels();
   const rest=await page.locator('#partner').evaluate(c=>c.toDataURL());
@@ -169,6 +203,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   }
   if(gyakuOnly){
    for(const mirror of [true,false]){
+    // Each retry starts a new camera session: establish identity before hiding body wrists.
+    await page.evaluate(()=>window.qaWristVisibility=1);
     await page.locator('#mirror').setChecked(mirror);
     await phase('hook-open',1200);assert.equal(await grabbed(),'0');
     await phase('hook-close',1400);assert.equal(await grabbed(),'2','a collar hook must acquire without making a full fist');

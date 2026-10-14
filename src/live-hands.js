@@ -136,6 +136,16 @@ export class HandIdentityTracker{
    if(distance(handCenter(valid[0]),handCenter(valid[1]))<Math.max(.012,Math.min(...valid.map(h=>distance(h[5],h[17])))*.55))return [null,null];
    chosen=a<=b?valid:[valid[1],valid[0]];
   }
+  // Detector array order is not left/right identity. At startup (or after a
+  // free track expires), wait for an unambiguous nearby pose wrist before
+  // seeding history; otherwise overlap/history can preserve the wrong side.
+  chosen=chosen.map((h,i)=>{
+   if(!h||this.tracks[i])return h;
+   const own=points?.[15+i],other=points?.[16-i];
+   if(!own||(own.visibility??1)<.65||distance(h[0],own)>.075)return null;
+   if(other&&(other.visibility??1)>=.65&&distance(h[0],other)-distance(h[0],own)<.008)return null;
+   return h;
+  });
   chosen.forEach((h,i)=>{
    if(!h)return;const old=recovered[i]?null:this.tracks[i],dt=old?Math.max(1,time-old.time):1;
    // Do not let a single distant detection poison the identity prediction.

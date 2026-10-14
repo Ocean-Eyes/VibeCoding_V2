@@ -1,7 +1,7 @@
 import {CollarInteraction,GRIP_PASS_SCORE,GRIP_HOLD_SECONDS} from './collar-interaction.js';
 import {LandmarkStream,HandStream,HandIdentityTracker,GripProjection,projectHand,palmFacing,poseConfirmsHand} from './live-hands.js';
 import {drawLiveGlove} from './live-glove.js';
-import {selectGlove,hideCollarThumb} from './glove-display.js';
+import {selectGlove,hideCollarThumb,gloveElbow} from './glove-display.js';
 import {prepareHands} from './hand-renderer.js';
 import {drawOpponent,drawGripStudy,drawGripGuides,drawCollarTargets} from './opponent.js';
 import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,finishAt} from './demonstration.js';
@@ -105,12 +105,12 @@ function draw(now){
   });
   const observations=projectedHands('trackedAt'),displayHands=projectedHands('at');
   const recoveredHands=observations.map((h,i)=>{if(!h||consumedRecovery[i]===handStreams[i].recoveryRevision)return false;consumedRecovery[i]=handStreams[i].recoveryRevision;return true});
+  const arms=[0,1].map(i=>{
+    if(!frame)return null;
+    const joint=k=>{const p=shown?.[k];return p&&(k>=15||(p.visibility??1)>=.65)?{...projectHand([p],frame,unit,mirrored)[0],visibility:p.visibility??1}:null};
+    return {shoulder:joint(11+i),elbow:joint(13+i),wrist:joint(15+i)};
+  });
   if(mode==='live'&&!demonstrating){
-    const arms=[0,1].map(i=>{
-      if(!frame)return null;
-      const joint=k=>{const p=shown?.[k];return p&&(k>=15||(p.visibility??1)>=.65)?{...projectHand([p],frame,unit,mirrored)[0],visibility:p.visibility??1}:null};
-      return {shoulder:joint(11+i),elbow:joint(13+i),wrist:joint(15+i)};
-    });
     gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body,continuousHands:observations.map(Boolean),recoveredHands,poseSampleTime:poseStream.time});
     const phase=Math.min(2,gripState.count);
     if(selected!==phase){selected=phase;updatePose()}
@@ -128,6 +128,8 @@ function draw(now){
   canvas.dataset.completion=String(state?.completion??0);canvas.dataset.elbows=JSON.stringify(state?.elbowLevels??[]);canvas.dataset.forearms=JSON.stringify(state?.forearmLevels??[]);canvas.dataset.grips=JSON.stringify(state?.grips??[]);
   score=state&&(state.visible||state.count)?state.score:null;armScore=state?.count===2&&!state.trackingPaused?Math.round(state.completion*100):null;
   hold=state?.hold??0;
+  canvas.dataset.displayElbows=JSON.stringify(displayHands.map((h,i)=>gloveElbow(h,arms[i])));
+  canvas.dataset.guideVisible=String(demonstrating||mode==='idle');
   let instruction;
   if(demonstrating){
     instruction=demonstrationAt((now-demoStarted)/1000,activeTechnique);
@@ -138,7 +140,7 @@ function draw(now){
     const live=displayHands.map((h,i)=>{
       if(!h)return null;
       const hand=h.map(p=>({...p,x:scene.origin.x+p.x*scene.scale,y:scene.origin.y+p.y*scene.scale}));
-      const e=shown?.[13+i],elbow=e&&(e.visibility??1)>=.65?projectHand([e],frame,scene,mirrored)[0]:null;
+      const e=gloveElbow(h,arms[i]),elbow=e?{x:scene.origin.x+e.x*scene.scale,y:scene.origin.y+e.y*scene.scale}:null;
       return {hand,elbow,index:i,thumbInside:hideCollarThumb(h,!!state.grips[i]&&activeTechnique.directions[i]==='↓'),depth:shown?.[15+i]?.z??0};
     }).filter(Boolean).sort((a,b)=>b.depth-a.depth);
     for(const h of live)drawLiveGlove(ctx,h.hand,palmFacing(h.hand,h.index===0,mirrored),h.elbow,h.thumbInside,.78*(gloves[h.index].source==='wrist'?state.wristOpacity[h.index]:handStreams[h.index].opacityAt(now)));
@@ -146,7 +148,7 @@ function draw(now){
       const projected=shown.map(p=>p?projectHand([p],frame,scene,mirrored)[0]:null);skeleton(ctx,projected,cyan,1.5);
       for(const h of live)for(const [a,b]of HAND_BONES)line(ctx,h.hand[a],h.hand[b],cyan,1);
     }
-  }else drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected],{finish:selected===2?finishAt(((now-guideStarted)/1000)%4):0});
+  }else if(mode==='idle')drawGripGuides(ctx,scene,practiceGuide(selected,(now-guideStarted)/1000),activeTechnique.directions,mirrored,GRIP_STEPS[selected],{finish:selected===2?finishAt(((now-guideStarted)/1000)%4):0});
   const feedback=demonstrating?`깃 안쪽: ${activeTechnique.directions.map((d,i)=>`${i?'오른손':'왼손'} ${d==='↑'?'네 손가락':'엄지'}`).join(' · ')}`:
     state?.trackingPaused?(state.scoringWrists.every(Boolean)?'깃은 잡고 있습니다. 교차한 손목이나 팔꿈치의 움직임을 확인 중입니다.':`깃은 잡고 있습니다. ${state.wristStatus.map((s,i)=>s==='tracked'?null:`${i?'오른':'왼'} 손목 ${s==='recovering'||s==='ambiguous'?'다시 찾는 중':'인식 대기'}`).filter(Boolean).join(' · ')}. 손목을 카메라 안에 잠깐 보여 주세요.`):!state?.visible&&!state?.count?'양손과 어깨가 보이도록 서 주세요.':state.tapped?'TAP! 손을 펴서 깃을 놓으세요.':
     state.posture?.some(p=>p==='palm'||p==='turn')?`카메라에 왼손 ${activeTechnique.directions[0]==='↓'?'손바닥':'손등'}, 오른손 ${activeTechnique.directions[1]==='↓'?'손바닥':'손등'}이 보이게 해 주세요.`:state.posture?.some(Boolean)?'각 손으로 반대편 깃을 잡으세요.':

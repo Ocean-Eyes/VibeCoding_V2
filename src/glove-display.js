@@ -26,3 +26,15 @@ export function hideCollarThumb(hand,requested){
  // Nami/Kata grip during release does not put the user's whole thumb in cloth.
  return size>0&&[3,4].every(k=>distance(hand[k],hand[5])<size*.6);
 }
+
+// Hand and body filters can disagree during initialization, identity swaps or
+// occlusion. Never draw a long forearm to a pose wrist somewhere else on screen.
+// All inputs are in the same shoulder-width scene coordinates.
+export function gloveElbow(hand,arm){
+ if(!hand||!arm?.wrist||!arm?.elbow)return null;
+ if((arm.wrist.visibility??1)<.65||(arm.elbow.visibility??1)<.65)return null;
+ const wrist=hand[0],distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ const palm=Math.max(distance(wrist,hand[9]),distance(hand[5],hand[17]));
+ const tolerance=Math.min(.12,Math.max(.035,palm*.5));
+ return distance(wrist,arm.wrist)<=tolerance?arm.elbow:null;
+}
