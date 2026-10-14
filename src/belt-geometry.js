@@ -21,7 +21,7 @@ const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
 export function beltPose(step,progress=1){
  step=Math.max(0,Math.min(BELT_STEPS.length-1,Math.floor(step)));const a=poses[Math.max(0,step-1)],b=poses[step],u=ease(progress);
  const wrap=a.wrap+(b.wrap-a.wrap)*u,angle=wrap*Math.PI*2;
- const tail=(key,index)=>{const x=(index?1:-1)*.51*Math.sin(angle),y=(index?.026:-.026)-.09*(1-Math.cos(angle));return b[key].map((p,i)=>p.map((v,k)=>(u===1?v:u===0?a[key][i][k]:a[key][i][k]+(v-a[key][i][k])*u)+(k?y:x)))};
+ const tail=(key,index)=>{const x=(index?1:-1)*.51*Math.sin(angle),y=(index?.026:-.026)*wrap-.09*(1-Math.cos(angle));return b[key].map((p,i)=>p.map((v,k)=>(u===1?v:u===0?a[key][i][k]:a[key][i][k]+(v-a[key][i][k])*u)+(k?y:x)))};
  return {step,wrap,a:tail('a',0),b:tail('b',1)};
 }
 export function beltAnchor(width,height,vertical=58,size=32){return {x:width*.5,y:height*vertical/100,scale:width*size/100}}
@@ -47,7 +47,7 @@ export function drawGhostBelt(ctx,anchor,pose,{mirror=true,opacity=.86,labels=tr
  for(const [index,key]of ['a','b'].entries()){
   const side=index?1:-1,color=index?'#e0bb78':'#91cee6';let run=[],behind=false;
   for(let n=0;n<=100;n++){
-   const angle=pose.wrap*Math.PI*2*n/100,z=Math.cos(angle),p=[side*.51*Math.sin(angle),(index?.026:-.026)-.09*(1-z)];
+   const angle=pose.wrap*Math.PI*2*n/100,z=Math.cos(angle),p=[side*.51*Math.sin(angle),(index?.026:-.026)*pose.wrap-.09*(1-z)];
    const back=z<0;
    if(n&&back!==behind){run.push(p);ribbon(ctx,run,color,behind);run=[p]}
    else run.push(p);

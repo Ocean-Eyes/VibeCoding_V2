@@ -6,7 +6,7 @@
   "description": "Judo learning dojo with grip missions and solo webcam position practice",
   "scripts": {
     "start": "node scripts/serve.mjs",
-    "test": "node --test tests/pose.test.mjs tests/curriculum.test.mjs tests/demonstration.test.mjs tests/hand-rig.test.mjs tests/live-hands.test.mjs tests/collar-interaction.test.mjs tests/cloth-stability.test.mjs tests/hand-recovery.test.mjs tests/held-wrist.test.mjs tests/finish-recovery.test.mjs tests/finish-corpus.test.mjs tests/gyaku-recovery.test.mjs tests/gyaku-corpus.test.mjs tests/grip-acquisition.test.mjs tests/kata-finish.test.mjs tests/glove-display.test.mjs tests/forearm-recovery.test.mjs tests/practice-trace.test.mjs tests/belt-lesson.test.mjs",
+    "test": "node --test tests/pose.test.mjs tests/curriculum.test.mjs tests/demonstration.test.mjs tests/hand-rig.test.mjs tests/live-hands.test.mjs tests/collar-interaction.test.mjs tests/cloth-stability.test.mjs tests/hand-recovery.test.mjs tests/held-wrist.test.mjs tests/finish-recovery.test.mjs tests/finish-corpus.test.mjs tests/gyaku-recovery.test.mjs tests/gyaku-corpus.test.mjs tests/grip-acquisition.test.mjs tests/kata-finish.test.mjs tests/glove-display.test.mjs tests/forearm-recovery.test.mjs tests/practice-trace.test.mjs tests/belt-lesson.test.mjs tests/belt-tracker.test.mjs",
     "build": "node scripts/build.mjs",
     "test:fit": "node scripts/fit-grip.mjs",
     "test:fit:gyaku": "node scripts/fit-gyaku.mjs"

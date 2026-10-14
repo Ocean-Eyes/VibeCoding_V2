@@ -41,20 +41,31 @@
     </section>
     <section id="belt-screen" hidden>
       <section class="heading"><div><div class="eyebrow">FOUNDATIONS / OBI</div><h1>띠 매는 법</h1><p>띠의 길을 눈으로 따라, 한 단계씩 내 손으로.</p></div><div class="session-label"><span class="tiny">GHOST BELT</span><strong>두 번 감고, 평매듭</strong><span>시연 + 카메라 가이드</span></div></section>
+      <div class="belt-modes" role="group" aria-label="띠 연습 모드">
+        <button id="belt-mode-virtual" aria-pressed="true"><strong>가상 띠</strong><span>띠 없이 시연 · 카메라 가이드</span></button>
+        <button id="belt-mode-real" aria-pressed="false"><strong>실제 띠</strong><span>내 띠 양끝 추적 · 단계별 따라 하기</span></button>
+      </div>
+      <p id="belt-mode-description" class="belt-mode-description">반투명 띠의 움직임을 보거나 카메라 위 가이드를 따라 해 보세요.</p>
       <div class="belt-workspace">
         <section class="studio belt-studio" aria-label="띠 매기 시연과 카메라 가이드">
           <div class="belt-toolbar"><span id="belt-view-label">DEMONSTRATION · GHOST BELT</span><span>01 — 07 / OBI</span></div>
-          <div class="belt-viewport"><video id="belt-video" autoplay muted playsinline hidden></video><canvas id="belt-canvas" aria-label="허리에 감기고 매듭이 만들어지는 반투명 띠"></canvas><div class="belt-legend"><span><i class="belt-a"></i>A 끝</span><span><i class="belt-b"></i>B 끝</span><span>┄ 몸 뒤쪽</span></div></div>
+          <div class="belt-viewport"><video id="belt-video" autoplay muted playsinline hidden></video><canvas id="belt-canvas" aria-label="허리에 감기고 매듭이 만들어지는 반투명 띠"></canvas><div id="belt-real-empty" class="belt-real-empty" hidden><strong>내 띠로 따라 하기</strong><p>양끝에 서로 다른 선명한 색 테이프를 붙인 뒤<br>카메라를 켜고 A·B 색을 등록하세요.</p></div><div class="belt-legend"><span><i class="belt-a"></i>A 끝</span><span><i class="belt-b"></i>B 끝</span><span>┄ 몸 뒤쪽</span></div></div>
           <div class="belt-current"><span id="belt-step-number">01 / 07</span><div><h2 id="belt-step-title">가운데를 배꼽에</h2><p id="belt-cue"></p></div></div>
           <progress id="belt-progress" max="1" value="0" aria-label="현재 단계 시연 진행"></progress>
           <div class="transport"><div><button id="belt-prev" class="outline" aria-label="이전 단계">← 이전</button><button id="belt-play" class="primary">일시 정지 Ⅱ</button><button id="belt-next" class="outline">다음 →</button><button id="belt-restart" class="quiet">처음부터 ↻</button></div><button id="belt-camera" class="outline">카메라로 따라 하기</button></div>
           <div id="belt-alignment" class="belt-alignment" hidden><label>띠 높이<input id="belt-height" type="range" min="35" max="80" value="58" /></label><label>띠 크기<input id="belt-width" type="range" min="22" max="48" value="32" /></label><label><input id="belt-mirror" type="checkbox" checked /> 거울 모드</label><button id="belt-align-reset" class="quiet">위치 초기화</button></div>
+          <section id="belt-tracking" class="belt-tracking" hidden aria-label="실제 띠 색 등록">
+            <p>띠 양끝에 서로 다른 색 테이프를 넓게 붙이세요. 선명한 파랑·분홍처럼 옷·배경과 다른 색이 좋습니다. A·B 버튼을 누른 뒤 영상에서 해당 색 부분을 눌러 등록하세요.</p>
+            <div class="belt-registration"><button id="belt-register-a" class="outline"><i id="belt-swatch-a"></i>A 색 등록</button><span id="belt-track-a">미등록</span><button id="belt-register-b" class="outline"><i id="belt-swatch-b"></i>B 색 등록</button><span id="belt-track-b">미등록</span></div>
+            <div id="belt-pick-controls" hidden><p id="belt-pick-prompt" role="status"></p><button id="belt-sample-center" class="outline">화면 중앙에서 등록</button><button id="belt-pick-cancel" class="quiet">취소</button></div>
+            <p id="belt-tracking-status" role="status">카메라를 켜면 색을 등록할 수 있습니다.</p><button id="belt-clear-colors" class="quiet">색 등록 초기화</button>
+          </section>
           <p class="notice" id="belt-notice" role="status">A·B는 양끝을 구분하는 표시입니다. 점선은 몸 뒤쪽 경로입니다.</p>
         </section>
         <aside class="belt-aside">
           <section class="belt-closeup"><div class="section-title"><h2>띠 경로 확대</h2><span>앞에서 본 모습</span></div><canvas id="belt-detail" aria-label="띠 교차와 매듭 통과 순서 확대"></canvas><p id="belt-focus"></p></section>
           <nav id="belt-steps" class="belt-steps" aria-label="띠 매기 7단계"></nav>
-          <p class="belt-note">카메라에서는 높이·크기를 조절해 가이드를 내 허리에 맞추세요. 매듭의 조임은 직접 확인하고, 단계는 버튼으로 넘깁니다.</p>
+          <p id="belt-mode-note" class="belt-note">카메라에서는 높이·크기를 조절해 가이드를 내 허리에 맞추세요. 매듭의 조임은 직접 확인하고, 단계는 버튼으로 넘깁니다.</p>
           <a id="belt-source" class="source-link" target="_blank" rel="noopener noreferrer">British Judo · 기본 띠 매기 참고 ↗</a>
         </aside>
       </div>
