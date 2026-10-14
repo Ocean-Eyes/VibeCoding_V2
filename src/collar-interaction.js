@@ -121,10 +121,10 @@ const emptyHand=()=>({armed:false,closed:false,pending:null,grip:null,releaseSin
 // Camera posture exercise only: neither collar depth behind the neck nor pressure is observable.
 export class CollarInteraction{
  constructor(tuning={}){this.tuning={...GRIP_TUNING,...tuning};this.reset()}
- reset(){this.clothMotion=new ClothMotion();this.hands=[emptyHand(),emptyHand()];this.released=[];this.lastTime=null;this.hold=0;this.tapped=false;this.lastMirror=null;this.elbowBaseline=[null,null];this.forearmBaseline=[null,null];this.armMissingSince=null;this.finishDipSince=null}
+ reset(){this.clothMotion=new ClothMotion();this.hands=[emptyHand(),emptyHand()];this.released=[];this.lastTime=null;this.hold=0;this.tapped=false;this.lastMirror=null;this.elbowBaseline=[null,null];this.forearmBaseline=[null,null];this.forearmSamples=[[],[]];this.armMissingSince=null;this.finishDipSince=null}
  release(i,now){
   const h=this.hands[i];if(h.grip)this.released.push({...h.grip,releasedAt:now});
-  this.hands[i]=emptyHand();this.elbowBaseline[i]=null;this.forearmBaseline[i]=null;this.hold=0;this.tapped=false;this.finishDipSince=null;
+  this.hands[i]=emptyHand();this.elbowBaseline[i]=null;this.forearmBaseline[i]=null;this.forearmSamples[i]=[];this.hold=0;this.tapped=false;this.finishDipSince=null;
  }
  deformation(now){
   this.released=this.released.filter(g=>now-g.releasedAt<700);
@@ -160,7 +160,12 @@ export class CollarInteraction{
     if(recoveredHands[i]&&!open){
      // Reacquisition changes the input origin, never the already attached cloth.
      const g=h.grip,previousWrist=g.wrist;
-     g.start={...center};g.center={...center};g.offset={x:g.dx,y:g.dy};g.travelX=0;g.wrist={...hand[0]};h.wristTrack=new HeldWrist(hand[0],this.tuning);h.wristStart={...hand[0]};this.forearmBaseline[i]=null;
+     g.start={...center};g.center={...center};g.offset={x:g.dx,y:g.dy};g.travelX=0;g.wrist={...hand[0]};h.wristTrack=new HeldWrist(hand[0],this.tuning);h.wristStart={...hand[0]};
+     // A fresh finger track does not restart independently continuous pose-arm
+     // motion. Invalidate the hand-based reference only when pose cannot vouch for it.
+     const base=this.forearmBaseline[i],a=arms[i];
+     const continuousPose=base?.source==='pose'&&base.lastPose&&now-base.lastPose.time<250&&a?.wrist&&(a.wrist.visibility??1)>=this.tuning.wristVisibility&&a.elbow&&(a.elbow.visibility??1)>=.65&&Math.hypot(a.wrist.x-base.lastPose.wrist.x,a.wrist.y-base.lastPose.wrist.y)<.075&&Math.hypot(a.elbow.x-base.lastPose.elbow.x,a.elbow.y-base.lastPose.elbow.y)<.12;
+     if(!continuousPose){this.forearmBaseline[i]=null;this.forearmSamples[i]=[]}
      const pin=lapelPoint(g.side,g.t,this.deformation(now));g.contactOffset={x:pin.x-center.x,y:pin.y-center.y};
      if(this.elbowBaseline[i]&&previousWrist)this.elbowBaseline[i].gap+=previousWrist.y-hand[0].y;
     }
@@ -239,7 +244,7 @@ export class CollarInteraction{
    if(wrist&&revision!==h.wristTrack.revision){
     // A recovered location establishes a fresh reference, never a finishing turn.
     if(this.elbowBaseline[i])this.elbowBaseline[i].gap+=(h.wristStart?.y??wrist.y)-wrist.y;
-    h.wristStart={...wrist};this.forearmBaseline[i]=null;this.hold=0;this.finishDipSince=null;
+    h.wristStart={...wrist};this.forearmBaseline[i]=null;this.forearmSamples[i]=[];this.hold=0;this.finishDipSince=null;
    }
    if(h.wristTrack?.recoveredAt!==null)wristOpacity[i]=clamp((now-h.wristTrack.recoveredAt)/200);
    return wrist;
@@ -262,12 +267,24 @@ export class CollarInteraction{
   // This is a 2D motion cue, not a measurement of choking pressure.
   const mixed=directions[0]!==directions[1];
   const forearmMotion=arms.map((a,i)=>{
-   if(!grips[i])this.forearmBaseline[i]=null;
+   if(!grips[i]){this.forearmBaseline[i]=null;this.forearmSamples[i]=[]}
    if(!mixed||!grips[i]||!scoringWrists[i]||!armVisible(a))return null;
-   const wrist=scoringWrists[i];
-   this.forearmBaseline[i]??={wrist:{...wrist},elbow:{...a.elbow}};
-   const base=this.forearmBaseline[i],angle=wristTurn(base.elbow,a.elbow,wrist,base.wrist);
-   return angle===null?null:{angle,dx:a.elbow.x-wrist.x-(base.elbow.x-base.wrist.x),dy:a.elbow.y-wrist.y-(base.elbow.y-base.wrist.y)};
+   const pose=a.wrist,hand=scoringWrists[i];
+   const usablePose=pose&&!poseSwapped&&(pose.visibility??1)>=this.tuning.wristVisibility&&Math.hypot(pose.x-hand.x,pose.y-hand.y)<.12;
+   this.forearmBaseline[i]??={wrist:{...(usablePose?pose:hand)},elbow:{...a.elbow},source:usablePose?'pose':'hand'};
+   const base=this.forearmBaseline[i],offset=this.hands[i].poseOffset;
+   const wrist=base.source==='pose'?(usablePose?pose:offset?{x:hand.x-offset.x,y:hand.y-offset.y}:null):hand;
+   if(!wrist)return null;
+   if(usablePose)base.lastPose={wrist:{...pose},elbow:{...a.elbow},time:now};
+   const angle=wristTurn(base.elbow,a.elbow,wrist,base.wrist);
+   if(angle===null){this.forearmSamples[i]=[];return null}
+   // One actual pose sample gets one vote; repainting a cached frame cannot
+   // outvote the preceding camera samples. Three-sample median rejects spikes.
+   let samples=this.forearmSamples[i].filter(s=>now-s.time<250);
+   if(!samples.some(s=>s.sample===poseSampleTime))samples.push({angle,time:now,sample:poseSampleTime});
+   samples=samples.slice(-3);this.forearmSamples[i]=samples;
+   const ordered=samples.map(s=>s.angle).sort((a,b)=>a-b),filtered=ordered.length===3?ordered[1]:angle;
+   return {angle:filtered,dx:a.elbow.x-wrist.x-(base.elbow.x-base.wrist.x),dy:a.elbow.y-wrist.y-(base.elbow.y-base.wrist.y)};
   });
   const forearmLevels=forearmMotion.map(m=>m?clamp(Math.abs(m.angle)/this.tuning.wristAngle):0);
   // Sliding both elbows together is translation, not two independently turning

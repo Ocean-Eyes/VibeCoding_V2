@@ -17,7 +17,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   for(const name of ['collar-hands','gyaku-hands','acquisition-hands'])await page.route(`**/tests/fixtures/${name}.mjs`,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(`tests/fixtures/${name}.mjs`,'utf8')}));
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
    const deps=Promise.all([import('./pose.js'),import('/tests/fixtures/collar-hands.mjs'),import('/tests/fixtures/gyaku-hands.mjs'),import('/tests/fixtures/acquisition-hands.mjs')]);
-   let previous=null,kataAngle=0;
+   let previous=null,kataAngle=0,kataFrames=0;
    function gradual(target){
     if(!previous){previous=target.map(h=>h?.map(p=>({...p}))??null);return target}
     const result=target.map((hand,i)=>{
@@ -77,11 +77,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      if(data.phase!=='fast'&&data.phase!=='wrist-return'&&!data.phase.startsWith('recover-'))hands=gradual(hands);
      hands.forEach((hand,i)=>{if(hand)pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
      if(data.kata){
+      kataFrames++;
       const target=['kata-turn','kata-one','kata-hidden'].includes(data.phase)?.36:0;
       kataAngle+=Math.max(-.018,Math.min(.018,target-kataAngle));
       for(let i=0;i<2;i++){
        const wrist=pose[15+i],wx=(frame.origin.x-wrist.x)/frame.scale,wy=(wrist.y-frame.origin.y)/frame.scale;
-       const a=data.phase==='kata-one'&&i===1?0:kataAngle,c=Math.cos(a),s=Math.sin(a),dx=(i?.67:-.67)-wx,dy=.70-wy;
+       const a=data.phase==='kata-one'&&i===1?0:data.phase==='kata-hidden'&&i===1&&kataFrames%5===0?Math.max(0,kataAngle-.24):kataAngle,c=Math.cos(a),s=Math.sin(a),dx=(i?.67:-.67)-wx,dy=.70-wy;
        pose[13+i]={x:frame.origin.x-(wx+dx*c-dy*s)*frame.scale,y:frame.origin.y+(wy+dx*s+dy*c)*frame.scale,visibility:1};
       }
       if(data.phase==='kata-hidden')hands=[null,null];
@@ -133,7 +134,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     await page.locator('#result-dialog').waitFor({state:'visible'});
     if(mirror){await page.locator('#result-again').click();await page.locator('#play').click();await page.waitForTimeout(3100)}
    }
-   assert.deepEqual(errors,[]);console.log('PASS Kata mixed-grip acquisition, one-arm rejection, asymmetric forearm finish with hidden fingers, visible gloves, tap and release in both mirror modes. Synthetic camera landmarks.');return;
+   assert.deepEqual(errors,[]);console.log('PASS Kata mixed-grip acquisition, one-arm rejection, asymmetric forearm finish with hidden fingers and noisy right elbow, visible gloves, tap and release in both mirror modes. Synthetic camera landmarks.');return;
   }
   if(gyakuOnly){
    for(const mirror of [true,false]){
