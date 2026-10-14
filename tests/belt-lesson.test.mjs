@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BELT_STEPS,BELT_SOURCE,BELT_REFERENCE_2,BELT_LENGTH,BELT_WIDTH,beltPose,beltAnchor,pathLength,demoPlacement,cinematicPlacement,project,drawGhostBelt} from '../src/belt-geometry.js';
+import {BELT_STEPS,beltInspectionPoints,BELT_THREADING,BELT_THICKNESS,BELT_SOURCE,BELT_REFERENCE_2,BELT_LENGTH,BELT_WIDTH,beltPose,beltAnchor,pathLength,demoPlacement,cinematicPlacement,project,drawGhostBelt} from '../src/belt-geometry.js';
 const SIZE=6.4/7.6;
 const dist=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
 test('all seven stages join without teleporting the cloth at their boundaries',()=>{
@@ -37,7 +37,7 @@ test('default camera placement and demo framing retain long ends and the head',(
 });
 test('underpass is behind both front waist layers; back view reverses depth',()=>{
  const p=beltPose(3),a=p.halves[0].ribbon;
- const inserted=a.filter(v=>Math.abs(v.p[0])<.15&&Math.abs(v.p[1])<.08&&v.p[2]>.20*SIZE&&v.p[2]<.25*SIZE);
+ const inserted=a.filter(v=>Math.abs(v.p[0])<.15&&Math.abs(v.p[1])<.08&&v.p[2]>.24*SIZE&&v.p[2]<.252*SIZE);
  assert.ok(inserted.length>0,'threaded cloth goes between body and standing belt');
  const point=[.2,.1,.3];assert.equal(project(point,'back')[0],-.2);assert.ok(project(point,'front')[1]<project(point,'back')[1]);
 });
@@ -55,11 +55,11 @@ test('reference sequence keeps B still while A forms the loop, then A still whil
   for(let n=0;n<loop.a.length;n++)assert.ok(dist(duringThread.a[n],loop.a[n])<1e-9,'A loop must stay open during B insertion');
  }
  assert.ok(dist(before.a.at(-1),loop.a.at(-1))>.3);assert.ok(dist(loop.b.at(-1),thread.b.at(-1))>.3);
- assert.ok(before.a.at(-1)[1]>0,'A returns down after passing beneath both layers');
- assert.ok(before.a.at(-1)[0]<0&&before.b.at(-1)[0]>0,'first underpass leaves the ends on opposite sides');
+ assert.ok(before.a.at(-1)[1]<0,'reference 12.5s: A is raised to the side after the underpass');
+ assert.ok(before.a.at(-1)[0]>0&&before.b.at(-1)[0]<0,'first underpass leaves the ends on opposite sides');
  assert.ok(beltPose(2).a.at(-1)[1]>0&&beltPose(2).b.at(-1)[1]>0,'ends remain below the waist before threading');
  assert.ok(!BELT_STEPS.some(s=>s.title.includes('길이 맞추기')),'removed length-check step stays removed');
- assert.ok(BELT_SOURCE.includes('poG-fDcqUA0'));assert.ok(BELT_REFERENCE_2.includes('IG5WBxopLJw'));assert.ok(BELT_STEPS.every(s=>s.reference.length===2));
+ assert.ok(BELT_SOURCE.includes('F-NJFRGi6ys'));assert.ok(BELT_REFERENCE_2.includes('IG5WBxopLJw'));assert.ok(BELT_STEPS.every(s=>s.reference.length===2));
 });
 test('passing the rear center and returning to the front does not teleport a hanging end',()=>{
  let previous=beltPose(1,0);
@@ -83,9 +83,9 @@ function insertionAt(step,fraction){
  return beltPose(step,(lo+hi)/2);
 }
 test('the tip reaches each opening before material emerges on its other side',()=>{
- const cases=[{step:3,index:0,entry:[-.06,.065,.222],vertical:-1},{step:4,index:0,entry:[.07,-.055,.265],vertical:1},{step:5,index:1,entry:[-.03,.12,.44],vertical:-1}];
+ const cases=[{step:3,index:0,entry:[-.04,.06,.244],vertical:-1},{step:4,index:0,entry:[.18,-.065,.2595],vertical:1},{step:5,index:1,entry:[-.16,-.065,.2595],vertical:1}];
  for(const {step,index,entry:authoredEntry,vertical} of cases){
-  const entry=authoredEntry.map(v=>v*SIZE);
+  const entry=authoredEntry.map((v,i)=>v*SIZE*(i===0?-1:1));
   const start=insertionAt(step,0).halves[index].path.at(-1),arrive=insertionAt(step,.3).halves[index].path.at(-1),through=insertionAt(step,.4).halves[index].path.at(-1);
   assert.ok(dist(start,entry)>.3,'the hanging tip starts away from the opening');
   assert.ok(dist(arrive,entry)<1e-7,'the tip, not the middle of the strip, arrives first');
@@ -111,4 +111,50 @@ test('dense material samples stay continuous while the tip is lifted and fed thr
    previous=current;
   }
  }
+});
+
+const sub3=(a,b)=>a.map((v,i)=>v-b[i]);
+const dot3=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
+const unit3=a=>a.map(v=>v/Math.hypot(...a));
+const cross3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+function segmentDistance(p,a,b){
+ const ab=sub3(b,a),t=Math.max(0,Math.min(1,dot3(sub3(p,a),ab)/dot3(ab,ab)));
+ return dist(p,a.map((v,i)=>v+ab[i]*t));
+}
+test('B enters the opposite waist gap downward before crossing the retained A opening',()=>{
+ const path=beltPose(5).halves[1].path,{gap,center,normal}=BELT_THREADING;
+ const entry=path.findIndex(p=>dist(p,gap[0])<1e-9),exit=path.findIndex(p=>dist(p,gap[1])<1e-9);
+ assert.ok(entry>=0&&exit===entry+1);assert.ok(gap[1][1]>gap[0][1]);
+ const before=path[exit+1],after=path[exit+2];
+ assert.ok(dot3(sub3(before,center),normal)<0);assert.ok(dot3(sub3(after,center),normal)>0);
+ const segment=sub3(after,before),t=-dot3(sub3(before,center),normal)/dot3(segment,normal);
+ assert.ok(dist(before.map((v,i)=>v+t*segment[i]),center)<1e-9,'B goes through the opening, not around it');
+});
+test('the retained aperture has room for the full belt width and thickness before and after tightening',()=>{
+ const {opening,center,normal,tightenScale}=BELT_THREADING;
+ const axis=unit3(sub3(opening.at(-1),opening[0])),up=unit3(cross3(normal,axis));
+ for(const scale of [1,tightenScale]){
+  const boundary=opening.map(p=>sub3(p,center).map(v=>v*scale));boundary.push(boundary[0]);
+  for(const side of [-1,1])for(const face of [-1,1]){
+   const corner=axis.map((v,i)=>v*side*BELT_WIDTH/2+up[i]*face*BELT_THICKNESS/2);
+   const clearance=Math.min(...boundary.slice(1).map((p,i)=>segmentDistance(corner,boundary[i],p)));
+   assert.ok(clearance>BELT_WIDTH/2,`full strip clearance at scale ${scale}: ${clearance}`);
+  }
+ }
+});
+test('reference finish pulls tips outward without lengthening the material or switching A/B',()=>{
+ const before=beltPose(5),after=beltPose(6);
+ assert.ok(after.a.at(-1)[0]<before.a.at(-1)[0]);assert.ok(after.b.at(-1)[0]>before.b.at(-1)[0]);
+ for(const key of ['a','b']){
+  const tail=after[key].slice(-10),delta=sub3([...tail.at(-1),0],[...tail[0],0]);
+  assert.ok(Math.abs(delta[0])>5*Math.abs(delta[1]),'pull is sideways as in reference 19.5s');
+ }
+});
+test('inspection stops coincide with tip entry and B emergence through the held opening',()=>{
+ const {center,normal,gap}=BELT_THREADING,stops=beltInspectionPoints(5);
+ assert.equal(stops.length,2);
+ assert.ok(dist(beltPose(5,stops[0]).halves[1].path.at(-1),gap[0])<1e-8);
+ const tip=beltPose(5,stops[1]).halves[1].path.at(-1);
+ assert.ok(dot3(sub3(tip,center),normal)>0);assert.ok(dist(tip,center)<.08);
+ assert.equal(beltPose(5,stops[1]).halves[1].freeLength,0,'pause before drawing the free tail');
 });

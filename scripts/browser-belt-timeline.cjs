@@ -8,7 +8,7 @@ const assert=require('node:assert/strict');
   const enter=async p=>{await p.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');await p.locator('[data-category="basics"]').click();await p.locator('[data-lesson="belt"]').click();await p.waitForFunction(()=>document.querySelectorAll('[data-belt-step]').length===7)};
   await enter(page);
   await page.locator('[data-belt-step="4"]').click();
-  assert.match(await page.locator('#belt-source').getAttribute('href'),/poG-fDcqUA0.*t=13.5s/);
+  assert.match(await page.locator('#belt-source').getAttribute('href'),/F-NJFRGi6ys.*t=15s/);
   assert.match(await page.locator('#belt-source-2').getAttribute('href'),/IG5WBxopLJw.*t=20.5s/);
   const phase=()=>page.locator('#belt-canvas').getAttribute('data-phase');
   const travel=async speed=>{
@@ -19,7 +19,7 @@ const assert=require('node:assert/strict');
    return value;
   };
   const slow=await travel('0.5'),fast=await travel('1.5');assert.ok(fast>slow+6,`speed changes progress: ${slow}, ${fast}`);
-  await page.locator('#belt-speed').selectOption('1');await page.locator('#belt-scrub').fill('48');
+  await page.locator('#belt-speed').selectOption('1');await page.locator('#belt-scrub').fill('16');
   await page.locator('#belt-play').click();await page.waitForFunction(()=>document.querySelector('#belt-film-status').textContent==='통과 지점 확인');
   const held=await phase();await page.waitForTimeout(220);assert.equal(await phase(),held,'inspection holds still');await page.locator('#belt-play').click();
   await page.locator('#belt-scrub').fill('100');await page.waitForTimeout(100);assert.equal(await page.locator('#belt-canvas').getAttribute('data-step'),'4','scrubbing does not advance lesson');

@@ -1,15 +1,15 @@
-export const BELT_SOURCE='https://www.youtube.com/watch?v=poG-fDcqUA0';
+export const BELT_SOURCE='https://www.youtube.com/watch?v=F-NJFRGi6ys';
 export const BELT_REFERENCE_2='https://www.youtube.com/watch?v=IG5WBxopLJw';
 // Authored from the supplied videos. A is the end threaded first; the second
 // video's demonstrator uses the opposite hand, but the insertion order agrees.
 export const BELT_STEPS=[
- {title:'가운데를 허리 앞에',cue:'띠 가운데를 허리 앞에 대고 양끝을 같은 길이로 늘어뜨립니다.',focus:'띠를 비틀지 않고 넓은 면이 몸에 닿게 놓습니다.',move:'양끝 준비',reference:[5,0]},
- {title:'등 뒤로 감아 교차',cue:'가운데를 허리 앞에 댄 채 양끝을 뒤로 보내 교차합니다.',focus:'뒤쪽 보기에서 등 뒤의 두 겹을 확인하세요.',move:'양끝을 등 뒤로',reference:[6,5.5]},
- {title:'앞으로 가져와 교차',cue:'뒤에서 교차한 양끝을 앞으로 가져옵니다. A를 B 위에 겹칩니다.',focus:'양끝을 위로 들어 올리지 않고 허리 앞에서 교차합니다.',move:'허리 앞에서 A를 B 위로',reference:[9.5,12.5]},
- {title:'A를 두 겹 밑으로',cue:'A를 교차한 띠와 허리에 감긴 두 겹 모두의 밑에서 위로 통과시킨 뒤 아래로 내립니다.',focus:'A가 두 겹을 함께 감쌉니다. 끝을 계속 위로 세워 두지 않습니다.',move:'A 통과 · B 유지',reference:[11,15]},
- {title:'A를 끼워 고리 만들기',cue:'A를 다시 들어 반대편 허리띠의 겹 사이에 위에서 아래로 끼웁니다. 앞에는 고리를 남겨 둡니다.',focus:'이 단계에서는 A만 고리를 만듭니다. B는 아직 통과시키지 않습니다.',move:'A로 고리 · B 유지',reference:[13.5,20.5]},
- {title:'B를 고리에 통과',cue:'남겨 둔 A의 고리와 띠 겹 사이의 통로로 B를 통과시킵니다. 고리를 놓치지 않고 양끝을 잡습니다.',focus:'새 고리를 두 개 만들지 않고, B 끝이 A의 고리를 지나갑니다.',move:'B 통과 · A 유지',reference:[15,24]},
- {title:'양끝 당겨 매듭 정리',cue:'양끝을 좌우로 당겨 고리를 줄이고 매듭을 납작하게 정리합니다. 끝은 아래로 향하게 둡니다.',focus:'허리의 두 겹과 매듭이 꼬이지 않았는지 확인합니다.',move:'A · B 조이기',reference:[16.5,26]},
+ {title:'가운데를 허리 앞에',cue:'띠 가운데를 허리 앞에 대고 양끝을 같은 길이로 늘어뜨립니다.',focus:'띠를 비틀지 않고 넓은 면이 몸에 닿게 놓습니다.',move:'양끝 준비',reference:[2,0]},
+ {title:'등 뒤로 감아 교차',cue:'가운데를 허리 앞에 댄 채 양끝을 뒤로 보내 교차합니다.',focus:'뒤쪽 보기에서 등 뒤의 두 겹을 확인하세요.',move:'양끝을 등 뒤로',reference:[3.2,5.5]},
+ {title:'앞으로 가져와 교차',cue:'뒤에서 교차한 양끝을 앞으로 가져옵니다. A를 B 위에 겹칩니다.',focus:'양끝을 위로 들어 올리지 않고 허리 앞에서 교차합니다.',move:'허리 앞에서 A를 B 위로',reference:[5.4,12.5]},
+ {title:'A를 두 겹 밑으로',cue:'A를 교차한 띠와 허리에 감긴 두 겹 모두의 밑에서 위로 통과시킨 뒤 옆으로 빼냅니다.',focus:'A가 두 겹을 함께 감쌉니다. 이 끝을 다시 반대편으로 가져가 고리를 만듭니다.',move:'A 통과 · B 유지',reference:[12.5,15]},
+ {title:'A를 끼워 고리 만들기',cue:'A를 다시 들어 반대편 허리띠의 겹 사이에 위에서 아래로 끼웁니다. 앞에는 고리를 남겨 둡니다.',focus:'이 단계에서는 A만 고리를 만듭니다. B는 아직 통과시키지 않습니다.',move:'A로 고리 · B 유지',reference:[15,20.5]},
+ {title:'B를 겹 사이와 고리에 통과',cue:'B 끝을 반대편 띠 겹 사이로 내려 넣고, 남겨 둔 A의 고리 앞으로 빼냅니다.',focus:'새 고리를 두 개 만들지 않고, B 끝이 A의 고리를 지나갑니다.',move:'B 통과 · A 유지',reference:[17,24]},
+ {title:'양끝 당겨 매듭 정리',cue:'양끝을 좌우로 당겨 고리를 줄이고 매듭을 납작하게 정리합니다. 양끝을 잡은 채 좌우로 당기는 모습을 확인하세요.',focus:'허리의 두 겹과 매듭이 꼬이지 않았는지 확인합니다.',move:'A · B 조이기',reference:[19.5,26]},
 ];
 // A single inextensible, stiff obi. Coordinates are in waist-width units.
 // The waist contact arc consumes material; only the remaining length is free.
@@ -19,7 +19,7 @@ export const BELT_STEPS=[
 const AUTHORED_LENGTH=7.6;
 export const BELT_LENGTH=6.4;
 const SIZE=BELT_LENGTH/AUTHORED_LENGTH;
-export const BELT_WIDTH=.09*SIZE, BELT_THICKNESS=.008*SIZE;
+export const BELT_WIDTH=.09*SIZE, BELT_THICKNESS=.006*SIZE;
 const RX=.46,RZ=.24,TAU=Math.PI*2;
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]);
 const mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
@@ -32,11 +32,12 @@ export const pathLength=points=>points.slice(1).reduce((s,p,i)=>s+norm(sub(p,poi
 // opening, then draw the remaining slack through. The idle end stays fixed.
 const ROOT={a:[0,-.008,.267],b:[0,.008,.252]};
 const CROSS={a:[ROOT.a,[-.12,.045,.32]],b:[ROOT.b,[.14,.045,.30]]};
-const FIRST=[...CROSS.a,[-.06,.065,.222],[-.04,-.065,.222],[-.055,-.065,.32],[-.095,.025,.34]];
-const LOOP=[...FIRST,[-.065,.11,.39],[.07,-.055,.265],[.07,.06,.265],[.095,.095,.31]];
-const SECOND=[...CROSS.b,[-.03,.12,.44],[.095,-.065,.29],[.11,.075,.29],[-.12,.125,.47]];
+// Authored in the old coordinate convention; rendered x is reflected to match
+// the primary video's front view (A exits first on viewer-right).
+const FIRST=[...CROSS.a,[-.04,.06,.244],[-.04,-.06,.244],[-.10,-.06,.31],[-.14,.02,.32]];
+const A_LOOP_ENTRY=[.18,-.065,.2595],A_LOOP_EXIT=[.18,.065,.2595];
 const DOWN={a:unit([-.15,1,0]),b:unit([.15,1,0])};
-const FIRST_DOWN=unit([-.15,1,0]),LOOP_DOWN=unit([.26,1,0]),SECOND_DOWN=unit([-.3,1,0]);
+const FIRST_DOWN=unit([-.92,-.38,0]),LOOP_DOWN=unit([.85,.3,0]),SECOND_DOWN=unit([-1,.25,0]);
 function resample(points,count){
  const lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+norm(sub(points[i],points[i-1])));
  const total=lengths.at(-1);let j=1;
@@ -62,6 +63,21 @@ function bight(start,end,length,outward){
  for(let n=0;n<34;n++){const height=(low+high)/2;route=roundBend(start,add(center,mul(side,height)),end);if(pathLength(route)<length)low=height;else high=height}
  return route;
 }
+// One semicircular fold for the opening held in front of the waist. Its two
+// legs share a plane; the height is solved from available material, not scale.
+function loopFold(start,end,length,outward){
+ const axis=unit(sub(end,start)),d=norm(sub(end,start)),center=lerp(start,end,.5);
+ if(d>length+1e-7)throw new Error('Loop target exceeds available material');
+ const bend=unit(sub(outward,mul(axis,dot(outward,axis)))),radius=d/2;
+ const route=height=>{
+  const leg=Math.max(0,height-radius),turn=Math.min(height,radius),points=[start];
+  for(let i=0;i<=32;i++){const angle=Math.PI*i/32;points.push(add(add(center,mul(axis,-radius*Math.cos(angle))),mul(bend,leg+turn*Math.sin(angle))))}
+  points.push(end);return points;
+ };
+ let lo=0,hi=length,points;
+ for(let n=0;n<34;n++){const mid=(lo+hi)/2;points=route(mid);if(pathLength(points)<length)lo=mid;else hi=mid}
+ return points;
+}
 function finish(prefix,direction,length){
  const freeLength=length-pathLength(prefix);if(freeLength<=0)throw new Error('Belt route exceeds available cloth');
  return {local:[...prefix,add(prefix.at(-1),mul(direction,freeLength))],freeLength};
@@ -72,21 +88,22 @@ function sliceAtDistance(points,distance){
   out.push(points[i]);distance-=n;
  }return out;
 }
-function insert(prefix,passage,directionBefore,directionAfter,available,t,{slack=0,outward=[0,1,1]}={}){
+function insert(prefix,passage,directionBefore,directionAfter,available,t,{slack=0,outward=[0,1,1],fold=bight,controlOffset=null}={}){
  const start=prefix.at(-1),entry=passage[0],pLength=pathLength(prefix),remaining=available-pLength;
+ const foldDirection=typeof outward==='function'?outward(t):outward;
  const before=add(start,mul(directionBefore,remaining));
  if(t<=.3){
   // The tip arrives at the opening before any of the cloth is threaded.
-  const u=ease(t/.3),control=add(start,[Math.sign(entry[0]-start[0])*.4,.4,.15]);
+  const u=ease(t/.3),control=add(start,controlOffset??[Math.sign(entry[0]-start[0])*.4,.4,.15]);
   const tip=add(add(mul(before,(1-u)**2),mul(control,2*u*(1-u))),mul(entry,u*u));
-  return {local:[...prefix,...bight(start,tip,remaining,outward).slice(1)],freeLength:0,operation:'approach'};
+  return {local:[...prefix,...fold(start,tip,remaining,foldDirection).slice(1)],freeLength:0,operation:'approach'};
  }
  const routeLength=pathLength(passage),approach=norm(sub(entry,start))+slack;
  const after=remaining-approach-routeLength;
  if(after<=0)throw new Error('Insufficient cloth after insertion');
  const fed=ease((t-.3)/.7)*(routeLength+after);
  const pending=remaining-fed;
- const incoming=bight(start,entry,pending,outward);
+ const incoming=fold(start,entry,pending,foldDirection);
  if(fed<routeLength){
   return {local:[...prefix,...incoming.slice(1),...sliceAtDistance(passage,fed).slice(1)],freeLength:0,operation:'tip-through'};
  }
@@ -106,23 +123,40 @@ function wrapRoute(key,phase){
  const direction=unit(lerp(unit([side*Math.sin(TAU*wrap)*.18,1,0]),DOWN[key],t));
  return {waist,...finish(local,direction,remaining),wrap,operation:phase<1?'wrap-back':'return-front'};
 }
-const A_PASS=FIRST.slice(CROSS.a.length),A_LOOP=LOOP.slice(FIRST.length+1),B_PASS=SECOND.slice(CROSS.b.length);
-const LOOP_SLACK=pathLength([FIRST.at(-1),LOOP[FIRST.length],A_LOOP[0]])-norm(sub(A_LOOP[0],FIRST.at(-1)));
-function settledLoop(){return [...FIRST,...bight(FIRST.at(-1),A_LOOP[0],norm(sub(A_LOOP[0],FIRST.at(-1)))+LOOP_SLACK,[0,1,1]).slice(1),...A_LOOP.slice(1)]}
-const A_LOOP_HELD=settledLoop();
-function compact(points,key){return points.map((p,i)=>i===0?p:[p[0]*.72,p[1]*.65,ROOT[key][2]+(p[2]-ROOT[key][2])*.78])}
-const FINAL={a:compact(A_LOOP_HELD,'a'),b:compact(SECOND,'b')};
+const A_PASS=FIRST.slice(CROSS.a.length),A_LOOP=[A_LOOP_ENTRY,A_LOOP_EXIT,[.20,.09,.33]];
+const LOOP_SLACK=.24;
+const LOOP_CURVE=loopFold(FIRST.at(-1),A_LOOP_ENTRY,norm(sub(A_LOOP_ENTRY,FIRST.at(-1)))+LOOP_SLACK,[0,1,.3]);
+const A_LOOP_HELD=[...FIRST,...LOOP_CURVE.slice(1),...A_LOOP.slice(1)];
+const bridge=lerp(LOOP_CURVE[0],LOOP_CURVE.at(-1),.5),loopAxis=unit(sub(LOOP_CURVE.at(-1),LOOP_CURVE[0]));
+const low=LOOP_CURVE.reduce((best,p)=>norm(cross(sub(p,bridge),loopAxis))>norm(cross(sub(best,bridge),loopAxis))?p:best,bridge);
+const loopCenter=lerp(bridge,low,.5);
+let loopNormal=unit(cross(loopAxis,sub(low,bridge)));if(loopNormal[2]<0)loopNormal=mul(loopNormal,-1);
+const B_GAP=[[-.16,-.065,.2595],[-.16,.065,.2595]];
+const SECOND=[...CROSS.b,...B_GAP,add(loopCenter,mul(loopNormal,-.045)),add(loopCenter,mul(loopNormal,.06)),add(loopCenter,[-.09,.025,.12])];
+const B_PASS=SECOND.slice(CROSS.b.length);
+const compact=p=>[p[0]*.75,p[1]*.75,.2595+(p[2]-.2595)*.75];
+const FINAL={a:A_LOOP_HELD.map((p,i)=>i?compact(p):p),b:SECOND.map((p,i)=>i?compact(p):p)};
+// These guides expose aperture geometry for geometric checks, not a claim of
+// exact hidden cloth geometry: the reference hands obscure the layer passage.
+export const BELT_THREADING={
+ opening:LOOP_CURVE.map(p=>[-p[0]*SIZE,p[1]*SIZE,p[2]*SIZE]),
+ center:[-loopCenter[0]*SIZE,loopCenter[1]*SIZE,loopCenter[2]*SIZE],
+ normal:[-loopNormal[0],loopNormal[1],loopNormal[2]],
+ gap:B_GAP.map(p=>[-p[0]*SIZE,p[1]*SIZE,p[2]*SIZE]),
+ tightenScale:.75
+};
 function knotRoute(key,phase,length){
  if(key==='a'){
   if(phase<3)return insert(CROSS.a,A_PASS,DOWN.a,FIRST_DOWN,length,phase-2);
-  if(phase<4)return insert(FIRST,A_LOOP,FIRST_DOWN,LOOP_DOWN,length,phase-3,{slack:LOOP_SLACK});
+  if(phase<4)return insert(FIRST,A_LOOP,FIRST_DOWN,LOOP_DOWN,length,phase-3,{slack:LOOP_SLACK,fold:loopFold,outward:t=>lerp([0,.15,1],[0,1,.3],ease((t-.3)/.7)),controlOffset:[.15,-.4,.08]});
   if(phase<=5)return {...finish(A_LOOP_HELD,LOOP_DOWN,length),operation:'hold-loop'};
  }else{
   if(phase<=4)return {...finish(CROSS.b,DOWN.b,length),operation:'hold-end'};
-  if(phase<5)return insert(CROSS.b,B_PASS,DOWN.b,SECOND_DOWN,length,phase-4,{outward:[0,1,1]});
+  if(phase<5)return insert(CROSS.b,B_PASS,DOWN.b,SECOND_DOWN,length,phase-4);
  }
- const a=key==='a'?A_LOOP_HELD:SECOND,b=FINAL[key],t=ease(phase-5);
- return {...finish(a.map((p,i)=>lerp(p,b[i],t)),key==='a'?LOOP_DOWN:SECOND_DOWN,length),operation:'tighten'};
+ const before=key==='a'?A_LOOP_HELD:SECOND,after=FINAL[key],t=ease(phase-5);
+ const held=key==='a'?LOOP_DOWN:SECOND_DOWN,out=unit([key==='a'?1:-1,.12,0]);
+ return {...finish(before.map((p,i)=>lerp(p,after[i],t)),unit(lerp(held,out,t)),length),operation:'tighten'};
 }
 function makeRibbon(points,key,waistLength){
  let across=[0,1,0];
@@ -133,13 +167,36 @@ function makeRibbon(points,key,waistLength){
   // Face the camera only after leaving the waist, via a gradual cloth roll.
   const material=i/(points.length-1)*points.materialLength;
   if(material>waistLength+.08*SIZE){let front=unit(cross([0,0,1],tangent));if(dot(front,across)<0)front=mul(front,-1);across=unit(lerp(across,front,.16))}
+  if(key==='b'){
+   const center=BELT_THREADING.center,normal=BELT_THREADING.normal,distance=norm(sub(p,center));
+   if(distance<.16&&Math.abs(dot(tangent,normal))>.65){
+    const axis=unit(sub(BELT_THREADING.opening.at(-1),BELT_THREADING.opening[0]));
+    let aligned=unit(sub(axis,mul(tangent,dot(axis,tangent))));if(dot(aligned,across)<0)aligned=mul(aligned,-1);
+    across=unit(lerp(across,aligned,ease((.16-distance)/.09)));
+   }
+  }
   return {p,left:add(p,mul(across,BELT_WIDTH/2)),right:add(p,mul(across,-BELT_WIDTH/2)),normal:unit(cross(tangent,across)),s:material,key};
  });
 }
 function buildHalf(route,i,materialLength){
- const path=[...route.waist,...route.local.slice(1)].map(p=>mul(p,SIZE)),points=resample(path,480);
+ const path=[...route.waist,...route.local.slice(1)].map(p=>[-p[0]*SIZE,p[1]*SIZE,p[2]*SIZE]),points=resample(path,480);
  materialLength*=SIZE;points.materialLength=materialLength;
  return {path,materialLength,freeLength:route.freeLength*SIZE,operation:route.operation,ribbon:makeRibbon(points,i?'b':'a',pathLength(route.waist)*SIZE)};
+}
+const inverseEase=value=>{
+ let lo=0,hi=1;for(let n=0;n<40;n++){const mid=(lo+hi)/2;if(ease(mid)<value)lo=mid;else hi=mid}return (lo+hi)/2;
+};
+export function beltInspectionPoints(step){
+ const entry=inverseEase(.3);
+ if(step===5){
+  const waistA=pathLength(waistPath('a',1)),waistB=pathLength(waistPath('b',1));
+  const balance=(pathLength(FIRST)-pathLength(CROSS.b)+waistA-waistB)/2;
+  const available=AUTHORED_LENGTH/2-balance-waistB;
+  const feed=available-pathLength(CROSS.b)-norm(sub(B_PASS[0],CROSS.b.at(-1)));
+  const emerging=pathLength(B_PASS.slice(0,4));
+  return [entry,inverseEase(.3+.7*inverseEase(Math.min(1,emerging/feed)))];
+ }
+ return step>=3&&step<=4?[entry]:[];
 }
 const poseCache=new Map();
 export function beltPose(step,progress=1){
@@ -151,7 +208,9 @@ export function beltPose(step,progress=1){
   halves=routes.map((r,i)=>buildHalf(r,i,AUTHORED_LENGTH/2));
  }else{
   const waists=['a','b'].map(key=>waistPath(key,1));wrap=1;
-  const balance=ease(phase-5)*(pathLength(FINAL.a)-pathLength(FINAL.b)+pathLength(waists[0])-pathLength(waists[1]))/2;
+  const firstBalance=(pathLength(FIRST)-pathLength(CROSS.b)+pathLength(waists[0])-pathLength(waists[1]))/2;
+  const lastBalance=(pathLength(FINAL.a)-pathLength(FINAL.b)+pathLength(waists[0])-pathLength(waists[1]))/2;
+  const balance=ease(phase-2)*firstBalance+ease(phase-5)*(lastBalance-firstBalance);
   halves=['a','b'].map((key,i)=>{const materialLength=AUTHORED_LENGTH/2+(i?-balance:balance),waist=waists[i];return buildHalf({waist,...knotRoute(key,phase,materialLength-pathLength(waist))},i,materialLength)});
  }
  const pose={step,phase,wrap,halves,a:halves[0].ribbon.map(v=>project(v.p)),b:halves[1].ribbon.map(v=>project(v.p))};
@@ -206,7 +265,7 @@ export function drawGhostBelt(ctx,anchor,pose,{mirror=true,opacity=.92,labels=tr
   ctx.beginPath();poly.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.fill();
   // Overdraw shared edges in the same tone to avoid seams between mesh faces.
   ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=.002;ctx.stroke();
-  ctx.strokeStyle='#9aa0a05c';ctx.lineWidth=.0025;
+  ctx.strokeStyle='#adb1b160';ctx.lineWidth=.004;
   for(const side of ['left','right']){ctx.beginPath();ctx.moveTo(...pr(a[side]));ctx.lineTo(...pr(b[side]));ctx.stroke()}
   ctx.strokeStyle='#8e96964a';ctx.lineWidth=.0013;
   for(const t of [.16,.32,.5,.68,.84]){ctx.beginPath();ctx.moveTo(...pr(lerp(a.left,a.right,t)));ctx.lineTo(...pr(lerp(b.left,b.right,t)));ctx.stroke()}
