@@ -75,6 +75,16 @@ export function openFingers(hand){
   return length>.00001&&reach/length>.97&&forward>.70;
  });
 }
+// A collar hook bends the finger joints without closing the knuckles into a
+// fist. Wrist-to-tip extension alone misses that shape, especially in Gyaku.
+export function curledFingers(hand){
+ if(!hand||hand.length!==21)return [];
+ return [5,9,13,17].filter(i=>{
+  const a=hand[i],b=hand[i+1],c=hand[i+2],d=hand[i+3];
+  const length=distance(a,b)+distance(b,c)+distance(c,d);
+  return length>.00001&&distance(a,d)/length<.97;
+ });
+}
 // Camera-facing normal only: gravity/vertical tilt must not swap palm and back.
 // In projected mirrored coordinates a positive value means palm toward camera.
 function palmPlane(hand){
@@ -145,7 +155,7 @@ export class CollarInteraction{
    }
    const center=graspCenter(hand);
    const extended=openFingers(hand),open=extended.length>=3;
-   if(open)h.closed=false;else if(extension<.92)h.closed=true;
+   if(open)h.closed=false;else if(extension<.92||curledFingers(hand).length>=3)h.closed=true;
    if(h.grip){
     if(recoveredHands[i]&&!open){
      // Reacquisition changes the input origin, never the already attached cloth.

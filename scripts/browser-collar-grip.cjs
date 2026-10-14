@@ -14,9 +14,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    window.qaGripPhase='open';const Original=Worker;
    window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.phase=window.qaGripPhase;d.palmUp=window.qaPalmUp;d.edge=window.qaEdge;d.swap=window.qaSwap;d.ghostOpen=window.qaGhostOpen;d.wristVisibility=window.qaWristVisibility;d.recoverySide=window.qaRecoverySide??0;}super.postMessage(d,t)}};
   });
-  for(const name of ['collar-hands','gyaku-hands'])await page.route(`**/tests/fixtures/${name}.mjs`,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(`tests/fixtures/${name}.mjs`,'utf8')}));
+  for(const name of ['collar-hands','gyaku-hands','acquisition-hands'])await page.route(`**/tests/fixtures/${name}.mjs`,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(`tests/fixtures/${name}.mjs`,'utf8')}));
   await page.route('**/src/tracker.js*',route=>route.fulfill({contentType:'text/javascript',body:`
-   const deps=Promise.all([import('./pose.js'),import('/tests/fixtures/collar-hands.mjs'),import('/tests/fixtures/gyaku-hands.mjs')]);
+   const deps=Promise.all([import('./pose.js'),import('/tests/fixtures/collar-hands.mjs'),import('/tests/fixtures/gyaku-hands.mjs'),import('/tests/fixtures/acquisition-hands.mjs')]);
    let previous=null;
    function gradual(target){
     if(!previous){previous=target.map(h=>h?.map(p=>({...p}))??null);return target}
@@ -31,7 +31,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     return result;
    }
    self.onmessage=async({data})=>{
-    const [{POSES,targetPose},{collarHands,handAt},{gyakuHands}]=await deps;
+    const [{POSES,targetPose},{collarHands,handAt},{gyakuHands},{acquisitionHands}]=await deps;
     if(data.type==='init')self.postMessage({type:'ready'});
     if(data.type==='frame'){
      const w=data.bitmap.width,h=data.bitmap.height;data.bitmap.close();
@@ -70,6 +70,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
        hand=hand.map(p=>({x:center.x,y:p.y,z:p.x-center.x}));
       }
       if(data.phase.startsWith('gyaku-'))hand=gyakuHands({curl:['gyaku-edge','gyaku-lift','gyaku-collapsed','gyaku-open'].includes(data.phase)?0:1,roll:data.phase==='gyaku-open'?.85:data.phase==='gyaku-collapsed'?.2:1.4,collapsed:data.phase==='gyaku-collapsed'?.3:false})[i];
+      if(data.phase==='hook-open'||data.phase==='hook-close')hand=acquisitionHands({hook:data.phase==='hook-open'?0:.55})[i];
       const mapped=hand.map(p=>({x:frame.origin.x-p.x*frame.scale,y:frame.origin.y+p.y*frame.scale,z:p.z*frame.scale,visibility:1}));
       pose[15+i]=mapped[0];return mapped.map(p=>({...p,x:p.x/w,y:p.y/h,z:p.z/w}));
      });
@@ -107,7 +108,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   if(gyakuOnly){
    for(const mirror of [true,false]){
     await page.locator('#mirror').setChecked(mirror);
-    await phase('open',1200);await phase('close',1400);assert.equal(await grabbed(),'2');
+    await phase('hook-open',1200);assert.equal(await grabbed(),'0');
+    await phase('hook-close',1400);assert.equal(await grabbed(),'2','a collar hook must acquire without making a full fist');
+    await phase('hook-open',1000);assert.equal(await grabbed(),'0','opening a hooked grip releases');
+    await phase('close',1400);assert.equal(await grabbed(),'2');
     await page.evaluate(()=>window.qaWristVisibility=.1);
     await phase('gyaku-roll',1200);assert.equal(await grabbed(),'2');
     await phase('gyaku-edge',1800);assert.equal(await grabbed(),'2','self-occluded fingers cannot unlatch');
@@ -121,7 +125,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     await page.locator('#result-dialog').waitFor({state:'visible'});
     if(mirror){await page.locator('#result-again').click();await page.locator('#play').click();await page.waitForTimeout(3100)}
    }
-   assert.deepEqual(errors,[]);console.log('PASS Gyaku actual app path, mirrored and unmirrored: 3D roll, self-occluded false-open estimates, collapsed fingertips, no body-model wrists, two visible gloves, finish -> tap -> deliberate tilted opening -> release. Synthetic landmarks.');return;
+   assert.deepEqual(errors,[]);console.log('PASS Gyaku actual app path, mirrored and unmirrored: open -> collar hook -> release, 3D roll, self-occluded false-open estimates, collapsed fingertips, no body-model wrists, two visible gloves, finish -> tap -> deliberate tilted opening -> release. Synthetic landmarks.');return;
   }
   await phase('outside');assert.equal(await grabbed(),'0');
   await phase('close');assert.equal(await grabbed(),'2','prepared closed hands acquire the opposite collars without reopening');
