@@ -11,7 +11,7 @@ for(let step=0;step<7;step++)test(`stage ${step+1} preserves cloth length, width
   const pose=beltPose(step,i/40),length=pose.halves.reduce((s,h)=>s+pathLength(h.path),0);assert.ok(Math.abs(length-BELT_LENGTH)<1e-8);
   assert.ok(dist(pose.halves[0].path[0],pose.halves[1].path[0])<1e-10,'one continuous midpoint');
   for(const h of pose.halves){
-   assert.ok(h.freeLength>.05);
+   assert.ok(h.freeLength>=0); // While feeding, the tip can be inside the opening.
    for(const v of h.ribbon){assert.ok(v.p.every(Number.isFinite));assert.ok(Math.abs(dist(v.left,v.right)-BELT_WIDTH)<1e-9,'fixed cloth width')}
    assert.ok(Math.abs(pathLength(h.ribbon.map(v=>v.p))-h.materialLength)/h.materialLength<.015,'rendered mesh does not stretch');
    const tail=h.ribbon.filter(v=>v.s>h.materialLength-h.freeLength+.04).map(v=>v.p);
@@ -55,7 +55,9 @@ test('reference sequence keeps B still while A forms the loop, then A still whil
  }
  assert.ok(dist(before.a.at(-1),loop.a.at(-1))>.3);assert.ok(dist(loop.b.at(-1),thread.b.at(-1))>.3);
  assert.ok(before.a.at(-1)[1]>0,'A returns down after passing beneath both layers');
- assert.ok(beltPose(2).a.at(-1)[1]<0&&beltPose(2).b.at(-1)[1]<0,'ends lift together for the length check');
+ assert.ok(before.a.at(-1)[0]<0&&before.b.at(-1)[0]>0,'first underpass leaves the ends on opposite sides');
+ assert.ok(beltPose(2).a.at(-1)[1]>0&&beltPose(2).b.at(-1)[1]>0,'ends remain below the waist before threading');
+ assert.ok(!BELT_STEPS.some(s=>s.title.includes('길이 맞추기')),'removed length-check step stays removed');
  assert.ok(BELT_SOURCE.includes('poG-fDcqUA0'));assert.ok(BELT_REFERENCE_2.includes('IG5WBxopLJw'));assert.ok(BELT_STEPS.every(s=>s.reference.length===2));
 });
 test('passing the rear center and returning to the front does not teleport a hanging end',()=>{
@@ -73,4 +75,38 @@ test('waist closeups retain both tips through the full insertion sequence',()=>{
   }
  }
  for(const step of [4,5])assert.ok(beltPose(step).halves[0].freeLength>.3,'A needs enough cloth beyond the loop to be held');
+});
+
+function insertionAt(step,fraction){
+ let lo=0,hi=1;for(let n=0;n<40;n++){const m=(lo+hi)/2;if(m*m*(3-2*m)<fraction)lo=m;else hi=m}
+ return beltPose(step,(lo+hi)/2);
+}
+test('the tip reaches each opening before material emerges on its other side',()=>{
+ const cases=[{step:3,index:0,entry:[-.06,.065,.222],vertical:-1},{step:4,index:0,entry:[.07,-.055,.265],vertical:1},{step:5,index:1,entry:[-.03,.12,.44],vertical:-1}];
+ for(const {step,index,entry,vertical} of cases){
+  const start=insertionAt(step,0).halves[index].path.at(-1),arrive=insertionAt(step,.3).halves[index].path.at(-1),through=insertionAt(step,.4).halves[index].path.at(-1);
+  assert.ok(dist(start,entry)>.3,'the hanging tip starts away from the opening');
+  assert.ok(dist(arrive,entry)<1e-7,'the tip, not the middle of the strip, arrives first');
+  assert.ok((through[1]-arrive[1])*vertical>0,'first underpass goes upward; A tuck goes downward');
+  assert.ok(insertionAt(step,.4).halves[index].freeLength===0,'no outgoing length until the tip clears the passage');
+ }
+});
+test('full mannequin framing and belt dimensions cannot regress to the oversized V',()=>{
+ const initial=beltPose(0),frame=cinematicPlacement(940,705,initial);
+ assert.ok(BELT_LENGTH<=7.6,'do not lengthen the entire belt to hide oversized knot guides');
+ for(const key of ['a','b']){const tip=initial[key].at(-1);assert.ok(tip[1]<=3.28,'tip stays by the feet');assert.ok(Math.abs(tip[0])<1.1,'ends hang near the legs instead of spreading across the screen')}
+ assert.ok(frame.y-1.75*frame.scale>=11);assert.ok(frame.y+3.18*frame.scale<=705-11,'head and feet both visible');
+ const closeups=[3,4,5,6].map(s=>cinematicPlacement(940,705,beltPose(s)));assert.ok(closeups.every(a=>a.scale===closeups[0].scale),'camera does not enlarge the mannequin as the tails shorten');
+});
+test('dense material samples stay continuous while the tip is lifted and fed through',()=>{
+ for(const step of [2,3,4,5,6]){
+  let previous=beltPose(step,0);
+  for(let i=1;i<=400;i++){
+   const current=beltPose(step,i/400);
+   for(let h=0;h<2;h++)for(let n=0;n<current.halves[h].ribbon.length;n+=8){
+    assert.ok(dist(current.halves[h].ribbon[n].p,previous.halves[h].ribbon[n].p)<.035,`material jumped at stage ${step}, frame ${i}`);
+   }
+   previous=current;
+  }
+ }
 });

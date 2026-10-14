@@ -1,7 +1,7 @@
 import {BELT_STEPS,BELT_SOURCE,BELT_REFERENCE_2,beltPose,beltAnchor,cinematicPlacement,drawGhostBelt} from './belt-geometry.js';
 import {sampleMarker,markerCandidates,newBeltTrack,updateBeltTrack,videoRect,videoToScreen,screenToVideo} from './belt-tracker.js';
 import {createBeltTimeline} from './belt-timeline.js';
-import {drawOpponent} from './opponent.js';
+import {drawBeltMannequin} from './belt-mannequin.js';
 const $=id=>document.getElementById(id);
 const setText=(id,text)=>{if($(id).textContent!==text)$(id).textContent=text};
 let open=false,step=0,progress=0,playing=true,raf=0,stream=null,cameraPending=false,generation=0;
@@ -104,7 +104,7 @@ function draw(now){
  setText('belt-film-status',playing?(inspecting?'통과 지점 확인':'동작 시연'):progress>=1?'단계 완료':'동작 정지');
  const pose=beltPose(step,progress),{ctx,w,h}=surface($('belt-canvas'));let anchor;
  if(stream){anchor=beltAnchor(w,h,Number($('belt-height').value),Number($('belt-width').value));$('belt-video').style.transform=$('belt-mirror').checked?'scaleX(-1)':'none'}
- else if(mode==='virtual'){anchor=cinematicPlacement(w,h,pose);const frame={origin:{x:anchor.x,y:anchor.y-anchor.scale*1.13},scale:anchor.scale,x:{x:1,y:0},y:{x:0,y:1}};drawOpponent(ctx,frame,null,{belt:false})}
+ else if(mode==='virtual'){anchor=cinematicPlacement(w,h,pose);drawBeltMannequin(ctx,anchor)}
  if(mode==='real'){if(stream)realOverlay(ctx,w,h,beltPose(step),anchor,now)}else drawGhostBelt(ctx,anchor,pose,{mirror:!stream||$('belt-mirror').checked});
  $('belt-canvas').dataset.phase=String(pose.phase);$('belt-detail').dataset.view=detailView;$('belt-canvas').dataset.lessonMode=mode;$('belt-canvas').dataset.step=String(step);$('belt-canvas').dataset.mode=stream?'camera':'demo';$('belt-canvas').dataset.anchor=JSON.stringify(anchor);
  const detail=surface($('belt-detail'));drawGhostBelt(detail.ctx,{x:detail.w/2,y:detail.h*.44,scale:Math.min(detail.w/1.65,detail.h/1.2)},pose,{opacity:1,mirror:!stream||$('belt-mirror').checked,view:detailView,labels:false});
