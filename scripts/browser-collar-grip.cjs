@@ -1,5 +1,5 @@
 const {chromium}=require(process.argv[2]||'playwright');
-const gyakuOnly=process.argv.includes('--gyaku'),kataOnly=process.argv.includes('--kata');
+const gyakuOnly=process.argv.includes('--gyaku'),kataOnly=process.argv.includes('--kata'),edgeOnly=process.argv.includes('--edge');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
@@ -31,7 +31,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     return result;
    }
    self.onmessage=async({data})=>{
-    const [{POSES,targetPose},{collarHands,handAt},{gyakuHands},{acquisitionHands}]=await deps;
+    const [{POSES,targetPose},{collarHands,handAt},{gyakuHands,rollHand},{acquisitionHands}]=await deps;
     if(data.type==='init')self.postMessage({type:'ready'});
     if(data.type==='frame'){
      const w=data.bitmap.width,h=data.bitmap.height;data.bitmap.close();
@@ -65,7 +65,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
        const angle=data.phase==='wrist-return'?.7:.55,a=i?-angle:angle,c=Math.cos(a),s=Math.sin(a);
        hand=hand.map(p=>({...p,x:center.x+(p.x-center.x)*c-(p.y-center.y)*s,y:center.y+(p.x-center.x)*s+(p.y-center.y)*c}));
       }
-      if(data.edge){
+      if(data.edge==='thin'){
+       hand=rollHand(hand,1.1*(i?-1:1)).map(p=>({...p,z:p.z*.1}));
+      }else if(data.edge){
        const center=[5,9,13,17].reduce((p,k)=>({x:p.x+hand[k].x/4,y:p.y+hand[k].y/4}),{x:0,y:0});
        hand=hand.map(p=>({x:center.x,y:p.y,z:p.x-center.x}));
       }
@@ -116,6 +118,35 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   const fixedHead=await headPixels();
   const rest=await page.locator('#partner').evaluate(c=>c.toDataURL());
   assert.equal(await grabbed(),'0');assert.equal(await page.locator('#live-score-value').innerText(),'0');
+  if(edgeOnly){
+   await page.locator('#back-menu').click();
+   for(const lesson of ['nami','gyaku','kata'])for(const mirror of [true,false]){
+    await page.locator(`[data-lesson="${lesson}"]`).click();
+    await page.evaluate(lesson=>{window.qaPalmUp=lesson==='gyaku';window.qaKata=lesson==='kata';window.qaEdge=false;window.qaGripPhase='open'},lesson);
+    await page.locator('#mirror').setChecked(mirror);
+    await page.locator('#play').click();
+    await phase('open',1500);
+    assert.equal(await grabbed(),'0');
+    await page.evaluate(()=>window.qaEdge='thin');
+    await phase('open',1500);
+    assert.equal(await grabbed(),'0',`${lesson}: open profile cannot acquire`);
+    await phase('close',1800);
+    assert.equal(await grabbed(),'0',`${lesson}, mirror=${mirror}: thin palm with false curled depth must not acquire`);
+    await page.evaluate(()=>window.qaEdge=false);
+    await phase('close',1400);
+    assert.equal(await grabbed(),'2',`${lesson}: turning a prepared grip to the camera can acquire without reopening`);
+    await page.evaluate(()=>window.qaEdge='thin');
+    await phase('close',1400);
+    assert.equal(await grabbed(),'2',`${lesson}: an acquired grip survives wrist rotation to profile`);
+    await page.evaluate(()=>window.qaEdge=false);
+    await phase('open',1700);
+    assert.equal(await grabbed(),'0',`${lesson}: visible opening releases`);
+    await page.locator('#back-menu').click();
+   }
+   assert.deepEqual(errors,[]);
+   console.log('PASS thin-palm acquisition rejection with flattened depth, prepared grip acquisition, held profile retention and opening release: Nami/Gyaku/Kata, both mirror modes. Synthetic camera landmarks through actual app tracking and rendering.');
+   return;
+  }
   if(kataOnly){
    for(const mirror of [true,false]){
     await page.locator('#mirror').setChecked(mirror);

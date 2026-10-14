@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CollarInteraction,fingerExtension,openFingers,curledFingers} from '../src/collar-interaction.js';
 import {acquisitionHands} from './fixtures/acquisition-hands.mjs';
+import {rollHand} from './fixtures/gyaku-hands.mjs';
 import {collarArms} from './fixtures/collar-hands.mjs';
 function acquire(hands,{mirror=true,palmUp=true,fps=15}={}){
  const model=new CollarInteraction();let state;
@@ -64,3 +65,29 @@ test('isolated bent fingers cannot acquire while the rest of the hand remains op
   assert.equal(acquire(hands,{mirror}).state.count,0);
  }
 });
+
+// Camera depth is particularly unreliable when the fingers overlap in profile.
+// Keep the thin projected palm, but simulate a curled estimate at those pixels.
+function edgeEstimate({mirror,palmUp,roll,depth,hook=.65,scale=1}){
+ return acquisitionHands({mirror,palmUp,hook,scale}).map((h,i)=>rollHand(h,roll*(i?-1:1)*(mirror?1:-1)).map(p=>({...p,z:p.z*depth})));
+}
+for(const mirror of [true,false])for(const palmUp of [true,false])for(const roll of [1,1.1,1.2])for(const depth of [0,.1,.4,1])for(const scale of [.8,1.2]){
+ test(`thin edge cannot acquire: mirror=${mirror}, reverse=${palmUp}, roll=${roll}, depth=${depth}, scale=${scale}`,()=>{
+  const hands=edgeEstimate({mirror,palmUp,roll,depth,scale});
+  assert.equal(acquire(hands,{mirror,palmUp}).state.count,0);
+ });
+}
+for(const mirror of [true,false])for(const palmUp of [true,false]){
+ test(`edge-to-face acquires without reopening and held edge retains: mirror=${mirror}, reverse=${palmUp}`,()=>{
+  const model=new CollarInteraction();let state,time=0;
+  const step=hands=>state=model.update(hands,time+=65,{mirrored:mirror,directions:[palmUp?'↑':'↓',palmUp?'↑':'↓'],bodyVisible:true,arms:collarArms()});
+  for(let n=0;n<20;n++)step(edgeEstimate({mirror,palmUp,roll:1.1,depth:.1}));
+  assert.equal(state.count,0);
+  for(let n=0;n<20;n++)step(acquisitionHands({mirror,palmUp}));
+  assert.equal(state.count,2,'prepared hook must still acquire without an open-first gesture');
+  for(let n=0;n<20;n++)step(edgeEstimate({mirror,palmUp,roll:1.1,depth:.1}));
+  assert.equal(state.count,2,'initial visibility gate must never unlatch an existing grip');
+  for(let n=0;n<25;n++)step(acquisitionHands({mirror,palmUp,hook:0}));
+  assert.equal(state.count,0,'visible opening still releases');
+ });
+}

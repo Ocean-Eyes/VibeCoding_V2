@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CollarInteraction,cameraPalmNormal} from '../src/collar-interaction.js';
+import {CollarInteraction} from '../src/collar-interaction.js';
 import {gyakuHands} from './fixtures/gyaku-hands.mjs';
 import {collarArms} from './fixtures/collar-hands.mjs';
 function setup(mirror=true){
@@ -40,14 +40,12 @@ test('clearly extended fingers still release with a tilted palm plane',()=>{
 });
 
 test('a tilted acquisition can still release with a clearly camera-facing open hand',()=>{
- let checked=0;
- for(const roll of [-1.4,-1.3,-1.2,-1.1,-.9,.9,1.1,1.2,1.3,1.4]){
-  const hands=gyakuHands({roll});if(!hands.every((h,i)=>cameraPalmNormal(h,i)<-.20))continue;
-  checked++;const model=new CollarInteraction();let state,time=0;
+ for(const roll of [-1.4,-1.3,-1.2,-1.1,-.9,.6,.8]){
+  const hands=gyakuHands({roll});
+  const model=new CollarInteraction();let state,time=0;
   for(let i=0;i<15;i++)state=model.update(hands,time+=65,{directions:['↑','↑'],bodyVisible:true});
   assert.equal(state.count,2);
   for(let i=0;i<20;i++)state=model.update(gyakuHands({curl:0}),time+=65,{directions:['↑','↑'],bodyVisible:true,continuousHands:[true,true]});
   assert.equal(state.count,0,`initial roll=${roll}`);
  }
- assert.ok(checked>=2);
 });

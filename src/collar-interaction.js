@@ -95,11 +95,19 @@ function palmPlane(hand){
 }
 export function cameraPalmNormal(hand,index,mirrored=true){return (palmPlane(hand)?.[2]??0)*(index?-1:1)*(mirrored?-1:1)}
 
+// Estimated depth can flatten an edge-on palm into a false camera-facing plane.
+// Require visible width across the palm as well, independently of that normal.
+export function visiblePalmWidth(hand){
+ const w=hand[0],c=graspCenter(hand),dx=c.x-w.x,dy=c.y-w.y;
+ const z=[5,9,13,17].reduce((v,k)=>v+(hand[k].z??0)/4,0)-(w.z??0);
+ const denominator=Math.hypot(dx,dy)*Math.hypot(dx,dy,z);
+ return denominator<.00001?0:Math.abs((hand[5].x-hand[17].x)*dy-(hand[5].y-hand[17].y)*dx)/denominator;
+}
 export function gripPosture(hand,index,side,mirrored,direction){
  if(side!==(index?-1:1)*(mirrored?1:-1))return 'opposite';
  const normal=cameraPalmNormal(hand,index,mirrored);
  // Allow broad tilt, but an edge-on hand supplies no reliable front/back signal.
- if(Math.abs(normal)<.20)return 'turn';
+ if(Math.abs(normal)<.20||visiblePalmWidth(hand)<.20)return 'turn';
  if((normal>0)!==(direction==='↓'))return 'palm';
  return null;
 }
