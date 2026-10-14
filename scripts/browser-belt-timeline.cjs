@@ -8,7 +8,7 @@ const assert=require('node:assert/strict');
   const enter=async p=>{await p.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');await p.locator('[data-category="basics"]').click();await p.locator('[data-lesson="belt"]').click();await p.waitForFunction(()=>document.querySelectorAll('[data-belt-step]').length===7)};
   await enter(page);
   await page.locator('[data-belt-step="4"]').click();
-  assert.match(await page.locator('#belt-source').getAttribute('href'),/F-NJFRGi6ys.*t=14s/);
+  assert.match(await page.locator('#belt-source').getAttribute('href'),/poG-fDcqUA0.*t=13.5s/);
   assert.match(await page.locator('#belt-source-2').getAttribute('href'),/IG5WBxopLJw.*t=20.5s/);
   const phase=()=>page.locator('#belt-canvas').getAttribute('data-phase');
   const travel=async speed=>{
