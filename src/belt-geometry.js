@@ -1,21 +1,21 @@
-export const BELT_SOURCE='https://www.youtube.com/watch?v=poG-fDcqUA0';
+export const BELT_SOURCE='https://www.youtube.com/watch?v=F-NJFRGi6ys';
 export const BELT_REFERENCE_2='https://www.youtube.com/watch?v=IG5WBxopLJw';
 // Authored from the supplied videos. A is the end threaded first; the second
 // video's demonstrator uses the opposite hand, but the insertion order agrees.
 export const BELT_STEPS=[
- {title:'가운데를 허리 앞에',cue:'띠 가운데를 허리 앞에 대고 양끝을 같은 길이로 늘어뜨립니다.',focus:'띠를 비틀지 않고 넓은 면이 몸에 닿게 놓습니다.',move:'양끝 준비',reference:[5,0]},
- {title:'등 뒤로 감아 교차',cue:'가운데를 허리 앞에 댄 채 양끝을 뒤로 보내 교차합니다.',focus:'뒤쪽 보기에서 등 뒤의 두 겹을 확인하세요.',move:'양끝을 등 뒤로',reference:[6,5.5]},
- {title:'앞으로 가져와 교차',cue:'뒤에서 교차한 양끝을 앞으로 가져옵니다. A를 B 위에 겹칩니다.',focus:'양끝을 위로 들어 올리지 않고 허리 앞에서 교차합니다.',move:'허리 앞에서 A를 B 위로',reference:[9.5,12.5]},
- {title:'A를 두 겹 밑으로',cue:'A를 교차한 띠와 허리에 감긴 두 겹 모두의 밑에서 위로 통과시킨 뒤 아래로 내립니다.',focus:'A가 두 겹을 함께 감쌉니다. 끝을 계속 위로 세워 두지 않습니다.',move:'A 통과 · B 유지',reference:[11,15]},
- {title:'A를 끼워 고리 만들기',cue:'A를 다시 들어 반대편 허리띠의 겹 사이에 위에서 아래로 끼웁니다. 앞에는 고리를 남겨 둡니다.',focus:'이 단계에서는 A만 고리를 만듭니다. B는 아직 통과시키지 않습니다.',move:'A로 고리 · B 유지',reference:[13.5,20.5]},
- {title:'B를 고리에 통과',cue:'남겨 둔 A의 고리와 띠 겹 사이의 통로로 B를 통과시킵니다. 고리를 놓치지 않고 양끝을 잡습니다.',focus:'새 고리를 두 개 만들지 않고, B 끝이 A의 고리를 지나갑니다.',move:'B 통과 · A 유지',reference:[15,24]},
- {title:'양끝 당겨 매듭 정리',cue:'양끝을 좌우로 당겨 고리를 줄이고 매듭을 납작하게 정리합니다. 끝은 아래로 향하게 둡니다.',focus:'허리의 두 겹과 매듭이 꼬이지 않았는지 확인합니다.',move:'A · B 조이기',reference:[16.5,26]},
+ {title:'가운데를 허리 앞에',cue:'띠 가운데를 허리 앞에 대고 양끝을 손에 듭니다. 아래로 접힌 띠를 등 뒤로 감습니다.',focus:'띠를 비틀지 않고 넓은 면이 몸에 닿게 놓습니다.',move:'양끝 준비',reference:[2,0]},
+ {title:'등 뒤로 감아 교차',cue:'가운데를 허리 앞에 댄 채 양끝을 뒤로 보내 교차합니다.',focus:'뒤쪽 보기에서 등 뒤의 두 겹을 확인하세요.',move:'양끝을 등 뒤로',reference:[3.2,5.5]},
+ {title:'앞으로 가져와 교차',cue:'뒤에서 교차한 양끝을 앞으로 가져옵니다. A를 B 위에 겹칩니다.',focus:'양끝을 위로 들어 올리지 않고 허리 앞에서 교차합니다.',move:'허리 앞에서 A를 B 위로',reference:[5.4,12.5]},
+ {title:'A를 두 겹 밑으로',cue:'A를 교차한 띠와 허리에 감긴 두 겹 모두의 밑에서 위로 통과시킨 뒤 아래로 내립니다.',focus:'A가 두 겹을 함께 감쌉니다. 끝을 계속 위로 세워 두지 않습니다.',move:'A 통과 · B 유지',reference:[9.6,15]},
+ {title:'A를 끼워 고리 만들기',cue:'A를 다시 들어 반대편 허리띠의 겹 사이에 위에서 아래로 끼웁니다. 앞에는 고리를 남겨 둡니다.',focus:'이 단계에서는 A만 고리를 만듭니다. B는 아직 통과시키지 않습니다.',move:'A로 고리 · B 유지',reference:[14,20.5]},
+ {title:'B를 겹 사이와 고리에 통과',cue:'B를 오른쪽 허리띠 겹 사이에 위에서 아래로 넣고, 앞에 남긴 A 고리 안으로 빼냅니다.',focus:'B는 먼저 허리띠 겹 사이를 내려온 뒤 A의 고리를 통과합니다.',move:'B는 겹 사이 → A 고리',reference:[17,24]},
+ {title:'양끝 당겨 매듭 정리',cue:'양끝을 좌우로 당겨 고리를 줄이고 매듭을 납작하게 정리합니다. 끝은 아래로 향하게 둡니다.',focus:'허리의 두 겹과 매듭이 꼬이지 않았는지 확인합니다.',move:'A · B 조이기',reference:[19.3,26]},
 ];
 // A single inextensible, stiff obi. Coordinates are in waist-width units.
 // The waist contact arc consumes material; only the remaining length is free.
 // Insertion routes distinguish the approaching tip from cloth already fed through.
-export const BELT_WIDTH=.09, BELT_LENGTH=7.6, BELT_THICKNESS=.008;
-const RX=.46,RZ=.24,TAU=Math.PI*2;
+export const BELT_WIDTH=.075, BELT_LENGTH=6.4, BELT_THICKNESS=.008;
+const RX=.405,RZ=.18,TAU=Math.PI*2;
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]);
 const mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
 const norm=a=>Math.hypot(...a),unit=a=>mul(a,1/(norm(a)||1));
@@ -25,37 +25,39 @@ const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
 export const pathLength=points=>points.slice(1).reduce((s,p,i)=>s+norm(sub(p,points[i])),0);
 // Threading is tip-led: lift the tip to the entry, feed it through the
 // opening, then draw the remaining slack through. The idle end stays fixed.
-const ROOT={a:[0,-.008,.267],b:[0,.008,.252]};
-const CROSS={a:[ROOT.a,[-.12,.045,.32]],b:[ROOT.b,[.14,.045,.30]]};
-const FIRST=[...CROSS.a,[-.06,.065,.222],[-.04,-.065,.222],[-.055,-.065,.32],[-.095,.025,.34]];
-const LOOP=[...FIRST,[-.065,.11,.39],[.07,-.055,.265],[.07,.06,.265],[.095,.095,.31]];
-const SECOND=[...CROSS.b,[-.03,.12,.44],[.095,-.065,.29],[.11,.075,.29],[-.12,.125,.47]];
-const DOWN={a:unit([-.15,1,0]),b:unit([.15,1,0])};
-const FIRST_DOWN=unit([-.15,1,0]),LOOP_DOWN=unit([.26,1,0]),SECOND_DOWN=unit([-.3,1,0]);
+// Front-to-back order: body .18, underpass .19, inner wrap .202,
+// layer passage .214, outer wrap .226. Each insertion has real clearance.
+export const BELT_LAYERS={body:.18,under:.19,inner:.202,gap:.214,outer:.226};
+const ROOT={a:[0,-.008,.226],b:[0,.008,.202]};
+const CROSS={a:[ROOT.a,[.085,.025,.255]],b:[ROOT.b,[-.085,.025,.248]]};
+const FIRST=[...CROSS.a,[.025,.06,.19],[.025,-.06,.19],[.075,-.06,.255],[.095,.005,.27]];
+// A returns on the right, crosses in front to the LEFT layer passage and
+// leaves a U-shaped opening in front of the waist. B is held on the left.
+const LOOP=[...FIRST,[.015,.11,.31],[-.115,-.06,.214],[-.115,.06,.214],[-.13,.09,.275]];
+// Crucial order from F-NJFRGi6ys 16–18s: B goes DOWN the right layer gap,
+// then FORWARD through the opening left by A. It never enters A first.
+const DOWN={a:unit([.12,1,0]),b:unit([-.12,1,0])};
+const FIRST_DOWN=unit([.12,1,0]),LOOP_DOWN=unit([-.24,1,0]),SECOND_DOWN=unit([.8,.6,0]);
 function resample(points,count){
  const lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+norm(sub(points[i],points[i-1])));
  const total=lengths.at(-1);let j=1;
  return Array.from({length:count},(_,i)=>{const s=total*i/(count-1);while(j<lengths.length-1&&lengths[j]<s)j++;return lerp(points[j-1],points[j],(s-lengths[j-1])/(lengths[j]-lengths[j-1]||1))});
 }
-// One rounded fold stores slack; long spans remain straight and inextensible.
-function roundBend(start,middle,end,radius=.07){
- const a=sub(start,middle),b=sub(end,middle),r=Math.min(radius,norm(a)*.24,norm(b)*.24);
- const p=add(middle,mul(unit(a),r)),q=add(middle,mul(unit(b),r)),out=[start,p];
- for(let i=1;i<=12;i++){const t=i/12;out.push(add(add(mul(p,(1-t)**2),mul(middle,2*t*(1-t))),mul(q,t*t)))}
- out.push(end);return out;
-}
+// A stiff strip folds into two straight legs joined by one rounded turn.
+// For a small opening the turn flattens to an ellipse; it never becomes a V.
 function bight(start,end,length,outward){
- const chord=sub(end,start),d=norm(chord);
+ const chord=sub(end,start),d=norm(chord),axis=unit(chord),center=lerp(start,end,.5);
  if(d>length+1e-7)throw new Error('Thread target exceeds available material');
- // An oblique bending plane avoids the singularity of projecting vertical
- // gravity onto an almost vertical strip as its tip rises toward the waist.
- const tangent=unit(chord);
- let side=sub(outward,mul(tangent,dot(outward,tangent)));
- if(norm(side)<1e-8)side=[1,0,0];
- side=unit(side);const center=lerp(start,end,.5);
- let low=0,high=length,route;
- for(let n=0;n<34;n++){const height=(low+high)/2;route=roundBend(start,add(center,mul(side,height)),end);if(pathLength(route)<length)low=height;else high=height}
- return route;
+ let bend=sub(outward,mul(axis,dot(outward,axis)));if(norm(bend)<1e-8)bend=[1,0,0];bend=unit(bend);
+ const radius=d/2;
+ function route(height){
+  const leg=Math.max(0,height-radius),turn=Math.min(height,radius),points=[start];
+  for(let i=0;i<=24;i++){const angle=Math.PI*i/24;points.push(add(add(center,mul(axis,-radius*Math.cos(angle))),mul(bend,leg+turn*Math.sin(angle))))}
+  points.push(end);return points;
+ }
+ let low=0,high=length,points;
+ for(let n=0;n<34;n++){const height=(low+high)/2;points=route(height);if(pathLength(points)<length)low=height;else high=height}
+ return points;
 }
 function finish(prefix,direction,length){
  const freeLength=length-pathLength(prefix);if(freeLength<=0)throw new Error('Belt route exceeds available cloth');
@@ -90,7 +92,7 @@ function insert(prefix,passage,directionBefore,directionAfter,available,t,{slack
 }
 function waistPath(key,wrap){
  const side=key==='a'?-1:1,angle=TAU*wrap,n=Math.max(2,Math.ceil(angle*40));
- return Array.from({length:n},(_,i)=>{const t=angle*i/(n-1),layer=(key==='a'?.027:.012)*t/TAU;return [side*(RX+layer)*Math.sin(t),side*.008*t/TAU,(RZ+layer)*Math.cos(t)]});
+ return Array.from({length:n},(_,i)=>{const t=angle*i/(n-1),layer=(key==='a'?.046:.022)*t/TAU;return [side*(RX+layer)*Math.sin(t),side*.008*t/TAU,(RZ+layer)*Math.cos(t)]});
 }
 function wrapRoute(key,phase){
  const side=key==='a'?-1:1,wrap=.25+.75*Math.min(1,phase/2),waist=waistPath(key,wrap),end=waist.at(-1);
@@ -99,13 +101,30 @@ function wrapRoute(key,phase){
  const cross=CROSS[key].map(p=>add(p,sub(end,ROOT[key])));
  const local=rest.map((p,i)=>lerp(p,cross[i],t));
  const direction=unit(lerp(unit([side*Math.sin(TAU*wrap)*.18,1,0]),DOWN[key],t));
- return {waist,...finish(local,direction,remaining),wrap,operation:phase<1?'wrap-back':'return-front'};
+ if(phase<1){
+  // Hold the tips by the hands before wrapping. The unused material hangs in
+  // one stiff U fold on each side, instead of extending below the feet.
+  const hanging=add(local.at(-1),mul(direction,remaining-pathLength(local)));
+  const held=[side*.64,.08,.06],tip=lerp(held,hanging,ease(phase));
+  const folded=bight(local.at(-1),tip,remaining-pathLength(local),[side*.06,1,.08]);
+  return {waist,local:[...local,...folded.slice(1)],freeLength:0,wrap,operation:'wrap-back'};
+ }
+ return {waist,...finish(local,direction,remaining),wrap,operation:'return-front'};
 }
-const A_PASS=FIRST.slice(CROSS.a.length),A_LOOP=LOOP.slice(FIRST.length+1),B_PASS=SECOND.slice(CROSS.b.length);
+const A_PASS=FIRST.slice(CROSS.a.length),A_LOOP=LOOP.slice(FIRST.length+1);
 const LOOP_SLACK=pathLength([FIRST.at(-1),LOOP[FIRST.length],A_LOOP[0]])-norm(sub(A_LOOP[0],FIRST.at(-1)));
-function settledLoop(){return [...FIRST,...bight(FIRST.at(-1),A_LOOP[0],norm(sub(A_LOOP[0],FIRST.at(-1)))+LOOP_SLACK,[0,1,1]).slice(1),...A_LOOP.slice(1)]}
-const A_LOOP_HELD=settledLoop();
-function compact(points,key){return points.map((p,i)=>i===0?p:[p[0]*.72,p[1]*.65,ROOT[key][2]+(p[2]-ROOT[key][2])*.78])}
+const LOOP_CURVE=bight(FIRST.at(-1),A_LOOP[0],norm(sub(A_LOOP[0],FIRST.at(-1)))+LOOP_SLACK,[0,1,1]);
+const A_LOOP_HELD=[...FIRST,...LOOP_CURVE.slice(1),...A_LOOP.slice(1)];
+const bridge=lerp(LOOP_CURVE[0],LOOP_CURVE.at(-1),.5),chord=unit(sub(LOOP_CURVE.at(-1),LOOP_CURVE[0]));
+const farthest=LOOP_CURVE.reduce((best,p)=>norm(cross(sub(p,bridge),chord))>norm(cross(sub(best,bridge),chord))?p:best,bridge);
+const openingCenter=lerp(bridge,farthest,.5);
+let openingNormal=unit(cross(chord,sub(farthest,bridge)));if(openingNormal[2]<0)openingNormal=mul(openingNormal,-1);
+export const BELT_LOOP_OPENING={boundary:LOOP_CURVE,center:openingCenter,normal:openingNormal};
+const B_GAP=[[.085,-.06,.214],[.085,.06,.214]];
+const B_BEHIND=add(openingCenter,mul(openingNormal,-.045)),B_FRONT=add(openingCenter,mul(openingNormal,.06));
+const SECOND=[...CROSS.b,...B_GAP,B_BEHIND,B_FRONT,add(B_FRONT,[.04,.02,.01])];
+const B_PASS=SECOND.slice(CROSS.b.length);
+function compact(points,key){return points.map((p,i)=>i===0?p:[p[0]*.94,p[1]*.94,.214+(p[2]-.214)*.94])}
 const FINAL={a:compact(A_LOOP_HELD,'a'),b:compact(SECOND,'b')};
 function knotRoute(key,phase,length){
  if(key==='a'){
@@ -117,9 +136,11 @@ function knotRoute(key,phase,length){
   if(phase<5)return insert(CROSS.b,B_PASS,DOWN.b,SECOND_DOWN,length,phase-4,{outward:[0,1,1]});
  }
  const a=key==='a'?A_LOOP_HELD:SECOND,b=FINAL[key],t=ease(phase-5);
- return {...finish(a.map((p,i)=>lerp(p,b[i],t)),key==='a'?LOOP_DOWN:SECOND_DOWN,length),operation:'tighten'};
+ const sign=key==='a'?-1:1,held=key==='a'?LOOP_DOWN:SECOND_DOWN,out=unit([sign,.24,0]),rest=unit([sign*.24,1,0]);
+ const direction=t<.55?unit(lerp(held,out,ease(t/.55))):unit(lerp(out,rest,ease((t-.55)/.45)));
+ return {...finish(a.map((p,i)=>lerp(p,b[i],t)),direction,length),operation:'tighten'};
 }
-function makeRibbon(points,key,waistLength){
+function makeRibbon(points,key,waistLength,operation){
  let across=[0,1,0];
  return points.map((p,i)=>{
   const tangent=unit(sub(points[Math.min(points.length-1,i+1)],points[Math.max(0,i-1)]));
@@ -128,12 +149,19 @@ function makeRibbon(points,key,waistLength){
   // Face the camera only after leaving the waist, via a gradual cloth roll.
   const material=i/(points.length-1)*points.materialLength;
   if(material>waistLength+.08){let front=unit(cross([0,0,1],tangent));if(dot(front,across)<0)front=mul(front,-1);across=unit(lerp(across,front,.16))}
+  if(key==='b'&&['tip-through','draw-through','tighten'].includes(operation)&&material>waistLength+.2){
+   const proximity=norm(sub(p,openingCenter));
+   if(proximity<.14&&Math.abs(dot(tangent,openingNormal))>.65){
+    let alignment=unit(sub(chord,mul(tangent,dot(chord,tangent))));if(dot(alignment,across)<0)alignment=mul(alignment,-1);
+    across=unit(lerp(across,alignment,ease((.14-proximity)/.065)));
+   }
+  }
   return {p,left:add(p,mul(across,BELT_WIDTH/2)),right:add(p,mul(across,-BELT_WIDTH/2)),normal:unit(cross(tangent,across)),s:material,key};
  });
 }
 function buildHalf(route,i,materialLength){
  const path=[...route.waist,...route.local.slice(1)],points=resample(path,480);points.materialLength=materialLength;
- return {path,materialLength,freeLength:route.freeLength,operation:route.operation,ribbon:makeRibbon(points,i?'b':'a',pathLength(route.waist))};
+ return {path,materialLength,waistLength:pathLength(route.waist),freeLength:route.freeLength,operation:route.operation,ribbon:makeRibbon(points,i?'b':'a',pathLength(route.waist),route.operation)};
 }
 const poseCache=new Map();
 export function beltPose(step,progress=1){
@@ -145,7 +173,9 @@ export function beltPose(step,progress=1){
   halves=routes.map((r,i)=>buildHalf(r,i,BELT_LENGTH/2));
  }else{
   const waists=['a','b'].map(key=>waistPath(key,1));wrap=1;
-  const balance=ease(phase-5)*(pathLength(FINAL.a)-pathLength(FINAL.b)+pathLength(waists[0])-pathLength(waists[1]))/2;
+  const firstBalance=(pathLength(FIRST)-pathLength(CROSS.b)+pathLength(waists[0])-pathLength(waists[1]))/2;
+  const finalBalance=(pathLength(FINAL.a)-pathLength(FINAL.b)+pathLength(waists[0])-pathLength(waists[1]))/2;
+  const balance=ease(phase-2)*firstBalance+ease(phase-5)*(finalBalance-firstBalance);
   halves=['a','b'].map((key,i)=>{const materialLength=BELT_LENGTH/2+(i?-balance:balance),waist=waists[i];return buildHalf({waist,...knotRoute(key,phase,materialLength-pathLength(waist))},i,materialLength)});
  }
  const pose={step,phase,wrap,halves,a:halves[0].ribbon.map(v=>project(v.p)),b:halves[1].ribbon.map(v=>project(v.p))};
@@ -166,7 +196,7 @@ export function cinematicPlacement(w,h,pose){
  return {x:start.x,y:start.y+(target.y-start.y)*zoom,scale:start.scale+(target.scale-start.scale)*zoom};
 }
 export function demoPlacement(w,h,pose){
- const b=beltBounds(pose),minY=-1.75,maxY=3.4,spanX=Math.max(2,b.maxX-b.minX);
+ const b=beltBounds(pose),minY=-1.75,maxY=2.65,spanX=Math.max(2,b.maxX-b.minX);
  const scale=Math.min(w/(spanX+.5),h/(maxY-minY+.6));
  return {x:w/2,y:(h-(maxY-minY)*scale)/2-minY*scale,scale};
 }
@@ -181,7 +211,7 @@ export function drawGhostBelt(ctx,anchor,pose,{mirror=true,opacity=.92,labels=tr
  for(const half of pose.halves)for(let i=0;i<half.ribbon.length-1;i++){
   const a=half.ribbon[i],b=half.ribbon[i+1],p=lerp(a.p,b.p,.5),d=depth(p),x=pr(p)[0];
   // Waist/torso hides the rear cloth; never draw dotted strips through a body.
-  if(bodyOcclusion&&Math.abs(x)<RX-.005&&p[1]<3.15&&d<.02)continue;
+  if(bodyOcclusion&&Math.abs(x)<RX-.005&&p[1]<2.45&&d<.02)continue;
   faces.push({a,b,d,tip:i>half.ribbon.length-5});
  }
  faces.sort((a,b)=>a.d-b.d);
@@ -207,7 +237,7 @@ export function drawGhostBelt(ctx,anchor,pose,{mirror=true,opacity=.92,labels=tr
  }
  ctx.restore();
  if(labels)for(const half of pose.halves){
-  const end=half.ribbon.at(-1),p=pr(end.p);if(bodyOcclusion&&Math.abs(p[0])<RX&&end.p[1]<3.15&&depth(end.p)<.02)continue;
+  const end=half.ribbon.at(-1),p=pr(end.p);if(bodyOcclusion&&Math.abs(p[0])<RX&&end.p[1]<2.45&&depth(end.p)<.02)continue;
   const x=anchor.x+p[0]*anchor.scale*sign,y=anchor.y+p[1]*anchor.scale,color=end.key==='a'?'#a7dcef':'#ebcb93';
   ctx.save();ctx.beginPath();ctx.arc(x,y,11,0,TAU);ctx.fillStyle='#20313b';ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.3;ctx.stroke();ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 11px sans-serif';ctx.fillText(end.key.toUpperCase(),x,y);ctx.restore();
  }
