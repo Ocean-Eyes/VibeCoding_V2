@@ -1,5 +1,5 @@
 const {chromium}=require(process.argv[2]||'playwright');
-const gyakuOnly=process.argv.includes('--gyaku'),kataLeft=process.argv.includes('--kata-left'),kataOnly=process.argv.includes('--kata')||kataLeft,edgeOnly=process.argv.includes('--edge'),startupOnly=process.argv.includes('--startup');
+const gyakuOnly=process.argv.includes('--gyaku'),kataShoulder=process.argv.includes('--kata-shoulder'),kataLeft=process.argv.includes('--kata-left')||kataShoulder,kataOnly=process.argv.includes('--kata')||kataLeft,edgeOnly=process.argv.includes('--edge'),startupOnly=process.argv.includes('--startup');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
@@ -91,7 +91,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
        const scale=data.kataLeft&&i===0?1-(.36+(kataFrames%2?.02:-.02))*Math.min(1,Math.abs(kataAngle)/.36):1;
        pose[13+i]={x:frame.origin.x-(wx+(dx*c-dy*s)*scale)*frame.scale,y:frame.origin.y+(wy+(dx*s+dy*c)*scale)*frame.scale,visibility:1};
       }
-      if(data.phase==='kata-hidden')hands=[null,null];
+      if(data.phase==='kata-hidden'){hands=[null,null];if(${kataShoulder})pose[11].visibility=.1}
      }
      if(data.ghostOpen)hands=collarHands('open').map(hand=>hand.map(p=>({x:(frame.origin.x-p.x*frame.scale)/w+.35,y:(frame.origin.y+p.y*frame.scale)/h,z:p.z*frame.scale/w})));
      if(data.swap){[pose[15],pose[16]]=[pose[16],pose[15]];hands.reverse()}
@@ -189,11 +189,20 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     await page.locator('#mirror').setChecked(mirror);
     await phase('open',1000);await phase('close',1400);assert.equal(await grabbed(),'2','mixed grip acquisition');
     await phase('kata-one',2600);assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false','one forearm cannot tap');
+    if(kataShoulder){
+     await page.locator('.motion-diagnostics summary').click();
+     const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#save-trace').click()]);
+     const path='.test-output/kata-shoulder-trace.json';await download.saveAs(path);
+     const trace=JSON.parse(fs.readFileSync(path,'utf8'));assert.equal(trace.technique,'kata');assert.ok(trace.frames.length>0&&trace.frames.length<=300);
+     assert.ok(trace.frames.every(f=>f.options.arms.length===2&&f.result.forearmStatus.length===2));
+     await page.locator('.motion-diagnostics summary').click();
+    }
     await phase('close',1500);
     await phase('kata-hidden',2600);
     await page.waitForFunction(()=>document.querySelector('#opponent-status').dataset.tap==='true');
     const elbows=JSON.parse(await page.locator('#overlay').getAttribute('data-elbows'));
     const forearms=JSON.parse(await page.locator('#overlay').getAttribute('data-forearms'));
+    if(kataShoulder){assert.equal(elbows[0],null);assert.match(await page.locator('#diagnostic-left').textContent(),/전완 추적 중/)}
     assert.ok(kataLeft?elbows.some(v=>v<.8):elbows.some(v=>v===0),'elbow-rise alone cannot complete this turn');
     assert.ok(forearms.every(v=>v>.8),'both forearms contribute despite asymmetric elbow rise');
     assert.equal(await page.locator('#overlay').getAttribute('data-wrist-hands'),'2','hidden fingers still show both gloves');

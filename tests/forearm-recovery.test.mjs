@@ -96,3 +96,17 @@ for(const side of [0,1])for(const kind of ['one-arm','still','collapsed','stretc
   if(kind==='unwind')assert.ok(state.forearmLevels[side]<1e-10);
  });
 }
+
+for(const side of [0,1])for(const mirror of [true,false])for(const reverse of [true,false]){
+ test(`visible forearm still scores when its shoulder is obscured: side=${side}, mirror=${mirror}, reverse=${reverse}`,()=>{
+  const model=new CollarInteraction(),hands=kataHands({mirror,reverse});let state;
+  for(let n=0;n<70;n++){
+   const now=n*65,angle=.36*Math.min(1,Math.max(0,(now-700)/900))*(side?1:-1)*(mirror?1:-1);
+   const arms=kataArms(hands,{mirror,angles:[angle,angle]});
+   if(now>500)arms[side].shoulder=null;
+   state=model.update(now>1100?[null,null]:hands,now,{active:true,mirrored:mirror,directions:reverse?['↓','↑']:['↑','↓'],bodyVisible:false,arms});
+   if(now>1800){assert.ok(state.forearmLevels[side]>.8);assert.equal(state.trackingPaused,false)}
+  }
+  assert.equal(state.count,2);assert.equal(state.tapped,true);
+ });
+}

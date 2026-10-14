@@ -273,19 +273,24 @@ export class CollarInteraction{
   // Mixed grips need not produce matching vertical elbow motion. Measure each
   // forearm turning about its held wrist as well, using only visible joints.
   // This is a 2D motion cue, not a measurement of choking pressure.
-  const mixed=directions[0]!==directions[1];
+  const mixed=directions[0]!==directions[1],forearmStatus=['ungripped','ungripped'];
   const forearmMotion=arms.map((a,i)=>{
    if(!grips[i]){this.forearmBaseline[i]=null;this.forearmSamples[i]=[]}
-   if(!mixed||!grips[i]||!scoringWrists[i]||!armVisible(a))return null;
+   if(!grips[i])return null;
+   if(!mixed){forearmStatus[i]='not-used';return null}
+   if(!scoringWrists[i]){forearmStatus[i]='wrist';return null}
+   // Elbow-to-wrist rotation does not depend on the shoulder being visible.
+   if(!a?.elbow||!Number.isFinite(a.elbow.x)||!Number.isFinite(a.elbow.y)||(a.elbow.visibility??1)<.65){forearmStatus[i]='elbow';return null}
    const pose=a.wrist,hand=scoringWrists[i];
    const usablePose=pose&&!poseSwapped&&(pose.visibility??1)>=this.tuning.wristVisibility&&Math.hypot(pose.x-hand.x,pose.y-hand.y)<.12;
    this.forearmBaseline[i]??={wrist:{...(usablePose?pose:hand)},elbow:{...a.elbow},source:usablePose?'pose':'hand'};
    const base=this.forearmBaseline[i],offset=this.hands[i].poseOffset;
    const wrist=base.source==='pose'?(usablePose?pose:offset?{x:hand.x-offset.x,y:hand.y-offset.y}:null):hand;
-   if(!wrist)return null;
+   if(!wrist){forearmStatus[i]='reference';return null}
    if(usablePose)base.lastPose={wrist:{...pose},elbow:{...a.elbow},time:now};
    const angle=forearmTurn(base.elbow,a.elbow,wrist,base.wrist);
-   if(angle===null){this.forearmSamples[i]=[];return null}
+   if(angle===null){this.forearmSamples[i]=[];forearmStatus[i]='geometry';return null}
+   forearmStatus[i]='tracked';
    // One actual pose sample gets one vote; repainting a cached frame cannot
    // outvote the preceding camera samples. Three-sample median rejects spikes.
    let samples=this.forearmSamples[i].filter(s=>now-s.time<250);
@@ -297,9 +302,9 @@ export class CollarInteraction{
   const forearmLevels=forearmMotion.map(m=>m?clamp(Math.abs(m.angle)/this.tuning.wristAngle):0);
   // Sliding both elbows together is translation, not two independently turning
   // forearms. Both sides still need their own valid finishing observation.
-  if(forearmMotion.every(Boolean)&&Math.hypot(forearmMotion[0].dx-forearmMotion[1].dx,forearmMotion[0].dy-forearmMotion[1].dy)<.035)forearmLevels.fill(0);
+  if(forearmMotion.every(Boolean)&&Math.hypot(forearmMotion[0].dx-forearmMotion[1].dx,forearmMotion[0].dy-forearmMotion[1].dy)<.035){forearmLevels.fill(0);forearmStatus.fill('translation')}
   const finishLevels=elbowLevels.map((v,i)=>Math.max(v??0,wristLevels[i],forearmLevels[i]));
-  const trackingPaused=count>0&&this.hands.some((h,i)=>h.grip&&(!scoringWrists[i]||(count===2&&elbowLevels[i]===null&&wristLevels[i]===0)));
+  const trackingPaused=count>0&&this.hands.some((h,i)=>h.grip&&(!scoringWrists[i]||(count===2&&elbowLevels[i]===null&&wristLevels[i]===0&&forearmMotion[i]===null)));
   const wristHands=this.hands.map((h,i)=>!h.tracked&&h.grip?gloveAtWrist(h.shape,scoringWrists[i]):null);
   // An upper-collar location is a visible proxy, NOT a claim to see a grip
   // behind the neck. Lateral separation is never a positive scoring signal.
@@ -323,7 +328,7 @@ export class CollarInteraction{
   if(!trackingPaused)this.armMissingSince=null;
   if(this.hold>=GRIP_HOLD_SECONDS)this.tapped=true;
   const score=Math.round(count*25+50*completion);
-  return {grips,trackingPaused,scoringWrists,wristHands,wristCompletion,wristStatus,wristOpacity,forearmLevels,finishLevels,issue,elbowLift,elbowLevels,completion,aligned,deformation:this.deformation(now),count,crossed,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
+  return {forearmStatus,forearmAngles:forearmMotion.map(m=>m?.angle??null),wristLevels,grips,trackingPaused,scoringWrists,wristHands,wristCompletion,wristStatus,wristOpacity,forearmLevels,finishLevels,issue,elbowLift,elbowLevels,completion,aligned,deformation:this.deformation(now),count,crossed,score,hold:this.hold,tapped:this.tapped,visible:observations.filter(Boolean).length,
    posture:this.hands.map(h=>h.posture),hover:this.hands.map(h=>h.hover),armed:this.hands.map(h=>h.armed),closed:this.hands.map(h=>h.closed)};
  }
 }

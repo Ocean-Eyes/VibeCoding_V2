@@ -1,3 +1,4 @@
+import {PracticeTrace,motionDiagnostic} from './practice-trace.js';
 import {CollarInteraction,GRIP_PASS_SCORE,GRIP_HOLD_SECONDS} from './collar-interaction.js';
 import {LandmarkStream,HandStream,HandIdentityTracker,GripProjection,projectHand,palmFacing,poseConfirmsHand} from './live-hands.js';
 import {drawLiveGlove} from './live-glove.js';
@@ -8,7 +9,7 @@ import {GRIP_STEPS,opponentFrame,demonstrationAt,practiceGuide,finishAt} from '.
 import {TECHNIQUES} from './curriculum.js';
 import {POSES,BONES,HAND_BONES,bodyFrame} from './pose.js';
 await prepareHands();
-const collar=new CollarInteraction();
+const collar=new CollarInteraction(),practiceTrace=new PracticeTrace();
 let gripState=collar.update([null,null],performance.now());
 const gripProjection=new GripProjection();
 const poseStream=new LandmarkStream(),handStreams=[new HandStream(),new HandStream()];
@@ -54,7 +55,7 @@ function trackingFailed(message){resetTrackingDisplay();clearScore();autoStart=f
   notify(`${message} 카메라 영상은 유지됩니다. 아래 버튼으로 자세 추적을 다시 연결해 주세요.`,true);
 }
 function connectTracker(){
-  resetTrackingDisplay();
+  practiceTrace.clear();resetTrackingDisplay();
   const session=generation,attempt=++trackerGeneration;
   clearTimeout(initTimer);clearTimeout(frameTimer);worker?.terminate();ready=busy=false;lastVideo=-1;lastResult=0;
   mode='loading';$('retry-tracking').hidden=true;controls();notify('카메라가 연결되었습니다. 자세 추적 모델을 준비하고 있습니다.');
@@ -111,7 +112,9 @@ function draw(now){
     return {shoulder:joint(11+i),elbow:joint(13+i),wrist:joint(15+i)};
   });
   if(mode==='live'&&!demonstrating){
-    gripState=collar.update(observations,now,{active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body,continuousHands:observations.map(Boolean),recoveredHands,poseSampleTime:poseStream.time});
+    const options={active:running&&countdown===0,mirrored,directions:activeTechnique.directions,arms,bodyVisible:!!body,continuousHands:observations.map(Boolean),recoveredHands,poseSampleTime:poseStream.time};
+    gripState=collar.update(observations,now,options);
+    if(fresh)practiceTrace.record(now,observations,options,gripState,{forearm:collar.forearmBaseline,elbow:collar.elbowBaseline});
     const phase=Math.min(2,gripState.count);
     if(selected!==phase){selected=phase;updatePose()}
   }
@@ -159,6 +162,8 @@ function draw(now){
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':score>=GRIP_PASS_SCORE?'good':score>=25?'near':'adjust';
   $('live-score-label').textContent=demonstrating?'시연 · 채점 안 함':'깃 위치·교차 동작 / 100';
   $('live-hold').textContent=demonstrating?'연습 버튼을 누르면 채점합니다':state?.count===2?`왼 동작 ${Math.round(state.finishLevels[0]*100)}% · 오른 동작 ${Math.round(state.finishLevels[1]*100)}% · 유지 ${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`:'목 가까운 깃 잡기 → 교차한 손목·전완 비틀기';
+  $('diagnostic-left').textContent=motionDiagnostic(state,0);$('diagnostic-right').textContent=motionDiagnostic(state,1);
+  $('save-trace').disabled=practiceTrace.frames.length===0;
   $('opponent-status').dataset.tap=String(!!tapUntil||!!state?.tapped);
   $('opponent-status').textContent=tapUntil||state?.tapped?'TAP! · 손을 펴서 놓기':demonstrating?instruction.label:state?.trackingPaused?'깃 잡기 유지 · 관절 인식 대기':state?.count===2?`양쪽 깃 잡힘 · 동작 일치 ${Math.round(state.completion*100)}%`:state?.count===1?'한쪽 깃 잡힘':'깃 위에서 손을 쥐세요';
 }
@@ -185,6 +190,12 @@ function tick(now){
 $('start').onclick=start;
 $('demo').onclick=()=>{stop();demonstrating=true;demoStarted=performance.now();demoStep=-1;controls();notify('흰색 손이 첫 깃 잡기 → 반대 깃 잡기 → 교차한 팔 비틀기 → 풀기를 반복합니다.')};
 $('retry-tracking').onclick=()=>{if(stream)connectTracker()};
+$('save-trace').onclick=()=>{
+ const version=new URL(import.meta.url).searchParams.get('v')??'local';
+ const data=practiceTrace.snapshot(activeTechnique.id,version),blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='just-judo-trace.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ notify('최근 30초의 좌표·판정 기록을 저장했습니다. 카메라 영상은 포함하지 않습니다.');
+};
 $('stop').onclick=()=>{stop();notify('연결을 종료했습니다. 카메라는 꺼져 있습니다.')};
 function openVideo(){autoStart=false;running=false;hold=countdown=0;tapUntil=0;$('countdown').hidden=true;controls();$('video-title').textContent=activeTechnique.name;$('video-external').href=`https://www.youtube.com/watch?v=${activeTechnique.video}`;$('kodokan-player').src=`https://www.youtube-nocookie.com/embed/${activeTechnique.video}?rel=0`;$('video-dialog').showModal()}
 $('video-shortcut').onclick=openVideo;
@@ -196,4 +207,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){collar.res
 window.addEventListener('pagehide',stop);updatePose();controls();requestAnimationFrame(tick);
 
 document.addEventListener('judo-exit',stop);
-document.addEventListener('judo-lesson',({detail})=>{activeTechnique=detail;const gripCanvas=$('grip-preview'),gripContext=gripCanvas.getContext('2d');drawGripStudy(gripContext,gripCanvas.width,gripCanvas.height,detail.directions);gripCanvas.setAttribute('aria-label',`${detail.name}: ${detail.detail}`);stop();completed.clear();selected=0;demonstrating=true;demoStarted=performance.now();demoStep=-1;updatePose();controls();notify('흰색 손의 시연을 확인한 뒤 내 동작 연습을 눌러 카메라를 연결하세요.');});
+document.addEventListener('judo-lesson',({detail})=>{practiceTrace.clear();activeTechnique=detail;const gripCanvas=$('grip-preview'),gripContext=gripCanvas.getContext('2d');drawGripStudy(gripContext,gripCanvas.width,gripCanvas.height,detail.directions);gripCanvas.setAttribute('aria-label',`${detail.name}: ${detail.detail}`);stop();completed.clear();selected=0;demonstrating=true;demoStarted=performance.now();demoStep=-1;updatePose();controls();notify('흰색 손의 시연을 확인한 뒤 내 동작 연습을 눌러 카메라를 연결하세요.');});
