@@ -4,7 +4,7 @@ export const TECHNIQUES = [
   {id:'kata',video:'3VZVUAmiMD8',name:'외십자 조르기',roman:'Kata-juji-jime',kanji:'片十字絞',grip:'한 손 위 · 한 손 아래',answer:2,description:'교차한 두 손의 손바닥 방향이 서로 다른 십자조르기입니다.',detail:'한쪽은 엄지, 다른 쪽은 손가락이 깃 안으로 들어가는 혼합 그립입니다.',source:'https://judo.ijf.org/techniques/Kata-juji-jime',directions:['↑','↓'],actions:['draw','press'],finish:'혼합 그립 유지 · 교차한 양 전완 비틀기',cues:['왼손 네 손가락을 반대편 위쪽 깃 안에 넣고 엄지는 밖에 둡니다.','오른손 엄지를 반대편 깃 안에 넣어 교차합니다. 왼 손바닥은 위, 오른 손바닥은 아래를 향합니다.','혼합 그립과 교차를 유지하며 손목과 전완을 함께 회전하는 시연을 확인하세요. 화면 점수는 깃 위치와 손목·팔꿈치 움직임을 확인합니다.']},
 ];
 export const QUIZ_CHOICES=['양 손바닥 아래','양 손바닥 위','한 손 위 · 한 손 아래'];
-export const FOUNDATIONS=[{name:'도복 입는 법',label:'JUDOGI',description:'도복을 갖춰 입는 순서를 따라할 기초 레슨'},{name:'띠 매는 법',label:'OBI',description:'띠를 두르고 매듭을 만드는 단계별 레슨'},{name:'낙법',label:'UKEMI',description:'지도자 시범을 보며 익힐 낙법 기초 레슨'}];
+export const FOUNDATIONS=[{id:'belt',name:'띠 매는 법',label:'OBI · GHOST BELT',kanji:'帯',available:true,description:'반투명 띠의 움직임을 보고, 카메라 위 가이드에 맞춰 매듭을 따라 만듭니다.'},{id:'ukemi',name:'낙법',label:'UKEMI',kanji:'受身',available:false,description:'지도자 시범을 보며 익힐 낙법 기초 레슨'}];
 export function readProgress(storage){
   try{const raw=JSON.parse(storage.getItem('just-judo-progress-v1')||'{}');return Object.fromEntries(TECHNIQUES.map(t=>[t.id,{quiz:raw?.[t.id]?.quiz===true,practice:raw?.[t.id]?.practice===true}]))}catch{return {}}
 }

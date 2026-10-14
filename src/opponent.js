@@ -161,7 +161,7 @@ export function drawGripStudy(ctx,width,height,directions){
   ctx.restore();
 }
 
-export function drawOpponent(ctx, frame,interaction=null) {
+export function drawOpponent(ctx, frame,interaction=null,{belt=true}={}) {
   const {origin,scale,x,y}=frame;
   ctx.save();ctx.transform(scale*x.x,scale*x.y,scale*y.x,scale*y.y,origin.x,origin.y);
   const shape=(points,fill,stroke='#9c998f',width=.014)=>{ctx.beginPath();points.forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke()};
@@ -169,7 +169,7 @@ export function drawOpponent(ctx, frame,interaction=null) {
   ctx.save();
   ellipse(-.74,1.055,.078,.12,'#c9a387');if(!interaction?.tapped)ellipse(.74,1.055,.078,.12,'#c9a387');
   shape([[-.18,.06],[.18,.06],[.48,.20],[.40,.66],[-.40,.66],[-.48,.20]],'#c9a387');
-  drawJudogi(ctx,true,interaction);
+  drawJudogi(ctx,belt,interaction);
   if(interaction?.tapped){
     const beat=Math.sin((interaction.time??0)/95)*.018;
     giPaint(ctx,'M .37 .17 Q .59 .15 .66 .32 Q .67 .45 .52 .58 L .25 .42 L .31 .28 Q .41 .35 .46 .37 L .37 .17 Z',clothGradient(ctx,.25,.25,.6,.5));
