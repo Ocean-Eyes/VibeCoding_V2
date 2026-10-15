@@ -89,10 +89,10 @@ function collarContact(p,index){
   const t=Math.max(0,Math.min(1,1-distance/.085));return t*t*(3-2*t);
 }
 let weaveContour;
-function drawJudogi(ctx,belt=true,interaction=null){
+function drawJudogi(ctx,belt=true,interaction=null,arms=true){
   const body='M -.2 .055 Q -.285 .11 -.40 .17 Q -.47 .38 -.44 .66 L -.48 1.1 Q -.48 1.35 -.53 1.55 Q -.27 1.64 .02 1.6 Q .32 1.65 .53 1.55 L .46 1.1 Q .42 .65 .44 .4 Q .44 .26 .39 .17 L .2 .055 L .14 .3 L 0 .55 L -.14 .3 Z';
   // Loose sleeves hang from sloping shoulders, with fabric volume at elbow and cuff.
-  for(const side of [-1,1]){
+  for(const side of (arms?[-1,1]:[])){
     if(side===1&&interaction?.tapped)continue;
     ctx.save();ctx.scale(side,1);
     giPaint(ctx,'M .32 .15 Q .49 .15 .59 .27 Q .67 .35 .70 .51 C .72 .67 .82 .83 .84 .98 L .64 1.07 Q .57 .91 .56 .76 Q .52 .63 .47 .5 L .37 .4 Z',clothGradient(ctx,.38,.4,.79,.48));
@@ -161,15 +161,15 @@ export function drawGripStudy(ctx,width,height,directions){
   ctx.restore();
 }
 
-export function drawOpponent(ctx, frame,interaction=null,{belt=true}={}) {
+export function drawOpponent(ctx, frame,interaction=null,{belt=true,arms=true}={}) {
   const {origin,scale,x,y}=frame;
   ctx.save();ctx.transform(scale*x.x,scale*x.y,scale*y.x,scale*y.y,origin.x,origin.y);
   const shape=(points,fill,stroke='#9c998f',width=.014)=>{ctx.beginPath();points.forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke()};
   const ellipse=(a,b,rx,ry,fill)=>{ctx.beginPath();ctx.ellipse(a,b,rx,ry,0,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill()};
   ctx.save();
-  ellipse(-.74,1.055,.078,.12,'#c9a387');if(!interaction?.tapped)ellipse(.74,1.055,.078,.12,'#c9a387');
-  shape([[-.18,.06],[.18,.06],[.48,.20],[.40,.66],[-.40,.66],[-.48,.20]],'#c9a387');
-  drawJudogi(ctx,belt,interaction);
+  if(arms){ellipse(-.74,1.055,.078,.12,'#c9a387');if(!interaction?.tapped)ellipse(.74,1.055,.078,.12,'#c9a387');}
+  shape(arms?[[-.18,.06],[.18,.06],[.48,.20],[.40,.66],[-.40,.66],[-.48,.20]]:[[-.18,.06],[.18,.06],[.16,.25],[0,.55],[-.16,.25]],'#c9a387');
+  drawJudogi(ctx,belt,interaction,arms);
   if(interaction?.tapped){
     const beat=Math.sin((interaction.time??0)/95)*.018;
     giPaint(ctx,'M .37 .17 Q .59 .15 .66 .32 Q .67 .45 .52 .58 L .25 .42 L .31 .28 Q .41 .35 .46 .37 L .37 .17 Z',clothGradient(ctx,.25,.25,.6,.5));

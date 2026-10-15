@@ -1,33 +1,38 @@
-import {normalizeTracking} from './belt-player.js';
-// Independent review of these exact input hashes; this does not relabel model
-// estimates as ground truth or manufacture a numerical detection confidence.
+import {normalizeControls} from './belt-controls.js';
+// Exact reviewed control data. Hidden contacts remain authored inference.
 export const BELT_REVIEW=Object.freeze({
- status:'approved',scope:'visible front-view vector observations and short-tail teaching drawing',
- belt:'0f3d3c3e5815d967bd386cea735e1009bfedf02d0d92efaee1141fac5523e0c3',
- hands:'82ff12472ee6f714292abef10fcc89c93503b45fd48ae70f49a29de0439c0664',
- reviewedRenderer:'70f44cf424ab558831d2ee9d6b42d4c791d7287f042bfb7da0f5663ae7ba936d',
- packed:'12dd282461bd4397aad73cf6314304a97e015c7acaec6cd1f315f89fdf2513d9',
- registration:{status:'approved-fixed-registration',anchor:[.5,.5],width:.65,bodyScale:.74},
- teaching:{from:0,to:21.4,freeTailOnly:true,evidence:'independent v4 source and contour review; hand clearance >= .433 waist units'}
+ "status": "approved",
+ "scope": "character-native instructional flat panels; hidden contact inferred",
+ "controlSHA256": "ebcf8e7605ad0c46e4c5067bab2406c3a7d1ed8f68f9fea213316df20f83f86a",
+ "sourceVideoSHA256": "661ed0670e8afbadd42a0c3cc21eb9ae86f171c0d5f5c826272b471f4b689822",
+ "rigSHA256": "374ee28feaf898b97d5a6b374336af3f39e101bd1409099b2eebbacfeebfb70b",
+ "reviewedPaperMotionSHA256": "311f98802e90aa03cb82fc702b8fa89e929fa8df793b91b1d25b2b88151c7e90",
+ "paperMotionSHA256": "4e176b335a3ece236800f15d87db724ff61bb2952208d355434224ad5dfd935c",
+ "reviewedPaperSceneSHA256": "957e8277d11b472c2e5a9ed9f8573cbe5ab7a7f165706074064f7ff427b4fad3",
+ "paperSceneSHA256": "999181b754f6169f6cafd15ef70666a93acb414929df289b88172426cb69910e",
+ "reviewedPaperLabelsSHA256": "2ab620e2a08265cd967cbddbf1f9117cacd9aa922f922582b36dec211fb48b4b",
+ "paperLabelsSHA256": "f8f0e5a646da3d8e2cc4985c6d64c823e5005d0c5bf6c5b02d8edb691da0bd64",
+ "reviewedPaperInspectionSHA256": "3a9f9d5f7d50cb1a6758649f57671a09fe0cef0c4139425caaba07fb18c2e192",
+ "paperInspectionSHA256": "47be4da7d21c4be08205a3d8adb609404fe0de8715cbc6e708f04330c46cc8b5",
+ "originalFrames": 1285,
+ "fps": 60,
+ "registration": "fixed native character rig; authored contact projection, not source confidence"
 });
-export const BELT_DATA_URL=new URL('../assets/belt/tracked-v4-12dd282461bd.json.gz',import.meta.url);
+export const BELT_DATA_URL=new URL('../assets/belt/controls-ebcf8e7605ad.json.gz',import.meta.url);
 let cached=null;
 export async function loadBeltSource({signal}={}){
- if(cached)return cached;
- const response=await fetch(BELT_DATA_URL,{signal});if(!response.ok)throw new Error('Tracking download failed');
+ signal?.throwIfAborted();if(cached)return cached;
+ const response=await fetch(BELT_DATA_URL,{signal});if(!response.ok)throw new Error('Control download failed');
  let bytes=new Uint8Array(await response.arrayBuffer());
- // Explicit .gz keeps the network payload small even on hosts without automatic
- // compression. A host which transparently decodes gzip is accepted too.
+ // Explicit gzip avoids depending on hosting compression. Decoded responses work too.
  if(bytes[0]===31&&bytes[1]===139){
   if(typeof DecompressionStream==='undefined')throw new Error('Gzip decoding unavailable');
-  const decompressed=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  bytes=new Uint8Array(await new Response(decompressed).arrayBuffer());
+  bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
  }
  signal?.throwIfAborted();
  const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');
- if(hash!==BELT_REVIEW.packed)throw new Error('Tracking integrity mismatch');
- const data=JSON.parse(new TextDecoder().decode(bytes)),sources=data.packing?.sourceHashes;
- if(sources?.belt!==BELT_REVIEW.belt||sources?.hands!==BELT_REVIEW.hands||data.frames.length!==1285)throw new Error('Unreviewed tracking source');
- signal?.throwIfAborted();
- cached=normalizeTracking(data,BELT_REVIEW);return cached;
+ if(hash!==BELT_REVIEW.controlSHA256)throw new Error('Control integrity mismatch');
+ const data=JSON.parse(new TextDecoder().decode(bytes));
+ if(data.source?.sourceVideoSHA256!==BELT_REVIEW.sourceVideoSHA256||data.frames?.length!==BELT_REVIEW.originalFrames)throw new Error('Unreviewed control source');
+ const normalized=normalizeControls(data);signal?.throwIfAborted();cached=normalized;return cached;
 }

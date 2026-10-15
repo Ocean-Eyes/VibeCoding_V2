@@ -1,10 +1,12 @@
+// Actual built-app source loading and recovery checks.
 const {chromium}=require(process.argv[2]||'playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true});
  const enter=async page=>{await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');await page.locator('[data-category="basics"]').click();await page.locator('[data-lesson="belt"]').click()};
- const pattern='**/tracked-v4-*.json.gz';
+ const {BELT_DATA_URL}=await import('../src/belt-source.js');
+ const expectedBytes=fs.statSync(BELT_DATA_URL).size,assetName=BELT_DATA_URL.pathname.split('/').at(-1),pattern='**/'+assetName;
  try{
   for(const kind of ['download','integrity']){
    const p=await browser.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
@@ -14,7 +16,9 @@ const fs=require('node:fs');
    await p.unroute(pattern);await p.locator('#belt-retry').click();await p.waitForFunction(()=>document.querySelector('#belt-canvas').dataset.sourceState==='ready');
    await p.locator('[data-belt-step="4"]').click();await p.waitForFunction(()=>document.querySelector('#belt-canvas').dataset.pts==='15.5');
    assert.equal(await p.locator('#belt-detail').getAttribute('data-pts'),'15.5');
-   assert.ok(Number(await p.locator('#belt-canvas').getAttribute('data-belt-regions'))>0);
+   assert.equal(await p.locator('#belt-canvas').getAttribute('data-rig-hands'),'2');
+   assert.equal(await p.locator('#belt-canvas').getAttribute('data-paper-strips'),'2');
+   assert.equal(await p.locator('#belt-canvas').getAttribute('data-render-source'),'paper-flat');
    assert.equal(await p.locator('[data-belt-view="back"]').count(),0);assert.equal(await p.locator('[data-belt-view="side"]').count(),0);
    assert.deepEqual(errors,[]);await p.close();
   }
@@ -24,9 +28,10 @@ const fs=require('node:fs');
   while(!requested)await p.waitForTimeout(20);
   await p.locator('#back-menu').click();release();await p.waitForTimeout(150);assert.ok(await p.locator('#home-screen').isVisible());
   await p.unroute(pattern);await p.locator('[data-lesson="belt"]').click();await p.waitForFunction(()=>document.querySelector('#belt-canvas').dataset.sourceState==='ready');
-  const resources=await p.evaluate(()=>performance.getEntriesByType('resource').filter(r=>r.name.includes('tracked-v4-')).map(r=>({name:r.name,encodedBodySize:r.encodedBodySize,decodedBodySize:r.decodedBodySize,transferSize:r.transferSize})));
-  assert.ok(resources.some(r=>r.encodedBodySize>3000000&&r.encodedBodySize<3300000),'explicit gzip transport stays approximately 3.2 MB');
-  const pixels=await p.locator('#belt-canvas').evaluate(c=>({regions:c.dataset.beltRegions,frame:c.dataset.frame,pts:c.dataset.pts,renderSource:c.dataset.renderSource}));
+  const resources=await p.evaluate(assetName=>performance.getEntriesByType('resource').filter(r=>r.name.includes(assetName)).map(r=>({name:r.name,encodedBodySize:r.encodedBodySize,decodedBodySize:r.decodedBodySize,transferSize:r.transferSize})),assetName);
+  assert.equal(await p.evaluate(()=>performance.getEntriesByType('resource').some(r=>r.name.includes('tracked-v4-'))),false,'source silhouette asset is not requested');
+  assert.ok(resources.some(r=>r.encodedBodySize===expectedBytes),'actual transfer matches the shipped controls gzip');
+  const pixels=await p.locator('#belt-canvas').evaluate(c=>({rigHands:c.dataset.rigHands,strips:c.dataset.paperStrips,panels:c.dataset.paperPanels,frame:c.dataset.frame,pts:c.dataset.pts,sourcePTS:c.dataset.sourcePts,nextSourcePTS:c.dataset.nextSourcePts,renderSource:c.dataset.renderSource}));
   fs.writeFileSync('.test-output/belt-source-browser.json',JSON.stringify({resources,pixels,errors},null,2));assert.deepEqual(errors,[]);
   console.log('PASS source: failed download, bad hash, retry, close during fetch, reopen, actual gzip transfer, same PTS detail and front-only UI.');
  }finally{await browser.close()}

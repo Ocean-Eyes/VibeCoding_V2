@@ -1,17 +1,14 @@
 import {createTimeline} from '../assets/vendor/animejs/anime.esm.min.js';
 import {BELT_INTERVALS} from './belt-sequence.js';
-// Timing follows original PTS linearly. Inspection holds repeat one observed
-// frame; no coordinate easing or synthetic intermediate knot poses are used.
+import {clockSegments} from './belt-clock.js';
 export function createBeltTimeline({step,onUpdate=()=>{},onComplete=()=>{},caption=null,reduced=false}){
- const interval=BELT_INTERVALS[step],span=interval.to-interval.from;
- const head={value:0},intro=reduced?0:350,move=Math.max(1200,span*1000/(step===4||step===5?.65:1)),hold=850;
- const stops=[...interval.holds.map(pts=>(pts-interval.from)/span),1],holds=[];
+ const head={value:0},intro=reduced?0:350,holds=[];
  const timeline=createTimeline({autoplay:false,onUpdate:self=>{const inspection=holds.find(([a,b])=>self.currentTime>=a&&self.currentTime<b);onUpdate(inspection?inspection[2]:head.value,!!inspection)},onComplete});
  if(caption&&!reduced)timeline.add(caption,{opacity:[0,1],translateY:[8,0],duration:intro,ease:'outQuad'},0);
- let previous=0,cursor=intro;
- for(const stop of stops){
-  const duration=move*(stop-previous);timeline.add(head,{value:[previous,stop],duration,ease:'linear'},cursor);cursor+=duration;
-  if(stop<1){const pause=950;holds.push([cursor,cursor+pause,stop]);cursor+=pause}previous=stop;
+ let cursor=intro;
+ for(const part of clockSegments(BELT_INTERVALS[step],step)){
+  timeline.add(head,{value:[part.from,part.to],duration:part.duration,ease:'linear'},cursor);cursor+=part.duration;
+  if(part.hold){holds.push([cursor,cursor+part.hold,part.to]);cursor+=part.hold}
  }
- timeline.add({duration:hold},cursor);return {timeline,head,holds};
+ timeline.add({duration:850},cursor);return {timeline,head,holds};
 }

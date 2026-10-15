@@ -1,6 +1,6 @@
 import {drawOpponent} from './opponent.js';
 // Full-length silhouette provides a stable reference for obi length.
-export function drawBeltMannequin(ctx,anchor){
+export function drawBeltMannequin(ctx,anchor,{arms=true}={}){
  ctx.save();ctx.translate(anchor.x,anchor.y);ctx.scale(anchor.scale*.90,anchor.scale*.76);
  const fabric=ctx.createLinearGradient(-.5,0,.5,0);fabric.addColorStop(0,'#aab2bb');fabric.addColorStop(.3,'#f0f2f3');fabric.addColorStop(.65,'#d7dde1');fabric.addColorStop(1,'#9fa8b2');
  for(const side of [-1,1]){
@@ -13,5 +13,5 @@ export function drawBeltMannequin(ctx,anchor){
  }
  ctx.restore();
  ctx.save();ctx.translate(anchor.x,0);ctx.scale(.9,1);ctx.translate(-anchor.x,0);
- drawOpponent(ctx,{origin:{x:anchor.x,y:anchor.y-anchor.scale*1.13},scale:anchor.scale,x:{x:1,y:0},y:{x:0,y:1}},null,{belt:false});ctx.restore();
+ drawOpponent(ctx,{origin:{x:anchor.x,y:anchor.y-anchor.scale*1.13},scale:anchor.scale,x:{x:1,y:0},y:{x:0,y:1}},null,{belt:false,arms});ctx.restore();
 }

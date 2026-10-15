@@ -1,10 +1,13 @@
 import {BELT_STEPS,BELT_SOURCE,BELT_REFERENCE_2,sourcePTS,trackedPlacement} from './belt-sequence.js';
 import {beltAnchor} from './belt-geometry.js';
-import {loadBeltSource,BELT_REVIEW} from './belt-source.js';
-import {trackingPose,sampleTracking,shortenTeachingTails,drawTrackedBelt} from './belt-player.js';
+import {loadBeltSource} from './belt-source.js';
+import {sampleRenderFrame} from './belt-interpolation.js';
+import {paperMotion} from './paper-motion.js';
+import {drawPaperMotion} from './paper-scene.js';
+import {drawPaperOpeningCue} from './paper-inspection.js';
 import {sampleMarker,markerCandidates,newBeltTrack,updateBeltTrack,videoRect,videoToScreen,screenToVideo} from './belt-tracker.js';
 import {createBeltTimeline} from './belt-timeline.js';
-import {drawBeltMannequin} from './belt-mannequin.js';
+
 const $=id=>document.getElementById(id);
 const setText=(id,text)=>{if($(id).textContent!==text)$(id).textContent=text};
 let open=false,step=0,progress=0,playing=true,raf=0,stream=null,cameraPending=false,generation=0;
@@ -13,7 +16,7 @@ let source=null,sourceState='idle',sourceController=null,sourceToken=0,poseCache
 let detailView='front',mode='virtual',picking=null,colors=[null,null],tracks=[newBeltTrack(),newBeltTrack()],lastDetection=0;
 const capture=document.createElement('canvas'),captureContext=capture.getContext('2d',{willReadFrequently:true});
 function resetTracks(){tracks=[newBeltTrack(),newBeltTrack()];lastDetection=0}
-function modeNotice(){return mode==='real'?'색 표시가 가려져도 단계는 유지됩니다. 매듭 안쪽과 등 뒤는 직접 확인한 뒤 다음을 누르세요.':'정면에서 관찰된 손과 띠의 움직임입니다. 양끝은 짧게 단순화했고, 가려진 부분은 참고 영상을 함께 확인하세요.'}
+function modeNotice(){return mode==='real'?'색 표시가 가려져도 단계는 유지됩니다. 매듭 안쪽과 등 뒤는 직접 확인한 뒤 다음을 누르세요.':'시연을 보며 순서대로 따라 하세요. 띠를 넣는 틈은 아래 확대 화면에서 확인하세요.'}
 function setMode(value){
  mode=value;picking=null;resetTracks();select(step,mode==='virtual'&&!reduced.matches);
  $('belt-notice').textContent=modeNotice();update();
@@ -45,7 +48,7 @@ function pause(){playing=false;animation?.timeline.pause();update()}
 
 function update(){
  const item=BELT_STEPS[step];$('belt-move').textContent=item.move;$('belt-source').href=`${BELT_SOURCE}&t=${item.reference[0]}s`;$('belt-source-2').href=`${BELT_REFERENCE_2}&t=${item.reference[1]}s`;
- $('belt-source').textContent=`참고 영상 1 · ${item.reference[0]}초 ↗`;$('belt-source-2').textContent=`참고 영상 2 · ${item.reference[1]}초 ↗`;$('belt-step-number').textContent=`${String(step+1).padStart(2,'0')} / 07`;$('belt-step-title').textContent=item.title;$('belt-cue').textContent=item.cue;$('belt-focus').textContent=item.focus;
+ $('belt-source').textContent=`참고 영상 1 · ${item.reference[0]}초 ↗`;$('belt-source-2').textContent=`참고 영상 2 · ${item.reference[1]}초 ↗`;$('belt-step-number').textContent=`${String(step+1).padStart(2,'0')} / 07`;$('belt-step-title').textContent=item.title;$('belt-cue').textContent=item.cue;$('belt-focus').textContent=(step>=3?'매듭 부분 확대 · ':'')+item.focus;
  $('belt-play').textContent=playing?'일시 정지 Ⅱ':'이 단계 시연 ▶';$('belt-prev').disabled=step===0;$('belt-next').disabled=step===BELT_STEPS.length-1;
  document.querySelectorAll('[data-belt-step]').forEach((b,i)=>{b.classList.toggle('selected',i===step);b.setAttribute('aria-current',i===step?'step':'false')});
  $('belt-camera').textContent=cameraPending?'카메라 연결 중…':stream?'카메라 끄기':'카메라로 따라 하기';$('belt-camera').disabled=cameraPending||sourceState!=='ready';
@@ -94,10 +97,10 @@ function realOverlay(ctx,w,h,pose,anchor,now){
   const frame=cameraFrame();if(frame){const candidates=markerCandidates(frame,colors);tracks=tracks.map((t,i)=>updateBeltTrack(t,candidates[i],now,!!colors[i]));trackingUI()}
   lastDetection=now;
  }
- drawTrackedBelt(ctx,anchor,pose,{mirror,opacity:.22,labels:false});
+ drawCharacter(ctx,anchor,pose,{mirror,opacity:.22,body:false,labels:false});
  for(let i=0;i<2;i++){
   const t=tracks[i];if(!t.point||!['tracked','occluded'].includes(t.state))continue;
-  const p=videoToScreen(t.point,rect,mirror),key=i?'b':'a',end=pose.ends[key]?.tip,target=end?{x:anchor.x+end[0]*anchor.scale*(mirror?-1:1),y:anchor.y+end[1]*anchor.scale}:null;
+  const p=videoToScreen(t.point,rect,mirror),key=i?'b':'a',end=pose.guideEnds[key.toUpperCase()]?.position,target=end?{x:anchor.x+end[0]*anchor.scale*(mirror?-1:1),y:anchor.y+end[1]*anchor.scale}:null;
   ctx.save();ctx.globalAlpha=t.state==='occluded'?.4:1;ctx.strokeStyle=i?'#ebcb93':'#a7dcef';ctx.fillStyle='#1b303be8';ctx.lineWidth=2;
   if(target&&t.state==='tracked'&&Math.hypot(target.x-p.x,target.y-p.y)>30){
    ctx.setLineDash([5,6]);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(target.x,target.y);ctx.stroke();ctx.setLineDash([]);
@@ -109,10 +112,15 @@ function realOverlay(ctx,w,h,pose,anchor,now){
  $('belt-canvas').dataset.tracks=tracks.map(t=>t.state).join(',');
 }
 function surface(canvas){const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);if(canvas.width!==Math.round(rect.width*dpr)||canvas.height!==Math.round(rect.height*dpr)){canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr)}const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,rect.width,rect.height);return {ctx,w:rect.width,h:rect.height}}
+// The paper renderer owns body/arm/panel occlusion and mirroring.
+// The UI does not mirror a second time or add folds/clearance routes.
+function drawCharacter(ctx,anchor,pose,{mirror=false,opacity=1,body=true,labels=true}={}){
+ ctx.save();ctx.globalAlpha=opacity;drawPaperMotion(ctx,anchor,pose,{body,diagnostic:false,mirror,labels});ctx.restore();
+}
 function currentPose(){
- const pts=sourcePTS(step,progress),frame=sampleTracking(source,pts).frame;
- if(poseCache?.frameIndex===frame.frameIndex)return poseCache;
- poseCache=shortenTeachingTails(trackingPose(source,pts),{cutY:1.1,reviewedInterval:BELT_REVIEW.teaching});return poseCache;
+ const time=sourcePTS(step,progress);if(poseCache?.requestedPTS===time)return poseCache;
+ const sample=sampleRenderFrame(source,time);
+ poseCache={...paperMotion(sample.frame),requestedPTS:time,frameIndex:sample.sourceFrame.frameIndex,originalPTS:sample.renderPTS,sourceOriginalPTS:sample.sourceFrame.originalPTS,nextSourcePTS:sample.nextFrame.originalPTS,interpolationAlpha:sample.alpha};return poseCache;
 }
 function draw(now){
  if(!open)return;
@@ -125,15 +133,18 @@ function draw(now){
  }
  setText('belt-film-status',playing?(inspecting?'통과 지점 확인':'동작 시연'):progress>=1?'단계 완료':'동작 정지');
  const pose=currentPose(),mirror=!!stream&&$('belt-mirror').checked;let anchor;
- const visibleEnds=['a','b'].map(key=>!!pose.ends[key]?.tip&&pose.ends[key].identityConfidence>=.6),legend=document.querySelector('.belt-legend');
- legend.hidden=!visibleEnds.some(Boolean);visibleEnds.forEach((visible,i)=>legend.children[i].hidden=!visible);
+ document.querySelector('.belt-legend').hidden=true;
  if(stream){anchor=beltAnchor(w,h,Number($('belt-height').value),Number($('belt-width').value));$('belt-video').style.transform=mirror?'scaleX(-1)':'none'}
- else {anchor=trackedPlacement(w,h,step,progress);if(mode==='virtual')drawBeltMannequin(ctx,anchor)}
- const beltTransform={...anchor,scale:anchor.scale*BELT_REVIEW.registration.bodyScale};
- if(mode==='real'){if(stream)realOverlay(ctx,w,h,pose,beltTransform,now)}else drawTrackedBelt(ctx,beltTransform,pose,{mirror,opacity:.94});
- const canvas=$('belt-canvas');canvas.dataset.phase=String(Math.max(0,step-1)+progress*(step?1:0));canvas.dataset.pts=String(pose.originalPTS);canvas.dataset.frame=String(pose.frameIndex);canvas.dataset.renderSource='tracked-v4';canvas.dataset.lessonMode=mode;canvas.dataset.step=String(step);canvas.dataset.mode=stream?'camera':'demo';canvas.dataset.anchor=JSON.stringify(anchor);canvas.dataset.beltRegions=String(pose.beltRegions.length);canvas.dataset.handRegions=String(pose.handRegions.length);
+ else anchor=trackedPlacement(w,h,step,progress);
+ const beltTransform=anchor;
+ if(mode==='real'){if(stream)realOverlay(ctx,w,h,pose,beltTransform,now)}else drawCharacter(ctx,beltTransform,pose,{mirror,opacity:stream?.94:1,body:!stream});
+ const canvas=$('belt-canvas');canvas.dataset.phase=String(Math.max(0,step-1)+progress*(step?1:0));canvas.dataset.pts=String(pose.originalPTS);canvas.dataset.frame=String(pose.frameIndex);canvas.dataset.sourcePts=String(pose.sourceOriginalPTS);canvas.dataset.nextSourcePts=String(pose.nextSourcePTS);canvas.dataset.interpolationAlpha=String(pose.interpolationAlpha);canvas.dataset.renderSource='paper-flat';canvas.dataset.lessonMode=mode;canvas.dataset.step=String(step);canvas.dataset.mode=stream?'camera':'demo';canvas.dataset.anchor=JSON.stringify(anchor);canvas.dataset.paperStrips=String(pose.strips.length);canvas.dataset.paperPanels=String(pose.strips.reduce((n,s)=>n+s.panels.length,0));canvas.dataset.rigHands=String(pose.rig.hands.length);canvas.dataset.guideEnds=JSON.stringify(pose.guideEnds);
  $('belt-detail').dataset.view='front';$('belt-detail').dataset.pts=String(pose.originalPTS);
- drawTrackedBelt(detail.ctx,{x:detail.w/2,y:detail.h*.44,scale:Math.min(detail.w/1.65,detail.h/1.2)*BELT_REVIEW.registration.bodyScale},pose,{opacity:1,mirror,labels:false});
+ const knotCloseup=step>=3,detailScale=knotCloseup?Math.min(detail.w/.92,detail.h/.62):Math.min(detail.w/1.8,detail.h/1.05);
+ const detailAnchor={x:detail.w/2-(knotCloseup?.035:0)*detailScale*(mirror?-1:1),y:knotCloseup?detail.h*.42:detail.h*.10,scale:detailScale};
+ $('belt-detail').dataset.anchor=JSON.stringify(detailAnchor);$('belt-detail').dataset.crop=knotCloseup?'knot':'waist-and-ends';
+ drawCharacter(detail.ctx,detailAnchor,pose,{opacity:1,mirror,body:false});
+ drawPaperOpeningCue(detail.ctx,detailAnchor,pose,{mirror,step});
  $('belt-progress').value=Math.min(1,progress);$('belt-scrub').value=String(Math.round((animation?.timeline.progress??1)*100));raf=requestAnimationFrame(draw);
 }
 async function ensureSource(){
