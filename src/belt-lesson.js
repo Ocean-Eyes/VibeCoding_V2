@@ -1,3 +1,4 @@
+import {tr} from './i18n.js';
 import {BELT_STEPS,BELT_SOURCE,BELT_REFERENCE_2,sourcePTS,trackedPlacement} from './belt-sequence.js';
 import {beltAnchor} from './belt-geometry.js';
 import {loadBeltSource} from './belt-source.js';
@@ -16,22 +17,22 @@ let source=null,sourceState='idle',sourceController=null,sourceToken=0,poseCache
 let detailView='front',mode='virtual',picking=null,colors=[null,null],tracks=[newBeltTrack(),newBeltTrack()],lastDetection=0;
 const capture=document.createElement('canvas'),captureContext=capture.getContext('2d',{willReadFrequently:true});
 function resetTracks(){tracks=[newBeltTrack(),newBeltTrack()];lastDetection=0}
-function modeNotice(){return mode==='real'?'색 표시가 가려져도 단계는 유지됩니다. 매듭 안쪽과 등 뒤는 직접 확인한 뒤 다음을 누르세요.':'시연을 보며 순서대로 따라 하세요. 띠를 넣는 틈은 아래 확대 화면에서 확인하세요.'}
+function modeNotice(){return mode==='real'?tr('색 표시가 가려져도 단계는 유지됩니다. 매듭 안쪽과 등 뒤는 직접 확인한 뒤 다음을 누르세요.'):tr('시연을 보며 순서대로 따라 하세요. 띠를 넣는 틈은 아래 확대 화면에서 확인하세요.')}
 function setMode(value){
  mode=value;picking=null;resetTracks();select(step,mode==='virtual'&&!reduced.matches);
  $('belt-notice').textContent=modeNotice();update();
 }
 function trackingUI(){
- const status={unregistered:'미등록',searching:'찾는 중',tracked:'추적 중',occluded:'가림 · 잠시 유지'};
+ const status={unregistered:tr('미등록'),searching:tr('찾는 중'),tracked:tr('추적 중'),occluded:tr('가림 · 잠시 유지')};
  for(let i=0;i<2;i++){
-  const key=i?'b':'a';setText('belt-track-'+key,colors[i]?status[tracks[i].state==='unregistered'?'searching':tracks[i].state]:'미등록');
+  const key=i?'b':'a';setText('belt-track-'+key,colors[i]?status[tracks[i].state==='unregistered'?'searching':tracks[i].state]:tr('미등록'));
   $('belt-swatch-'+key).style.background=colors[i]?`hsl(${colors[i].h} 75% 55%)`:'';
   $('belt-register-'+key).disabled=!stream;$('belt-register-'+key).setAttribute('aria-pressed',String(picking===i));
  }
  $('belt-pick-controls').hidden=picking===null;$('belt-canvas').dataset.picking=String(picking!==null);
- if(picking!==null)setText('belt-pick-prompt',`${picking?'B':'A'} 끝의 색 테이프를 영상에서 누르세요. 또는 화면 중앙의 십자에 맞추고 아래 버튼을 누르세요.`);
+ if(picking!==null)setText('belt-pick-prompt',tr`${picking?'B':'A'} 끝의 색 테이프를 영상에서 누르세요. 또는 화면 중앙의 십자에 맞추고 아래 버튼을 누르세요.`);
  const states=tracks.map(t=>t.state);
- setText('belt-tracking-status',!stream?'카메라를 켜면 색을 등록할 수 있습니다.':colors.some(c=>!c)?'A·B 색을 등록하면 실제 양끝에 표시가 따라갑니다.':states.every(s=>s==='tracked')?'양끝 추적 중 · 화살표는 현재 단계의 참고 경로입니다. 동작 후 다음을 눌러 주세요.':states.includes('occluded')?'색 표시가 잠시 가려졌습니다. 단계를 유지하고 다시 보이면 이어갑니다.':'색 표시를 찾고 있습니다. 양끝을 보여 주세요. 같은 색 물건이 배경에 있으면 치워 주세요.');
+ setText('belt-tracking-status',!stream?tr('카메라를 켜면 색을 등록할 수 있습니다.'):colors.some(c=>!c)?tr('A·B 색을 등록하면 실제 양끝에 표시가 따라갑니다.'):states.every(s=>s==='tracked')?tr('양끝 추적 중 · 화살표는 현재 단계의 참고 경로입니다. 동작 후 다음을 눌러 주세요.'):states.includes('occluded')?tr('색 표시가 잠시 가려졌습니다. 단계를 유지하고 다시 보이면 이어갑니다.'):tr('색 표시를 찾고 있습니다. 양끝을 보여 주세요. 같은 색 물건이 배경에 있으면 치워 주세요.'));
 }
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 function select(index,animate=false){
@@ -48,15 +49,15 @@ function pause(){playing=false;animation?.timeline.pause();update()}
 
 function update(){
  const item=BELT_STEPS[step];$('belt-move').textContent=item.move;$('belt-source').href=`${BELT_SOURCE}&t=${item.reference[0]}s`;$('belt-source-2').href=`${BELT_REFERENCE_2}&t=${item.reference[1]}s`;
- $('belt-source').textContent=`참고 영상 1 · ${item.reference[0]}초 ↗`;$('belt-source-2').textContent=`참고 영상 2 · ${item.reference[1]}초 ↗`;$('belt-step-number').textContent=`${String(step+1).padStart(2,'0')} / 07`;$('belt-step-title').textContent=item.title;$('belt-cue').textContent=item.cue;$('belt-focus').textContent=(step>=3?'매듭 부분 확대 · ':'')+item.focus;
- $('belt-play').textContent=playing?'일시 정지 Ⅱ':'이 단계 시연 ▶';$('belt-prev').disabled=step===0;$('belt-next').disabled=step===BELT_STEPS.length-1;
+ $('belt-source').textContent=tr`참고 영상 1 · ${item.reference[0]}초 ↗`;$('belt-source-2').textContent=tr`참고 영상 2 · ${item.reference[1]}초 ↗`;$('belt-step-number').textContent=`${String(step+1).padStart(2,'0')} / 07`;$('belt-step-title').textContent=item.title;$('belt-cue').textContent=item.cue;$('belt-focus').textContent=(step>=3?tr('매듭 부분 확대 · '):'')+item.focus;
+ $('belt-play').textContent=playing?tr('일시 정지 Ⅱ'):tr('이 단계 시연 ▶');$('belt-prev').disabled=step===0;$('belt-next').disabled=step===BELT_STEPS.length-1;
  document.querySelectorAll('[data-belt-step]').forEach((b,i)=>{b.classList.toggle('selected',i===step);b.setAttribute('aria-current',i===step?'step':'false')});
- $('belt-camera').textContent=cameraPending?'카메라 연결 중…':stream?'카메라 끄기':'카메라로 따라 하기';$('belt-camera').disabled=cameraPending||sourceState!=='ready';
- $('belt-alignment').hidden=!stream;$('belt-view-label').textContent=mode==='real'?'REAL BELT · 색 표시 추적':stream?'CAMERA · GHOST BELT':'DEMONSTRATION · GHOST BELT';
+ $('belt-camera').textContent=cameraPending?tr('카메라 연결 중…'):stream?tr('카메라 끄기'):tr('카메라로 따라 하기');$('belt-camera').disabled=cameraPending||sourceState!=='ready';
+ $('belt-alignment').hidden=!stream;$('belt-view-label').textContent=mode==='real'?tr('REAL BELT · 색 표시 추적'):stream?'CAMERA · GHOST BELT':'DEMONSTRATION · GHOST BELT';
  $('belt-mode-virtual').setAttribute('aria-pressed',String(mode==='virtual'));$('belt-mode-real').setAttribute('aria-pressed',String(mode==='real'));
  $('belt-tracking').hidden=mode!=='real';$('belt-real-empty').hidden=mode!=='real'||!!stream;
- $('belt-mode-description').textContent=mode==='real'?'실제 띠 양끝에 서로 다른 색 표시를 붙여 추적합니다. 옆 시연을 보고 한 단계씩 따라 하세요.':'반투명 띠의 움직임을 보거나 카메라 위 가이드를 따라 해 보세요.';
- $('belt-mode-note').textContent=mode==='real'?'원은 실제 색 표시 위치, 옅은 띠는 목표 경로입니다. 가이드 높이·크기를 내 허리에 맞추세요. 등 뒤와 매듭 안쪽은 카메라로 확인할 수 없어 단계는 직접 넘깁니다.':'카메라에서는 높이·크기를 조절해 가이드를 내 허리에 맞추세요. 매듭의 조임은 직접 확인하고, 단계는 버튼으로 넘깁니다.';
+ $('belt-mode-description').textContent=mode==='real'?tr('실제 띠 양끝에 서로 다른 색 표시를 붙여 추적합니다. 옆 시연을 보고 한 단계씩 따라 하세요.'):tr('반투명 띠의 움직임을 보거나 카메라 위 가이드를 따라 해 보세요.');
+ $('belt-mode-note').textContent=mode==='real'?tr('원은 실제 색 표시 위치, 옅은 띠는 목표 경로입니다. 가이드 높이·크기를 내 허리에 맞추세요. 등 뒤와 매듭 안쪽은 카메라로 확인할 수 없어 단계는 직접 넘깁니다.'):tr('카메라에서는 높이·크기를 조절해 가이드를 내 허리에 맞추세요. 매듭의 조임은 직접 확인하고, 단계는 버튼으로 넘깁니다.');
  trackingUI();
  const unavailable=sourceState!=='ready';
  for(const id of ['belt-play','belt-prev','belt-next','belt-restart','belt-scrub','belt-speed'])if(unavailable)$(id).disabled=true;
@@ -67,16 +68,16 @@ function update(){
 function stopCamera(){generation++;cameraPending=false;stream?.getTracks().forEach(t=>t.stop());stream=null;picking=null;resetTracks();$('belt-video').srcObject=null;$('belt-video').hidden=true;update()}
 async function toggleCamera(){
  if(stream||cameraPending){stopCamera();return}
- const token=++generation;cameraPending=true;update();$('belt-notice').textContent='카메라 권한을 허용해 주세요.';
+ const token=++generation;cameraPending=true;update();$('belt-notice').textContent=tr('카메라 권한을 허용해 주세요.');
  try{
   if(!navigator.mediaDevices?.getUserMedia)throw new Error('unavailable');
   const acquired=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
   if(token!==generation||!open){acquired.getTracks().forEach(t=>t.stop());return}
   stream=acquired;const video=$('belt-video');video.srcObject=stream;await video.play();
   if(token!==generation||!open)return;
-  video.hidden=false;cameraPending=false;stream.getVideoTracks()[0].addEventListener('ended',()=>{if(token===generation){stopCamera();$('belt-notice').textContent='카메라 연결이 끝났습니다. 시연은 계속 볼 수 있습니다.'}});
-  $('belt-notice').textContent=mode==='real'?'A 색 등록과 B 색 등록을 눌러 실제 띠 끝의 색 표시를 선택하세요.':'가이드가 배꼽 높이에 오도록 높이와 크기를 맞추세요. 단계는 직접 넘길 수 있습니다.';update();
- }catch(error){if(token!==generation)return;stopCamera();$('belt-notice').textContent=error.name==='NotAllowedError'?'카메라 권한이 거부됐습니다. 시연을 보거나 권한 허용 후 다시 연결하세요.':'카메라를 연결하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도하세요.'}
+  video.hidden=false;cameraPending=false;stream.getVideoTracks()[0].addEventListener('ended',()=>{if(token===generation){stopCamera();$('belt-notice').textContent=tr('카메라 연결이 끝났습니다. 시연은 계속 볼 수 있습니다.')}});
+  $('belt-notice').textContent=mode==='real'?tr('A 색 등록과 B 색 등록을 눌러 실제 띠 끝의 색 표시를 선택하세요.'):tr('가이드가 배꼽 높이에 오도록 높이와 크기를 맞추세요. 단계는 직접 넘길 수 있습니다.');update();
+ }catch(error){if(token!==generation)return;stopCamera();$('belt-notice').textContent=error.name==='NotAllowedError'?tr('카메라 권한이 거부됐습니다. 시연을 보거나 권한 허용 후 다시 연결하세요.'):tr('카메라를 연결하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도하세요.')}
 }
 function cameraFrame(){
  const video=$('belt-video');if(!stream||video.readyState<2||!video.videoWidth)return null;
@@ -127,11 +128,11 @@ function draw(now){
  const {ctx,w,h}=surface($('belt-canvas')),detail=surface($('belt-detail'));
  $('belt-canvas').dataset.sourceState=sourceState;
  if(!source){
-  setText('belt-film-status',sourceState==='error'?'시연 불러오기 실패':'시연 불러오는 중');
-  ctx.fillStyle='#e6e9e7';ctx.font='15px sans-serif';ctx.textAlign='center';ctx.fillText(sourceState==='error'?'다시 불러오기를 눌러 주세요.':'띠와 손의 움직임을 불러오고 있습니다.',w/2,h/2);
+  setText('belt-film-status',sourceState==='error'?tr('시연 불러오기 실패'):tr('시연 불러오는 중'));
+  ctx.fillStyle='#e6e9e7';ctx.font='15px sans-serif';ctx.textAlign='center';ctx.fillText(sourceState==='error'?tr('다시 불러오기를 눌러 주세요.'):tr('띠와 손의 움직임을 불러오고 있습니다.'),w/2,h/2);
   raf=requestAnimationFrame(draw);return;
  }
- setText('belt-film-status',playing?(inspecting?'통과 지점 확인':'동작 시연'):progress>=1?'단계 완료':'동작 정지');
+ setText('belt-film-status',playing?(inspecting?tr('통과 지점 확인'):tr('동작 시연')):progress>=1?tr('단계 완료'):tr('동작 정지'));
  const pose=currentPose(),mirror=!!stream&&$('belt-mirror').checked;let anchor;
  document.querySelector('.belt-legend').hidden=true;
  if(stream){anchor=beltAnchor(w,h,Number($('belt-height').value),Number($('belt-width').value));$('belt-video').style.transform=mirror?'scaleX(-1)':'none'}
@@ -148,11 +149,11 @@ function draw(now){
  $('belt-progress').value=Math.min(1,progress);$('belt-scrub').value=String(Math.round((animation?.timeline.progress??1)*100));raf=requestAnimationFrame(draw);
 }
 async function ensureSource(){
- const token=++sourceToken;sourceController?.abort();sourceController=new AbortController();sourceState='loading';playing=false;update();$('belt-notice').textContent='시연을 불러오고 있습니다.';
+ const token=++sourceToken;sourceController?.abort();sourceController=new AbortController();sourceState='loading';playing=false;update();$('belt-notice').textContent=tr('시연을 불러오고 있습니다.');
  try{
   const loaded=await loadBeltSource({signal:sourceController.signal});if(token!==sourceToken||!open)return;
   source=loaded;sourceState='ready';poseCache=null;select(step,mode==='virtual'&&!reduced.matches);$('belt-notice').textContent=modeNotice();
- }catch(error){if(token!==sourceToken||!open||error.name==='AbortError')return;sourceState='error';$('belt-notice').textContent='시연을 불러오지 못했습니다. 연결을 확인한 뒤 다시 불러오기를 눌러 주세요.';update()}
+ }catch(error){if(token!==sourceToken||!open||error.name==='AbortError')return;sourceState='error';$('belt-notice').textContent=tr('시연을 불러오지 못했습니다. 연결을 확인한 뒤 다시 불러오기를 눌러 주세요.');update()}
 }
 BELT_STEPS.forEach((item,i)=>{const b=document.createElement('button');b.type='button';b.dataset.beltStep=String(i);b.innerHTML=`<span>${String(i+1).padStart(2,'0')}</span>${item.title}`;b.onclick=()=>select(i);$('belt-steps').append(b)});
 $('belt-play').onclick=()=>{if(playing)pause();else if(progress>=1)select(step,true);else{playing=true;animation.timeline.play();update()}};
@@ -170,7 +171,7 @@ $('belt-canvas').onclick=e=>{
  if(mode!=='real'||picking===null||!stream)return;
  const canvas=$('belt-canvas'),r=canvas.getBoundingClientRect(),video=$('belt-video'),rect=videoRect(r.width,r.height,video.videoWidth||4,video.videoHeight||3);
  const point=screenToVideo({x:e.clientX-r.left,y:e.clientY-r.top},rect,$('belt-mirror').checked);
- if(point)registerAt(point);else $('belt-notice').textContent='검은 여백이 아닌 영상 속 색 표시를 선택하세요.';
+ if(point)registerAt(point);else $('belt-notice').textContent=tr('검은 여백이 아닌 영상 속 색 표시를 선택하세요.');
 };
 export function openBeltLesson(){mode='virtual';picking=null;colors=[null,null];resetTracks();cancelAnimationFrame(raf);open=true;step=0;progress=reduced.matches?1:0;playing=false;poseCache=null;if(source){sourceState='ready';select(0,!reduced.matches);$('belt-notice').textContent=modeNotice()}else void ensureSource();update();raf=requestAnimationFrame(draw)}
 export function closeBeltLesson(){open=false;sourceToken++;sourceController?.abort();animationToken++;animation?.timeline.cancel();cancelAnimationFrame(raf);stopCamera()}

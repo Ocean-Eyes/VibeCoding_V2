@@ -1,3 +1,4 @@
+import {tr} from './i18n.js';
 // Bounded numeric diagnostics stay in this tab; export is a user-initiated download.
 export class PracticeTrace{
  constructor(){this.clear()}
@@ -10,11 +11,11 @@ export class PracticeTrace{
  }
  snapshot(technique,version){return structuredClone({format:'just-judo-trace',schema:1,technique,version,frames:this.frames})}
 }
-const pct=v=>v===null||v===undefined?'미확인':`${Math.round(v*100)}%`;
+const pct=v=>v===null||v===undefined?tr('미확인'):`${Math.round(v*100)}%`;
 export function motionDiagnostic(state,index){
- const side=index?'오른쪽':'왼쪽';
- if(!state?.grips[index])return `${side}: 깃 잡기 전`;
- const reason={ungripped:'깃 잡기 전','not-used':'전완 회전 대상 아님',wrist:'손목 인식 대기',elbow:'팔꿈치 인식 대기',reference:'손목 기준 연결 대기',geometry:'팔 길이·방향 확인 불가',tracked:'전완 추적 중',translation:'양팔 평행 이동'}[state.forearmStatus[index]];
+ const side=index?tr('오른쪽'):tr('왼쪽');
+ if(!state?.grips[index])return tr`${side}: 깃 잡기 전`;
+ const reason={ungripped:tr('깃 잡기 전'),'not-used':tr('전완 회전 대상 아님'),wrist:tr('손목 인식 대기'),elbow:tr('팔꿈치 인식 대기'),reference:tr('손목 기준 연결 대기'),geometry:tr('팔 길이·방향 확인 불가'),tracked:tr('전완 추적 중'),translation:tr('양팔 평행 이동')}[state.forearmStatus[index]];
  const angle=state.forearmAngles[index],degrees=angle===null?'—':`${Math.round(Math.abs(angle)*180/Math.PI)}°`;
- return `${side}: ${reason} · 회전 ${degrees} · 팔꿈치 ${pct(state.elbowLevels[index])} / 손목 ${pct(state.wristLevels[index])} / 전완 ${pct(state.forearmLevels[index])}`;
+ return tr`${side}: ${reason} · 회전 ${degrees} · 팔꿈치 ${pct(state.elbowLevels[index])} / 손목 ${pct(state.wristLevels[index])} / 전완 ${pct(state.forearmLevels[index])}`;
 }

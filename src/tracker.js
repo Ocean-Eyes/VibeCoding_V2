@@ -15,14 +15,14 @@ self.onmessage=async({data})=>{
       };
       try{await create('GPU')}catch{await create('CPU')}
       self.postMessage({type:'ready'});
-    }catch(e){self.postMessage({type:'error',message:`모델을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 연결해 주세요. (${e.message})`})}
+    }catch(e){self.postMessage({type:'error',code:'model',detail:e.message,message:`모델을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 연결해 주세요. (${e.message})`})}
   }
   if(data.type==='frame'){
     const {bitmap,time}=data;
     try{
       const p=pose.detectForVideo(bitmap,time),h=hand.detectForVideo(bitmap,time);
       self.postMessage({type:'result',points:p.landmarks[0]??null,hands:h.landmarks,time});
-    }catch(e){self.postMessage({type:'error',message:`자세 추적이 중단되었습니다. 다시 연결해 주세요. (${e.message})`})}
+    }catch(e){self.postMessage({type:'error',code:'tracking',detail:e.message,message:`자세 추적이 중단되었습니다. 다시 연결해 주세요. (${e.message})`})}
     finally{bitmap.close()}
   }
 };

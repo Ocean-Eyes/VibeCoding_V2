@@ -280,3 +280,22 @@ footer { color: #303e2e; }
 .belt-scrub{display:flex;gap:14px;align-items:center;padding:12px 18px;font-size:12px;border-bottom:1px solid var(--line)}.belt-scrub input{flex:1;min-width:60px;accent-color:#983638}.belt-view-controls{display:flex;gap:6px;margin-top:12px}.belt-view-controls button{flex:1;padding:7px;border:1px solid var(--line);background:transparent;color:var(--ink);font-size:11px}.belt-view-controls button[aria-pressed=true]{background:#e7e5d9;border-color:#9b3437}
 
 .belt-film-caption{position:absolute;z-index:2;top:20px;left:20px;display:flex;flex-direction:column;gap:8px;pointer-events:none;color:#f5f0e3;border-left:2px solid #d4b16e;padding:8px 14px;background:linear-gradient(90deg,#18242cdf,transparent)}.belt-film-caption span{font-size:10px;letter-spacing:1px;color:#c4cccb}.belt-film-caption strong{font:19px var(--serif)}.belt-speed-control{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;background:#edece3;font-size:12px}.belt-speed-control label{display:flex;align-items:center;gap:10px}.belt-speed-control select{padding:7px;background:var(--panel);color:var(--ink);border:1px solid var(--line)}.belt-speed-control>span{font-size:11px;color:var(--muted)}.belt-references{display:flex;flex-wrap:wrap;gap:10px 16px;border-top:1px solid var(--line);padding-top:14px;font-size:11px}.belt-references>span{flex-basis:100%;color:var(--muted)}.belt-current{border-left:3px solid #cfad71}.belt-viewport{background:radial-gradient(ellipse at 50% 48%,#3b4b55,#18242d)}@media(max-width:520px){.belt-film-caption{top:10px;left:10px;padding:6px 10px}.belt-film-caption strong{font-size:14px}.belt-speed-control{flex-wrap:wrap}.belt-speed-control>span{width:100%}}
+
+.language-button{white-space:nowrap;font-size:12px}
+.language-dialog{width:min(420px,calc(100vw - 32px));padding:32px;background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.language-dialog::backdrop{background:#17212a88}
+.language-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
+.language-options button{padding:18px 12px;text-align:left;background:transparent;color:var(--ink);border:1px solid var(--line);font-size:18px}
+.language-options span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+.language-options button[aria-pressed=true]{border-color:#99383a;box-shadow:inset 3px 0 #99383a;background:#e7e5d9}
+html[lang=en] .chapter-name{font-size:clamp(20px,2.2vw,30px)}
+html[lang=en] .chapter-description,html[lang=en] .chapter-bottom{line-height:1.5}
+html[lang=en] .lesson-title-group h3{font-size:25px}
+html[lang=en] .right-note>span{font-size:14px;line-height:1.7}
+html[lang=en] .belt-current h2{font-size:20px}
+@media(max-width:760px){.topbar{flex-wrap:wrap;gap:10px}.header-actions{flex-wrap:wrap;gap:10px}.language-button{font-size:11px}html[lang=en] .transport{flex-wrap:wrap}html[lang=en] .heading h1{font-size:32px}html[lang=en] .belt-current{gap:12px}html[lang=en] .session-label{max-width:100%;white-space:normal}}
+html[lang=en] .right-note>span{writing-mode:horizontal-tb;text-align:right;letter-spacing:0;max-width:150px}
+html[lang=en] .grip-labels span{white-space:normal;flex:1;min-width:0;line-height:1.4;text-align:center}
+html[lang=en] .metrics>div{flex-wrap:wrap;gap:6px}
+@media(max-width:760px){html[lang=en] .right-note>span{position:absolute;bottom:2px;right:0;font-size:11px;line-height:1.4}}
+@media(max-width:520px){.topbar{gap:0;padding:10px 0}.header-actions{width:100%;justify-content:flex-end}.top-note{display:none}}

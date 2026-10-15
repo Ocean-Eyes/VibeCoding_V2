@@ -13,7 +13,7 @@ export const BELT_REVIEW=Object.freeze({
  "reviewedPaperLabelsSHA256": "2ab620e2a08265cd967cbddbf1f9117cacd9aa922f922582b36dec211fb48b4b",
  "paperLabelsSHA256": "f8f0e5a646da3d8e2cc4985c6d64c823e5005d0c5bf6c5b02d8edb691da0bd64",
  "reviewedPaperInspectionSHA256": "3a9f9d5f7d50cb1a6758649f57671a09fe0cef0c4139425caaba07fb18c2e192",
- "paperInspectionSHA256": "47be4da7d21c4be08205a3d8adb609404fe0de8715cbc6e708f04330c46cc8b5",
+ "paperInspectionSHA256": "f7815f0ae0ddcad627b381e992b0f93189c24e7e668e157c92604efb05bef7d7",
  "originalFrames": 1285,
  "fps": 60,
  "registration": "fixed native character rig; authored contact projection, not source confidence"

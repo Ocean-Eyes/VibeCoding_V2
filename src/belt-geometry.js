@@ -1,15 +1,16 @@
+import {tr} from './i18n.js';
 export const BELT_SOURCE='https://www.youtube.com/watch?v=F-NJFRGi6ys';
 export const BELT_REFERENCE_2='https://www.youtube.com/watch?v=IG5WBxopLJw';
 // Authored from the supplied videos. A is the end threaded first; the second
 // video's demonstrator uses the opposite hand, but the insertion order agrees.
 export const BELT_STEPS=[
- {title:'가운데를 허리 앞에',cue:'띠 가운데를 허리 앞에 대고 양끝을 같은 길이로 늘어뜨립니다.',focus:'띠를 비틀지 않고 넓은 면이 몸에 닿게 놓습니다.',move:'양끝 준비',reference:[2,0]},
- {title:'등 뒤로 감아 교차',cue:'가운데를 허리 앞에 댄 채 양끝을 뒤로 보내 교차합니다.',focus:'뒤쪽 보기에서 등 뒤의 두 겹을 확인하세요.',move:'양끝을 등 뒤로',reference:[3.2,5.5]},
- {title:'앞으로 가져와 교차',cue:'뒤에서 교차한 양끝을 앞으로 가져옵니다. A를 B 위에 겹칩니다.',focus:'양끝을 위로 들어 올리지 않고 허리 앞에서 교차합니다.',move:'허리 앞에서 A를 B 위로',reference:[5.4,12.5]},
- {title:'A를 두 겹 밑으로',cue:'A를 교차한 띠와 허리에 감긴 두 겹 모두의 밑에서 위로 통과시킨 뒤 옆으로 빼냅니다.',focus:'A가 두 겹을 함께 감쌉니다. 이 끝을 다시 반대편으로 가져가 고리를 만듭니다.',move:'A 통과 · B 유지',reference:[12.5,15]},
- {title:'A를 끼워 고리 만들기',cue:'A를 다시 들어 반대편 허리띠의 겹 사이에 위에서 아래로 끼웁니다. 앞에는 고리를 남겨 둡니다.',focus:'이 단계에서는 A만 고리를 만듭니다. B는 아직 통과시키지 않습니다.',move:'A로 고리 · B 유지',reference:[15,20.5]},
- {title:'B를 겹 사이와 고리에 통과',cue:'B 끝을 반대편 띠 겹 사이로 내려 넣고, 남겨 둔 A의 고리 앞으로 빼냅니다.',focus:'새 고리를 두 개 만들지 않고, B 끝이 A의 고리를 지나갑니다.',move:'B 통과 · A 유지',reference:[17,24]},
- {title:'양끝 당겨 매듭 정리',cue:'양끝을 좌우로 당겨 고리를 줄이고 매듭을 납작하게 정리합니다. 양끝을 잡은 채 좌우로 당기는 모습을 확인하세요.',focus:'허리의 두 겹과 매듭이 꼬이지 않았는지 확인합니다.',move:'A · B 조이기',reference:[19.5,26]},
+ {title:tr('가운데를 허리 앞에'),cue:tr('띠 가운데를 허리 앞에 대고 양끝을 같은 길이로 늘어뜨립니다.'),focus:tr('띠를 비틀지 않고 넓은 면이 몸에 닿게 놓습니다.'),move:tr('양끝 준비'),reference:[2,0]},
+ {title:tr('등 뒤로 감아 교차'),cue:tr('가운데를 허리 앞에 댄 채 양끝을 뒤로 보내 교차합니다.'),focus:tr('뒤쪽 보기에서 등 뒤의 두 겹을 확인하세요.'),move:tr('양끝을 등 뒤로'),reference:[3.2,5.5]},
+ {title:tr('앞으로 가져와 교차'),cue:tr('뒤에서 교차한 양끝을 앞으로 가져옵니다. A를 B 위에 겹칩니다.'),focus:tr('양끝을 위로 들어 올리지 않고 허리 앞에서 교차합니다.'),move:tr('허리 앞에서 A를 B 위로'),reference:[5.4,12.5]},
+ {title:tr('A를 두 겹 밑으로'),cue:tr('A를 교차한 띠와 허리에 감긴 두 겹 모두의 밑에서 위로 통과시킨 뒤 옆으로 빼냅니다.'),focus:tr('A가 두 겹을 함께 감쌉니다. 이 끝을 다시 반대편으로 가져가 고리를 만듭니다.'),move:tr('A 통과 · B 유지'),reference:[12.5,15]},
+ {title:tr('A를 끼워 고리 만들기'),cue:tr('A를 다시 들어 반대편 허리띠의 겹 사이에 위에서 아래로 끼웁니다. 앞에는 고리를 남겨 둡니다.'),focus:tr('이 단계에서는 A만 고리를 만듭니다. B는 아직 통과시키지 않습니다.'),move:tr('A로 고리 · B 유지'),reference:[15,20.5]},
+ {title:tr('B를 겹 사이와 고리에 통과'),cue:tr('B 끝을 반대편 띠 겹 사이로 내려 넣고, 남겨 둔 A의 고리 앞으로 빼냅니다.'),focus:tr('새 고리를 두 개 만들지 않고, B 끝이 A의 고리를 지나갑니다.'),move:tr('B 통과 · A 유지'),reference:[17,24]},
+ {title:tr('양끝 당겨 매듭 정리'),cue:tr('양끝을 좌우로 당겨 고리를 줄이고 매듭을 납작하게 정리합니다. 양끝을 잡은 채 좌우로 당기는 모습을 확인하세요.'),focus:tr('허리의 두 겹과 매듭이 꼬이지 않았는지 확인합니다.'),move:tr('A · B 조이기'),reference:[19.5,26]},
 ];
 // A single inextensible, stiff obi. Coordinates are in waist-width units.
 // The waist contact arc consumes material; only the remaining length is free.

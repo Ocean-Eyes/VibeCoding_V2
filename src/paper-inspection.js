@@ -1,3 +1,4 @@
+import {tr} from './i18n.js';
 // Instructional emphasis on existing ribbon edges; no new cloth, fold, or loop.
 export function drawPaperOpeningCue(ctx,anchor,state,{mirror=false,step}={}){
  if(step!==4&&step!==5)return;
@@ -17,6 +18,6 @@ export function drawPaperOpeningCue(ctx,anchor,state,{mirror=false,step}={}){
  const start=y-Math.min(48,anchor.scale*.18);
  ctx.save();ctx.strokeStyle='#cfad69';ctx.fillStyle='#21313b';ctx.lineWidth=1.8;
  ctx.beginPath();ctx.moveTo(x,start+14);ctx.lineTo(x,y-4);ctx.moveTo(x-4,y-10);ctx.lineTo(x,y-4);ctx.lineTo(x+4,y-10);ctx.stroke();
- ctx.font='600 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';const label=(step===4?'A':'B')+' 넣는 곳',width=ctx.measureText(label).width+12;
+ ctx.font='600 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';const label=(step===4?'A':'B')+tr(' 넣는 곳'),width=ctx.measureText(label).width+12;
  ctx.fillRect(x-width/2,start-1,width,17);ctx.fillStyle='#f3dfb6';ctx.fillText(label,x,start+8);ctx.restore();
 }

@@ -1,9 +1,10 @@
+import {tr} from './i18n.js';
 // All geometry uses image pixels, avoiding aspect-ratio distortion.
 export const PASS_SCORE = 50;
 export const POSES = [
-  {name:'첫 깃 잡기',short:'왼손을 반대편 깃으로',description:'왼손으로 반대편 위쪽 깃을 바로 잡습니다.',angles:[1.8,-2.5,Math.PI/2,Math.PI/2],gesture:'fist'},
-  {name:'반대 깃 잡기',short:'오른손을 교차해 잡기',description:'첫 손의 그립을 유지하고 오른손으로 반대편 깃을 잡아 교차합니다.',angles:[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5],gesture:'fist'},
-  {name:'교차한 팔 비틀기',short:'그립 유지 · 양 전완 회전',description:'양손의 교차와 깃 위치를 유지하며 손목과 전완을 함께 회전하는 시연을 확인합니다.',angles:[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5],gesture:'fist'},
+  {name:tr('첫 깃 잡기'),short:tr('왼손을 반대편 깃으로'),description:tr('왼손으로 반대편 위쪽 깃을 바로 잡습니다.'),angles:[1.8,-2.5,Math.PI/2,Math.PI/2],gesture:'fist'},
+  {name:tr('반대 깃 잡기'),short:tr('오른손을 교차해 잡기'),description:tr('첫 손의 그립을 유지하고 오른손으로 반대편 깃을 잡아 교차합니다.'),angles:[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5],gesture:'fist'},
+  {name:tr('교차한 팔 비틀기'),short:tr('그립 유지 · 양 전완 회전'),description:tr('양손의 교차와 깃 위치를 유지하며 손목과 전완을 함께 회전하는 시연을 확인합니다.'),angles:[1.8,-2.5,Math.PI-1.8,-Math.PI+2.5],gesture:'fist'},
 ];
 export const BONES=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24]];
 export const HAND_BONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];

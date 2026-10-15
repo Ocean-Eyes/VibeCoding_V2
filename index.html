@@ -8,6 +8,9 @@
   <title>Just Judo — 나의 유도 도장</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23a52c35'/%3E%3Ctext x='11' y='29' font-size='30' font-family='sans-serif' fill='%23101316'%3EJ%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="./dojo.css" />
+  <!-- Vercel Web Analytics: static HTML integration. -->
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script defer src="/_vercel/insights/script.js"></script>
   <script type="module" src="./src/academy.js"></script>
 </head>
 <body>
@@ -21,7 +24,7 @@
   <header class="topbar">
     <a id="brand-home" class="brand" href="./" aria-label="Just Judo 홈"><span class="brand-icon" lang="ja">柔</span> JUST JUDO</a>
     <span class="top-note"></span>
-    <div class="header-actions"><button id="back-menu" class="quiet" hidden>← 기술 메뉴</button><button id="help" class="quiet">이용 안내 ↗</button><span class="xp-pill" id="xp">0 XP</span></div>
+    <div class="header-actions"><button id="language-button" class="quiet language-button" type="button" aria-haspopup="dialog" aria-controls="language-dialog">Language · KO</button><button id="back-menu" class="quiet" hidden>← 기술 메뉴</button><button id="help" class="quiet">이용 안내 ↗</button><span class="xp-pill" id="xp">0 XP</span></div>
   </header>
   <main>
     <section id="home-screen">
@@ -104,5 +107,10 @@
   <dialog id="result-dialog"><div class="result-medal" lang="ja">済</div><div class="eyebrow">MISSION RESULT</div><h2 id="result-title"></h2><p id="result-copy"></p><button id="result-home" class="primary">기술 메뉴로 →</button><button id="result-again" class="outline">다시 연습</button></dialog>
   <dialog id="guide"><button id="close-help" class="icon-button close" aria-label="가이드 닫기">×</button><div class="eyebrow">HOW TO PLAY</div><h2>나의 유도 도장 이용하기</h2><ol><li>굳히기본에서 조르기 기술을 선택하세요.</li><li>수련하기를 누르면 흰색 손의 시연이 시작됩니다. 내 동작 연습을 누르면 카메라를 연결합니다.</li><li>연결되면 3초 준비 후 연습이 시작됩니다. 옆의 기술 설명을 참고하고 어깨와 팔꿈치, 손목을 보여 주세요.</li><li>손가락을 굽힌 채 손목을 교차해 반대편 깃을 잡으세요. 표시된 깃 위치에 양손의 높이를 조금 달리하면 손 가림을 줄일 수 있습니다. 목 가까운 위쪽 깃을 잡은 뒤 손은 크게 벌리지 않고 교차한 손목과 전완을 함께 비튼 자세를 1.2초 유지하면 가상 미션이 완료됩니다. 손을 펴면 깃을 놓습니다.</li><li>깃 위치와 손목·팔꿈치 동작 미션을 완료하면 20 XP와 연습 완료 도장이 기록됩니다. XP는 기술별 최초 1회 지급합니다.</li></ol><p>세 기술의 차이는 손바닥 방향입니다. 웹캠 미션은 가상의 깃 위치와 손목 교차·팔꿈치 움직임을 맞추는 동작 연습이며, 뒷목 안쪽의 실제 그립 깊이·압박이나 기술의 효과는 측정하지 않습니다. 실제 상대와의 실습은 지도자의 지도를 받으세요.</p><p>강도관 공식 영상은 연습 화면에서 볼 수 있습니다. 기초의 띠 매기는 반투명 띠 시연과 카메라 가이드로 따라 할 수 있습니다. 낙법과 메치기본 레슨은 준비 중입니다. 영상은 기기 안에서 처리되며 저장하지 않습니다.</p></dialog>
 <dialog id="video-dialog" class="video-dialog"><button id="close-video" class="icon-button close" aria-label="영상 닫기">×</button><div class="eyebrow">KODOKAN / 공식 시범</div><h2 id="video-title"></h2><iframe id="kodokan-player" title="강도관 공식 기술 시범" allow="fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><a id="video-external" target="_blank" rel="noopener noreferrer">YouTube에서 영상 보기 ↗</a><p>재생이 제한되면 YouTube에서 확인하세요. 영상을 보는 동안 연습은 일시 정지됩니다.</p></dialog>
+<dialog id="language-dialog" class="language-dialog" aria-labelledby="language-title" data-no-translate>
+  <button type="button" class="icon-button close" data-language-close aria-label="Close / 닫기">×</button>
+  <div class="eyebrow">LANGUAGE</div><h2 id="language-title">언어 / Language</h2>
+  <div class="language-options"><button type="button" data-language="ko" lang="ko" aria-pressed="true">한국어 <span>Korean</span></button><button type="button" data-language="en" lang="en" aria-pressed="false">English <span>영어</span></button></div>
+</dialog>
 </body>
 </html>

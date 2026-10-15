@@ -1,3 +1,4 @@
+import {tr} from './i18n.js';
 // Color marker tracking only. A tracked end is not evidence of a correct knot.
 export function hsv(r,g,b){
  r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;
@@ -11,11 +12,11 @@ export function sampleMarker(frame,x,y,other=null){
   const xx=px+dx,yy=py+dy;if(xx<0||yy<0||xx>=frame.width||yy>=frame.height)continue;
   const i=(yy*frame.width+xx)*4,c=hsv(...frame.data.slice(i,i+3));if(c.s>=.42&&c.v>=.25)samples.push(c);
  }
- if(samples.length<9)return {error:'흰색·검정 대신 선명한 색 테이프의 가운데를 선택하세요.'};
+ if(samples.length<9)return {error:tr('흰색·검정 대신 선명한 색 테이프의 가운데를 선택하세요.')};
  const center=samples[Math.floor(samples.length/2)],close=samples.filter(c=>hueDistance(c.h,center.h)<15);
- if(close.length<samples.length*.7)return {error:'여러 색이 섞였습니다. 색 표시를 더 크게 보여 주고 가운데를 선택하세요.'};
+ if(close.length<samples.length*.7)return {error:tr('여러 색이 섞였습니다. 색 표시를 더 크게 보여 주고 가운데를 선택하세요.')};
  const h=(Math.atan2(close.reduce((s,c)=>s+Math.sin(c.h*Math.PI/180),0),close.reduce((s,c)=>s+Math.cos(c.h*Math.PI/180),0))*180/Math.PI+360)%360;
- if(other&&hueDistance(h,other.h)<42)return {error:'A·B에는 서로 확실히 다른 색을 사용하세요.'};
+ if(other&&hueDistance(h,other.h)<42)return {error:tr('A·B에는 서로 확실히 다른 색을 사용하세요.')};
  return {color:{h,s:close.reduce((s,c)=>s+c.s,0)/close.length,v:close.reduce((s,c)=>s+c.v,0)/close.length}};
 }
 export function markerCandidates(frame,colors){
