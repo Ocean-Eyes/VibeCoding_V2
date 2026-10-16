@@ -1,5 +1,7 @@
 // Korean source phrases are stable keys; numbered slots are template values.
 export const EN = {
+  "주의 · 전문가 지도 필수": "WARNING · Qualified supervision required",
+  "전문 유도 지도자의 직접 지도 없이 다른 사람에게 메치기·조르기 등 유도 기술을 시도하지 마세요. 이 사이트는 혼자 하는 동작 연습용입니다.": "Do not attempt judo techniques, including throws and chokes, on another person without direct supervision from a qualified judo instructor. This site is for solo movement practice.",
   "연습 화면을 준비하고 있습니다…": "Preparing the practice screen…",
   "연습 화면을 불러오지 못했습니다. 새로고침하여 다시 연결해 주세요.": "Could not load practice. Refresh the page to reconnect.",
   "진행도는 이 브라우저에 저장됩니다.": "Your progress is saved in this browser.",

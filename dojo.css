@@ -299,3 +299,13 @@ html[lang=en] .grip-labels span{white-space:normal;flex:1;min-width:0;line-heigh
 html[lang=en] .metrics>div{flex-wrap:wrap;gap:6px}
 @media(max-width:760px){html[lang=en] .right-note>span{position:absolute;bottom:2px;right:0;font-size:11px;line-height:1.4}}
 @media(max-width:520px){.topbar{gap:0;padding:10px 0}.header-actions{width:100%;justify-content:flex-end}.top-note{display:none}}
+
+/* Safety guidance on the main course-selection screen. */
+.home-safety{display:flex;align-items:flex-start;gap:12px;margin:0 0 20px;padding:16px 18px;border:1px solid #c5897e;border-left:4px solid #99352f;background:#fbefe9;color:#682b25}
+.home-safety .safety-mark{display:grid;place-items:center;flex:0 0 24px;height:24px;border:2px solid currentColor;border-radius:50%;font-weight:800;line-height:1}
+.home-safety strong{display:block;font-size:13px;line-height:1.6}
+.home-safety p{margin:5px 0 0;font-size:13px;line-height:1.8}
+@media(max-width:520px){.home-safety{padding:12px;gap:10px}.home-safety strong,.home-safety p{font-size:12px}}
+
+#home-screen > .home-safety{margin:24px 0 0}
+#home-screen > .home-safety + .chapter-heading{margin-top:16px}
