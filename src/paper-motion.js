@@ -1,5 +1,6 @@
 // Reviewed character-native flat panels; hidden material paths are authored inference.
 import {rigFrame,handRig} from './retarget-rig.js';
+import {earlyWrapMotion,wrapPhase} from './belt-wrap-motion.js';
 export const WIDTH=.09;
 const T=.008,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),phase=(t,a,b)=>clamp((t-a)/(b-a)),smooth=(t,a,b)=>{const u=phase(t,a,b);return u*u*(3-2*u)},mix=(a,b,t)=>a+(b-a)*t;
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),len=a=>Math.hypot(...a),unit=a=>mul(a,1/(len(a)||1)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],blend=(a,b,t)=>a.map((v,i)=>mix(v,b[i],t)),v3=p=>[p[0],p[1],p[2]??0];
@@ -36,30 +37,55 @@ export function makePaperStrip(material,targets,names,layers,{tipProgress=1,tipS
 function nearestContact(strip,wanted,semantic=null){let best=null;for(const p of strip.panels){if(semantic&&!semantic(p))continue;const a=p.from.center,b=p.to.center,d=sub(b,a),q=clamp(((wanted[0]-a[0])*d[0]+(wanted[1]-a[1])*d[1])/(d[0]*d[0]+d[1]*d[1]||1),0,clamp((strip.visibleMaterialS-p.from.materialS)/(p.to.materialS-p.from.materialS||1))),point=add(a,mul(d,q)),distance=Math.hypot(wanted[0]-point[0],wanted[1]-point[1]);if(!best||distance<best.distance)best={point:point.slice(0,2),distance,panel:p.id,materialS:mix(p.from.materialS,p.to.materialS,q)};}return best;}
 function frameRig(frame){const styled=rigFrame(frame);return {originalPTS:frame.originalPTS,hands:styled.hands.map(h=>{const raw=frame.hands[h.identity].resolved,support=h.identity==='Right'?smooth(frame.originalPTS,16.6,17)* (1-smooth(frame.originalPTS,17.65,18.1)):0,curl=h.curl.map((v,i)=>mix(v,raw.curl[i],support));return handRig({...frame.hands[h.identity],resolved:{...raw,curl}},h.identity)}).filter(Boolean)};}
 export function paperMotion(frame){
- const t=frame.originalPTS,rig=frameRig(frame),hands=Object.fromEntries(rig.hands.map(h=>[h.identity,h])),gL=hands.Left?.grip??[.4,.1],gR=hands.Right?.grip??[-.4,.1],handoff=smooth(t,7,8),activeA=blend(gR,gL,handoff),activeB=blend(gL,gR,handoff),rootA=[-.43,.06],rootB=[.43,.07],behind=t>2.15&&t<4.1,tight=smooth(t,18.25,19.5);let A,B,events=[];
- const crossPoint=blend([.14,.125],[.22,.19],smooth(t,11.1,12.5)),upperExit=blend([.13,-.04],[.22,-.015],smooth(t,11.1,12.5));
+ const t=frame.originalPTS,rig=frameRig(frame),hands=Object.fromEntries(rig.hands.map(h=>[h.identity,h])),gL=hands.Left?.grip??[.4,.1],gR=hands.Right?.grip??[-.4,.1],handoff=smooth(t,7,8),activeA=blend(gR,gL,handoff),activeB=blend(gL,gR,handoff),rootA=[-.43,.06],rootB=[.43,.07],behind=wrapPhase(t).behindBody,tight=smooth(t,18.25,19.5);let A,B,events=[];
+ // Keep the opening loose until both ends have passed through (source 14-18.5s).
+ const crossPoint=blend([.14,.125],[.16,.22],smooth(t,11.1,12.5)),upperExit=blend([.13,-.04],[.08,-.09],smooth(t,11.1,12.5));
  if(t<9){const tip=blend([activeA[0],Math.min(.85,activeA[1]+.62)],extend(rootA,activeA,.12),smooth(t,4.2,5.4));A=makePaperStrip('A',[rootA,tip],['front-cross'],[6],{behind});}
  else if(t<10.7){const oldTip=extend(rootA,gL,.12),regrip=smooth(t,9,10),hold=blend(blend(rootA,oldTip,.72),[.14,.125],regrip),tip=blend(oldTip,[.24,.475],regrip);A=makePaperStrip('A',[rootA,hold,tip],['front-cross','feeding-end'],[6,6]);}
  else if(t<10.78){const q=smooth(t,10.70,10.78),u=1-q,tip=[u*u*u*.24+3*u*u*q*.30+3*u*q*q*.25+q*q*q*upperExit[0],u*u*u*.475+3*u*u*q*.16+3*u*q*q*.04+q*q*q*upperExit[1]];A=makePaperStrip('A',[rootA,crossPoint,tip],['front-cross','feeding-end'],[6,t<10.75?6:-4]);events.push('Existing A end enters below both waist layers; hidden interval inferred');}
  else if(t<11.1){const tip=blend(upperExit,extend(crossPoint,gL,.10),smooth(t,10.78,10.95));A=makePaperStrip('A',[rootA,crossPoint,tip],['front-cross','raised-underpass'],[6,-4]);events.push('Same A end emerges upward and is received');}
  else if(t<13.5){A=makePaperStrip('A',[rootA,crossPoint,extend(crossPoint,gL,.10)],['front-cross','raised-underpass'],[6,-4]);}
- else if(t<14.35){const fold=smooth(t,13.5,14.35),startTip=extend(crossPoint,gL,.10),tip=blend(startTip,[-.18,.105],fold),newCrease=blend(blend(crossPoint,startTip,.50),upperExit,fold);A=makePaperStrip('A',[rootA,crossPoint,newCrease,tip],['front-cross','first-underpass','upper-return'],[6,-4,4]);}
- else {const c=blend([.22,.19],[.14,.13],tight),u=blend([.22,-.015],[.06,-.015],tight),entry=blend([-.18,.105],[-.06,.14],tight),tail=blend([-.55,.216],extend(entry,gR,.09),tight);A=makePaperStrip('A',[rootA,c,u,entry,tail],['front-cross','first-underpass','upper-return','outgoing-end'],[6,-4,4,7],{tipStart:3,tipProgress:smooth(t,14.35,15.25)});}
+ else if(t<14.35){const fold=smooth(t,13.5,14.35),startTip=extend(crossPoint,gL,.10),tip=blend(startTip,[-.18,-.045],fold),newCrease=blend(blend(crossPoint,startTip,.50),upperExit,fold);A=makePaperStrip('A',[rootA,crossPoint,newCrease,tip],['front-cross','first-underpass','upper-return'],[6,-4,8]);}
+ else {
+  const c=blend([.16,.22],[.14,.13],tight),u=blend([.08,-.09],[.06,-.015],tight);
+  // A enters the LEFT waist-layer gap, travels behind the outer layer,
+  // then emerges below it. The feed is a material interval, not a new tail.
+  const entry=blend([-.18,-.045],[-.02,.14],tight),tail=blend([-.55,.34],extend(entry,gR,.09),tight),exit=blend([-.23,.17],blend(entry,tail,.22),smooth(t,18.25,18.6));
+  A=makePaperStrip('A',[rootA,c,u,entry,exit,tail],['front-cross','first-underpass','upper-return','left-layer-pass','outgoing-end'],[6,-4,8,-4,7],{tipStart:3,tipProgress:smooth(t,14.35,15.25)});
+ }
+
  if(t<8){const tip=blend([activeB[0],Math.min(.85,activeB[1]+.62)],extend(rootB,activeB,.12),smooth(t,4.2,5.4));B=makePaperStrip('B',[rootB,tip],['incoming-end'],[2],{behind});}
- else if(t<15){const released=smooth(t,9.3,10)*(1-smooth(t,11.1,11.7)),hold=blend(gR,[-.34,.12],released),oldTip=extend(rootB,gR,.12),q=smooth(t,8,9),pickup=blend(blend(rootB,oldTip,.75),hold,q),tip=blend(oldTip,[hold[0]-.035,Math.min(.90,hold[1]+.43)],q);B=makePaperStrip('B',[rootB,pickup,tip],['waist-run','hanging-end'],[2,4]);}
- else if(t<16.5){const lift=smooth(t,15,15.5),pickup=blend(gR,[-.35,.12],lift),raised=extend(pickup,gR,.10),tip=blend([gR[0]-.035,Math.min(.90,gR[1]+.43)],raised,lift),approach=smooth(t,16,16.5),feedingTip=blend(tip,[.15,-.025],approach),movingPickup=blend(pickup,blend(rootB,[.15,-.025],.55),smooth(t,16.15,16.5));B=makePaperStrip('B',[rootB,movingPickup,feedingTip],['waist-run','lifted-feed'],[2,4]);}
- else {const entry=blend([.15,-.025],[.10,.015],tight),exit=blend([.15,.13],[.10,.125],tight),opening=blend([.025,.08],[.025,.075],tight),tail=extend(opening,gL,.10);B=makePaperStrip('B',[rootB,entry,exit,opening,tail],['waist-feed','between-layer','hidden-return','outgoing-end'],[2,-3,4,7],{tipStart:1,tipProgress:smooth(t,16.5,17)});events.push('B tip first through retained A opening; hidden return authored');}
- for(const p of A.panels)if(p.semantic==='upper-return')p.wrapFrontFraction=tight;
+ else if(t<15){
+  const released=smooth(t,9.3,10)*(1-smooth(t,11.1,11.7)),settle=smooth(t,14.8,15),hold=blend(blend(gR,[-.34,.12],released),[-.35,.12],settle),oldTip=extend(rootB,gR,.12),q=smooth(t,8,9),pickup=blend(blend(rootB,oldTip,.75),hold,q),hanging=blend(oldTip,[hold[0]-.035,Math.min(.90,hold[1]+.43)],q),tip=blend(hanging,extend(pickup,gR,.10),settle);
+  B=makePaperStrip('B',[rootB,pickup,tip],['waist-run','hanging-end'],[2,4]);
+ }
+ else if(t<16.5){
+  // Follow the observed lifting hand around a retained waist bend. Interpolating
+  // opposing down/up vectors used to shrink this span through zero and flip it.
+  const pickup=[-.35,.12],tip=extend(pickup,gR,.10),approach=smooth(t,16,16.5),feedingTip=blend(tip,[.15,-.12],approach),movingPickup=blend(pickup,blend(rootB,[.15,-.12],.55),smooth(t,16.15,16.5));
+  B=makePaperStrip('B',[rootB,movingPickup,feedingTip],['waist-run','lifted-feed'],[2,4]);
+ }
+
+ else {const entry=blend([.15,-.12],[.10,.015],tight),exit=blend([.15,.15],[.10,.125],tight),opening=blend([.025,.08],[.025,.075],tight),tail=extend(opening,gL,.10);B=makePaperStrip('B',[rootB,entry,exit,opening,tail],['waist-feed','between-layer','hidden-return','outgoing-end'],[2,-3,4,7],{tipStart:1,tipProgress:smooth(t,16.5,17)});events.push('B tip first through retained A opening; hidden return authored');}
+ const early=earlyWrapMotion(t,hands,makePaperStrip);
+ if(early){[A,B]=early.strips;}
+ // The same A return stays in front at the crossing; tightening moves cloth,
+ // never paints an increasing fraction over an already drawn knot.
  const strips=[A,B],contacts=[];for(const st of strips){const p=st.fullPanels.find(p=>st.visibleMaterialS<=p.to.materialS+1e-8)??st.fullPanels.at(-1),tip=st.guideEnd;st.freeEndVisible=!st.behind&&!(p.hidden&&tip[0]>=-.43&&tip[0]<=.43&&tip[1]>=-.011&&tip[1]<=.118);}
 
  // All source frames contribute targets. Only projected panel contacts are fitted.
  // Record the resulting correction instead of relabeling it as a measurement.
  for(const h of [...rig.hands]){let material,weight=1;const right=h.identity==='Right';
   if(t<7)material=right?'A':'B';else if(t<8)material=null;else if(t>=9.5&&t<10.78)material=right?'A':null;else if(t>=10.78&&t<10.95)material='A';else if(t<16.75)material=right?'B':'A';else if(right){material=t<17.15?'B':'A';weight=t<17.15?1-smooth(t,16.85,17.15):smooth(t,17.15,17.45);}else material='B';
-  if(!material||behind||weight===0)continue;const strip=material==='A'?A:B,late=t>=18.25,support=right?smooth(t,16.6,17)*(1-smooth(t,17.65,18.1)):0,pad=mul(add(h.digits[0].at(-1),h.thumb.at(-1)),.5),feature=blend(h.grip,pad,support),filter=late?p=>p===strip.panels.at(-1):t>=15.25&&t<16.75&&material==='A'?p=>p.semantic==='first-underpass'||p.semantic==='upper-return':null,c=nearestContact(strip,feature,filter);if(!c)continue;
-  const correction=(t<9?.65:1)*weight,delta=mul(sub(c.point,feature),correction),target=add(h.grip,delta),control=frame.hands[h.identity],adapted={...control,resolved:{...control.resolved,gripCenter:[target[0]/.86,(target[1]-.04)/.86],curl:h.curl}},fit=handRig(adapted,h.identity);let actualContact=feature;if(fit){fit.contactRetargetDelta=len(sub(fit.grip,h.inputGrip));fit.contactPose='source control projected to authored paper contact';rig.hands[rig.hands.indexOf(h)]=fit;const fittedPad=mul(add(fit.digits[0].at(-1),fit.thumb.at(-1)),.5);actualContact=blend(fit.grip,fittedPad,support);}
+  if(early){
+   const candidates=[A,B].map(s=>({material:s.material,contact:nearestContact(s,h.grip)})).filter(x=>x.contact);
+   material=candidates.sort((a,b)=>a.contact.distance-b.contact.distance)[0]?.material;
+   weight=early.contactWeight;
+  }
+  if(!material||behind||weight===0)continue;const strip=material==='A'?A:B,late=t>=18.25,support=right?smooth(t,16.6,17)*(1-smooth(t,17.65,18.1)):0,pad=mul(add(h.digits[0].at(-1),h.thumb.at(-1)),.5),feature=blend(h.grip,pad,support),filter=late?p=>p===strip.panels.at(-1):t>=14.35&&t<16.75&&material==='A'?p=>p.semantic==='upper-return':null,c=nearestContact(strip,feature,filter);if(!c)continue;
+  const correction=(early?1:(t<9?.65:1))*weight,delta=mul(sub(c.point,feature),correction),target=add(h.grip,delta),control=frame.hands[h.identity],adapted={...control,resolved:{...control.resolved,gripCenter:[target[0]/.86,(target[1]-.04)/.86],curl:h.curl}},fit=handRig(adapted,h.identity);let actualContact=feature;if(fit){fit.contactRetargetDelta=len(sub(fit.grip,h.inputGrip));fit.contactPose='source control projected to authored paper contact';rig.hands[rig.hands.indexOf(h)]=fit;const fittedPad=mul(add(fit.digits[0].at(-1),fit.thumb.at(-1)),.5);actualContact=blend(fit.grip,fittedPad,support);}
   contacts.push({identity:h.identity,material,panel:c.panel,materialS:c.materialS,sourceTarget:h.inputGrip,assignedPoint:c.point,actualContactPoint:actualContact,feature:support>0?'blend grip to index-thumb pads':'grip',featureBlend:support,role:support>0?'support':'held',acquisitionWeight:weight,correction:c.distance,certainty:'inferred character contact; source controls unchanged'});
  }
 
- return {sourceFrame:frame,frameIndex:frame.frameIndex,originalPTS:t,rig,strips,contacts,behindBody:behind,tightening:tight,guideEnds:Object.fromEntries(strips.map(s=>[s.material,{position:s.guideEnd,kind:'authored shortened display end',freeEndVisible:s.freeEndVisible,sourceObservedTip:frame.beltEnds?.[s.material]?.observedTip??null}])),inference:{kind:'native shared-edge panels with source-controlled contacts',events,failures:[],originalFramesRetained:true}};
+ return {wrap:wrapPhase(t),sourceFrame:frame,frameIndex:frame.frameIndex,originalPTS:t,rig,strips,contacts,behindBody:behind,tightening:tight,guideEnds:Object.fromEntries(strips.map(s=>[s.material,{position:s.guideEnd,kind:'authored shortened display end',freeEndVisible:s.freeEndVisible,sourceObservedTip:frame.beltEnds?.[s.material]?.observedTip??null}])),inference:{kind:'native shared-edge panels with source-controlled contacts',events,failures:[],originalFramesRetained:true}};
 }

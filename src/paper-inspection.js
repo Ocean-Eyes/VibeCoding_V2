@@ -13,7 +13,7 @@ export function drawPaperOpeningCue(ctx,anchor,state,{mirror=false,step}={}){
   ctx.strokeStyle='#e2c68e';ctx.lineWidth=.010;ctx.stroke();ctx.restore();
  }
  ctx.restore();
- const B=state.strips.find(s=>s.material==='B'),entry=step===4?[-.18,.105]:(B?.fullPanels.find(p=>p.semantic==='between-layer')?.from.center??[.15,-.025]);
+ const B=state.strips.find(s=>s.material==='B'),entry=step===4?(A?.fullPanels.find(p=>p.semantic==='left-layer-pass')?.from.center??[-.18,-.045]):(B?.fullPanels.find(p=>p.semantic==='between-layer')?.from.center??[.15,-.025]);
  const x=anchor.x+entry[0]*anchor.scale*(mirror?-1:1),y=anchor.y+entry[1]*anchor.scale;
  const start=y-Math.min(48,anchor.scale*.18);
  ctx.save();ctx.strokeStyle='#cfad69';ctx.fillStyle='#21313b';ctx.lineWidth=1.8;

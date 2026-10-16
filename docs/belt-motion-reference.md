@@ -32,9 +32,7 @@ The virtual camera guide and actual-belt color-marker mode remain separate. In a
 
 Source video SHA256: `661ed0670e8afbadd42a0c3cc21eb9ae86f171c0d5f5c826272b471f4b689822`.
 Controls SHA256: `ebcf8e7605ad0c46e4c5067bab2406c3a7d1ed8f68f9fea213316df20f83f86a`.
-Reviewed motion candidate: `311f98802e90aa03cb82fc702b8fa89e929fa8df793b91b1d25b2b88151c7e90`.
-Shipped motion: `4e176b335a3ece236800f15d87db724ff61bb2952208d355434224ad5dfd935c`.
-The shipped motion differs only in the obsolete prototype header and cleared pending-review metadata; geometry equations remain identical. Scene adaptation changes the mannequin import and explicitly disables its duplicate arms. UTF-8/LF normalization also changes scene/label/inspection file hashes without changing their code. Reviewed and shipped hashes are distinguished in the manifest. Exact runtime rig/scene/labels/inspection hashes are recorded in `BELT_REVIEW` in `src/belt-source.js`.
+The previous v4 motion (`4e176b335a3ece236800f15d87db724ff61bb2952208d355434224ad5dfd935c`) is retained only as a regression baseline, not proof of correct threading. Current runtime module hashes, including the wrap helper, are recorded in `BELT_REVIEW` in `src/belt-source.js`.
 
 The explicit gzip asset is693,607 bytes. The browser decompresses and verifies controls SHA256 and original source/frame coverage before rendering. Failure offers retry; leaving cancels pending loading; successful data are cached. Source footage, raw model data and review images remain local audit inputs, not product assets. The legacy3.2MB mask asset and source-mask player are removed.
 
@@ -45,3 +43,21 @@ The explicit gzip asset is693,607 bytes. The browser decompresses and verifies c
 Independent review separately covered structural/contact/boundary checks, source-aligned sequence, and actual visual presentation. Real built-app checks cover seven stages,44 scrub positions, mobile, same-time detail, failed download/bad hash/retry/abort, gzip transfer, synthetic camera and marker recovery, both mirror modes, stopped camera tracks, and zero changed idle/tap pixels. The full regression suite remains required.
 
 Hidden material paths and finger contacts are authored inference. This is an explanatory flat-strip rig, not a cloth solver, proof of collision-free hidden3D topology, or a guarantee of physical knot strength. All1,285 frames are retained; this does not mean every frame was manually visually reviewed.
+
+## Reference correction after the rejected v4 presentation
+
+Re-opened primary source frames at 2.0, 3.5, 5.4, 7.5, 13.5, 14.5, 15.5, 16.5, 16.75, 17.0, 18.5 and 19.5 seconds. Front view, no additional mirror. The source is cropped at the waist for comparison, without changing aspect ratio. Baseline modules/captures and the opened side-by-side report are local artifacts in `.test-output/belt-reference-fix/`.
+
+Observed defects and corrections:
+
+- The initial pose already drew two standing bands. `belt-wrap-motion.js` now starts with one band and adds the returning front layer as the wrap advances. Opposite waist runs cross before the short free ends descend.
+- At 7?8 seconds the old code interpolated end positions between opposite hands while disabling both contacts. Hands now remain fitted to belt material sections. A hand need not be holding the physical tip or only one material end. The rear exchange remains inferred because the source hides it.
+- In the old 17-second pose, the apparent opening was only about 0.0146 units high for a 0.09-wide belt, and B's outlet lay inside A's visible face. The retained opening now provides clearance for both actual B outlet edges. The receiving interval, not just a single final pose, is tested.
+- A previously skipped the left waist-layer passage. It now enters above the outer layer, follows a distinct concealed span and emerges below it. The upper return stays supported by the hand. B enters at a separate right-side gap before emerging through the retained A opening.
+- Tightening previously changed the crossing by painting an increasing fraction of A over B. The A return now retains its front layer throughout; the cloth geometry contracts instead. After feeding, A's hidden passage and tail flatten into the same direction, without an extra final right-angle bend.
+
+Visible entry/exit, support, order and final silhouette are reference observations. Hidden depth, exact material contact and the loosened instructional opening are authored inference. Shortened display length remains deliberate. No source silhouettes, new decorative folds, character proportion changes or camera-tracking changes are included.
+
+`tests/belt-threading.test.mjs` checks outlet clearance, the concealed A passage, retained projected tail width, stable crossing order, final coplanar tail and time-boundary continuity. `tests/belt-wrap.test.mjs` checks the standing layers, crossed front paths, both visible contacts and the 9-second join. These complement the native-frame and immutable-source tests; they do not certify full hidden 3D cloth physics. In particular, finite-difference speed can be higher than the old, incorrect route during tightening, so continuity alone is not evidence of identical motion.
+
+The built-app review includes all seven stages, 44 intermediate scrub positions, mobile layout and uninterrupted progression through the lesson. Source comparison and inspection of intermediate poses are separate from automated test results. The source's occluded rear route and full physical knot topology remain unmeasured.

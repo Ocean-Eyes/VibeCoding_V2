@@ -1,19 +1,16 @@
 import {normalizeControls} from './belt-controls.js';
 // Exact reviewed control data. Hidden contacts remain authored inference.
 export const BELT_REVIEW=Object.freeze({
- "status": "approved",
- "scope": "character-native instructional flat panels; hidden contact inferred",
+ "status": "reference-reviewed",
+ "scope": "source-aligned wrap and layer entry corrections; hidden depth/contact inferred",
  "controlSHA256": "ebcf8e7605ad0c46e4c5067bab2406c3a7d1ed8f68f9fea213316df20f83f86a",
  "sourceVideoSHA256": "661ed0670e8afbadd42a0c3cc21eb9ae86f171c0d5f5c826272b471f4b689822",
  "rigSHA256": "374ee28feaf898b97d5a6b374336af3f39e101bd1409099b2eebbacfeebfb70b",
- "reviewedPaperMotionSHA256": "311f98802e90aa03cb82fc702b8fa89e929fa8df793b91b1d25b2b88151c7e90",
- "paperMotionSHA256": "4e176b335a3ece236800f15d87db724ff61bb2952208d355434224ad5dfd935c",
- "reviewedPaperSceneSHA256": "957e8277d11b472c2e5a9ed9f8573cbe5ab7a7f165706074064f7ff427b4fad3",
- "paperSceneSHA256": "999181b754f6169f6cafd15ef70666a93acb414929df289b88172426cb69910e",
- "reviewedPaperLabelsSHA256": "2ab620e2a08265cd967cbddbf1f9117cacd9aa922f922582b36dec211fb48b4b",
+ "paperMotionSHA256": "0eec1f6b2cbfb6c2731a7e39c0e6f61c2944e9ebb56f782044c8dcebaca10513",
+ "paperSceneSHA256": "8eea03972e5fac9e56289fe6225dda521b0a1c317c431c9f0a926d7c081e5cdb",
  "paperLabelsSHA256": "f8f0e5a646da3d8e2cc4985c6d64c823e5005d0c5bf6c5b02d8edb691da0bd64",
- "reviewedPaperInspectionSHA256": "3a9f9d5f7d50cb1a6758649f57671a09fe0cef0c4139425caaba07fb18c2e192",
- "paperInspectionSHA256": "f7815f0ae0ddcad627b381e992b0f93189c24e7e668e157c92604efb05bef7d7",
+ "paperInspectionSHA256": "d669def6bf8b45dd350ac72adf9c50136ce0983ee8b98e2cddc349cf6a9b78b7",
+ "wrapMotionSHA256": "d701181942b65142f50720eedb2ff9b466eee0d8d7f374209daa0548ce47dd42",
  "originalFrames": 1285,
  "fps": 60,
  "registration": "fixed native character rig; authored contact projection, not source confidence"
