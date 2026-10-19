@@ -24,7 +24,7 @@ test('the product uses one finite, fixed-length Blender belt from the first auth
   }
 });
 
-test('display cross section preserves the authored knot core and pre-tightening center paths',()=>{
+test('display cross section and relative knot geometry survive fitting to a flat waist',()=>{
   for(const key of BLENDER_BELT.keys){
     const mesh=buildBlenderBelt(key.t);
     assert.equal(mesh.displayWidth,.078);assert.equal(mesh.displayThickness,.006);
@@ -34,20 +34,22 @@ test('display cross section preserves the authored knot core and pre-tightening 
       const part=mesh.parts.find(p=>p.name===name.replace('adapter','adapter-'));
       const original=foldMaterialStrip(name,{...key[name],sampleOnly:true});
       assert.equal(part.strip.width,.078);assert.equal(part.strip.thickness,.006);
-      if(name.startsWith('adapter')&&key.t>18)continue; // Explicitly flattened by the subsequent user correction.
+      if(name.startsWith('adapter'))continue; // The user's marked shoulders are explicitly refitted.
       for(let j=0;j<=20;j++){
-        const s=key[name].length*j/20,p=part.strip.sampleMaterialPoint(s);
-        assert.ok(distance(p.center,original.sampleMaterialPoint(s).center)<1e-10);
+        const sourceS=Math.min(key[name].length,part.strip.sourceMaterialLength)*j/20,s=part.strip.sourceToMaterial(sourceS),p=part.strip.sampleMaterialPoint(s);
+        const expected=original.sampleMaterialPoint(sourceS).center;
+        // Only the first A under-wrap bend is corrected for full-width clearance.
+        if(name!=='A'||key.t<=10.35||key.t>=11.4){assert.ok(Math.abs(p.center[0]-expected[0])<1e-9);assert.ok(Math.abs(p.center[2]-expected[2])<1e-9);if(Math.abs(expected[0])<.04)assert.ok(Math.abs(p.center[1]-(expected[1]+2*mesh.pose.waist.dropM))<1e-9);}
         assert.ok(Math.abs(distance(part.strip.sampleMaterialPoint(s,0,1).center,part.strip.sampleMaterialPoint(s,0,-1).center)-.006)<1e-10);
       }
     }
     for(const source of BLENDER_BELT.standing){
       const part=mesh.parts.find(p=>p.name===source.name);
-      if(source.name==='middle-inner'&&key.t>18)continue;
       for(let i=0;i<part.positions.length;i+=5){
         const row=Math.min(i/5*3,source.rows-1),center=source.positions.slice(row*15+6,row*15+9);
-        center[1]-=2*mesh.pose.waist.dropM;
-        assert.ok(distance(part.positions[i+2],center)<1e-10);
+        assert.ok(Math.abs(part.positions[i+2][0]-center[0])<1e-10);
+        assert.ok(Math.abs(part.positions[i+2][1]-center[1])<1e-10);
+        assert.ok(Math.abs(part.positions[i+2][2]-center[2])<1e-10);
         const sourceWidth=distance(source.positions.slice(row*15,row*15+3),source.positions.slice(row*15+12,row*15+15));
         assert.ok(Math.abs(distance(part.positions[i],part.positions[i+4])-sourceWidth*.078/.09)<1e-10);
       }
@@ -55,16 +57,14 @@ test('display cross section preserves the authored knot core and pre-tightening 
   }
 });
 
-test('tightening conserves measured surface length while flattening the exposed waist connections',()=>{
- for(let t=18;t<=19.5+1e-8;t+=.025){
+test('stages four through seven keep horizontal waist edges and conserve actual surface length',()=>{
+ for(let t=8.5;t<=19.8+1e-8;t+=.1){
   const mesh=buildBlenderBelt(t);let measured=0;
   for(const part of mesh.parts){
    const rows=part.uv.map((uv,i)=>({s:uv[0],v:uv[1],p:part.positions[i]})).filter(row=>Math.abs(row.v)<1e-9).sort((a,b)=>a.s-b.s);
    for(let i=1;i<rows.length;i++)measured+=distance(rows[i].p,rows[i-1].p);
   }
   assert.ok(Math.abs(measured-BLENDER_BELT.length)<.003,`actual surface length at ${t}: ${measured}`);
- }
- const mesh=buildBlenderBelt(19.5);
  for(const name of ['adapter-A','adapter-B']){
   const part=mesh.parts.find(p=>p.name===name);
   for(let i=0;i<part.positions.length;i++){
@@ -74,10 +74,15 @@ test('tightening conserves measured surface length while flattening the exposed 
   }
  }
  const inner=mesh.parts.find(p=>p.name==='middle-inner');
- for(let i=2;i<inner.positions.length;i+=5){const p=inner.positions[i];
-  if(Math.abs(p[0])>=.29)assert.ok(Math.abs(p[1]-.03)<1e-10,'exposed inner wrap is not flat');
-  if(Math.abs(p[0])<=.17)assert.ok(Math.abs(p[1]-.098)<1e-10,'inner wrap moved into the knot core');
+ for(let i=0;i<inner.positions.length;i++){
+  assert.ok(Math.abs(inner.positions[i][1]-(.03+inner.uv[i][1]))<1e-10,`waist edge dips at ${t}`);
  }
+ }
+});
+
+test('connection fitting does not advance or retract the tip while it is threading',()=>{
+ for(let t=10;t<=12;t+=.1)assert.ok(Math.abs(buildBlenderBelt(t).strips[0].sourceMaterialLength-BLENDER_BELT.keys[0].A.length)<1e-12);
+ for(let t=15.5;t<=18;t+=.1)assert.ok(Math.abs(buildBlenderBelt(t).strips[1].sourceMaterialLength-BLENDER_BELT.keys[0].B.length)<1e-12);
 });
 
 test('the rendered thick surface stays closed through keys and intervening folds',()=>{
@@ -114,7 +119,7 @@ test('the two user-marked crossings keep their separate front/back relationships
   },a=samples(A),b=samples(B),hits=[];
   for(let i=0;i<a.length-1;i++)for(let j=0;j<b.length-1;j++){const hit=crossing(a[i],a[i+1],b[j],b[j+1]);if(hit)hits.push(hit);}
   const nearest=target=>hits.reduce((best,hit)=>distance(hit.point,target)<distance(best.point,target)?hit:best);
-  const circle=nearest(circlePoint),square=nearest(squarePoint);
+  const circle=nearest([circlePoint[0],circlePoint[1]+2*mesh.pose.waist.dropM]),square=nearest([squarePoint[0],squarePoint[1]+2*mesh.pose.waist.dropM]);
   assert.ok(circle.aMinusB<-.01,'circle: blue B must remain in front of yellow A');
   assert.ok(square.aMinusB>.01,'square: blue B must pass behind yellow A');
  }

@@ -2,7 +2,7 @@
 // per-panel painter order: both crossing regions use the actual surface depth.
 import {BLENDER_BELT as data} from './belt-blender-data.js';
 import {foldMaterialStrip} from './belt-material-folds.js';
-import {settleWaistAdapter,settleStandingWaist,waistSettleWeight} from './belt-waist-settle.js';
+import {buildWaistAdapter,planStandingLead,fitStandingLead,fitWaistWrap,standingField} from './belt-waist-settle.js';
 const DISPLAY_WIDTH=.078,DISPLAY_THICKNESS=.006;
 const mix=(a,b,q)=>a+(b-a)*q, lerp=(a,b,q)=>a.map((v,i)=>mix(v,b[i],q));
 const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
@@ -29,7 +29,18 @@ export function blenderPose(time){
   pose.waist={tiltDegrees:0,dropM:mix(a.waist.dropM,b.waist.dropM,q)};return pose;
 }
 function foldPart(name,options,reverse=false){
-  const strip=foldMaterialStrip(name,{...options,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,across:4,step:.02});
+  const strip=foldMaterialStrip(name,{...options,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,across:4,step:.02,longitudinalCuts:['A','B'].includes(name)?Array.from({length:Math.floor(options.length/.02)},(_,i)=>(i+1)*.02):[]});
+  // Preparation bends the initially straight ends. Keep longitudinal rows in
+  // that reference surface so a long triangle cannot shortcut a gravity bend.
+  if(options.creases.every(c=>Math.abs(c.angle)<1e-12)){
+    const rows=Math.ceil(options.length/.02)+1,positions=[],normals=[];
+    for(let row=0;row<rows;row++)for(let column=0;column<5;column++){
+      const p=strip.sampleMaterialPoint(options.length*row/(rows-1),DISPLAY_WIDTH*(column/4-.5));positions.push(p.center);normals.push(p.normal);
+    }
+    const part=gridPart(name,options.length,rows,positions,normals);
+    if(reverse)part.uv=part.uv.map(([s,v])=>[options.length-s,-v]);
+    return {...part,strip};
+  }
   const n=strip.vertices3D.length/2,positions=[],normals=[],uv=[];
   for(let i=0;i<n;i++){
     positions.push(lerp(strip.vertices3D[i],strip.vertices3D[i+n],.5));
@@ -103,15 +114,38 @@ export function assembleBelt(parts){
   return {vertexData,midsurface:positions,normals,materialUV:uv,midTriangles:triangles,length:offset,maxJoin,parts};
 }
 export function buildBlenderBelt(time){
-  const pose=blenderPose(time),settle=waistSettleWeight(time),
-    adapterA=settleWaistAdapter(foldPart('adapter-A',pose.adapterA),settle),adapterB=settleWaistAdapter(foldPart('adapter-B',pose.adapterB,true),settle,true);
-  const standing=fixed.map(p=>settleStandingWaist(p,pose.waist.dropM,settle));
-  const standingGrowth=standing.reduce((sum,p,i)=>sum+p.length-fixed[i].length,0);
-  const releasedA=pose.adapterA.length-adapterA.length-standingGrowth/2,releasedB=pose.adapterB.length-adapterB.length-standingGrowth/2;
-  const a=foldPart('A',{...pose.A,length:pose.A.length+releasedA},true),b=foldPart('B',{...pose.B,length:pose.B.length+releasedB});
-  pose.waist={...pose.waist,dropM:pose.waist.dropM*(1-settle)};
-  const parts=[a,adapterA,arcPart('outer-left',-pose.thetaA,-1.25,pose.waist.dropM),...standing,
-    arcPart('outer-right',-2*Math.PI-5,-4*Math.PI+pose.thetaB,pose.waist.dropM),adapterB,b];
+  // Straighten the standing leads with one shared height field. Applying it to
+  // every passing layer keeps their relative depth and avoids new collisions.
+  const smooth=(a,b)=>{const u=Math.max(0,Math.min(1,(time-a)/(b-a)));return u*u*(3-2*u)};
+  const pose=blenderPose(time),height=.03-2*pose.waist.dropM,field=standingField(pose,height);
+  pose.A.creases[0].k-=.16*smooth(10.35,10.65)*(1-smooth(11,11.4));
+  pose.A.creases[0].radius-=.0065*smooth(10.65,10.95)*(1-smooth(11.1,11.35));
+  const plan=(name,length=pose[name].length)=>planStandingLead(foldMaterialStrip(name,{...pose[name],length,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,sampleOnly:true}),field);
+  const leadA=plan('A'),leadB=plan('B'),
+    adapterA=buildWaistAdapter(foldPart('adapter-A',pose.adapterA),false,leadA.root,height,leadA.sampleSource),adapterB=buildWaistAdapter(foldPart('adapter-B',pose.adapterB,true),true,leadB.root,height,leadB.sampleSource);
+  const standing=fixed.map(p=>fitWaistWrap(p,height));
+  const left=arcPart('outer-left',-pose.thetaA,-1.25,pose.waist.dropM),right=arcPart('outer-right',-2*Math.PI-5,-4*Math.PI+pose.thetaB,pose.waist.dropM);
+  const available=data.length-[adapterA,left,...standing,right,adapterB].reduce((sum,p)=>sum+p.length,0);
+  const aFeed=smooth(8.5,9)*(1-smooth(12,14)),bFeed=smooth(14,15.5),shareA=.5*(1-aFeed)*(1-bFeed)+bFeed;
+  let releasedA=0,releasedB=0;
+  for(let i=0;i<5;i++){
+    const la=pose.A.length+releasedA,lb=pose.B.length+releasedB,pa=plan('A',la),pb=plan('B',lb),error=available-(la-pa.saved+lb-pb.saved);
+    if(Math.abs(error)<1e-9)break;
+    const speed=(name,length)=>{const p=foldMaterialStrip(name,{...pose[name],length,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,sampleOnly:true}).sampleMaterialPoint(length),k=field(p.center[0])[1];return Math.hypot(p.tangent[0],p.tangent[1]+k*p.tangent[0],p.tangent[2])};
+    releasedA+=shareA*error/speed('A',la);releasedB+=(1-shareA)*error/speed('B',lb);
+  }
+  const a=fitStandingLead(foldPart('A',{...pose.A,length:pose.A.length+releasedA},true),true,field),b=fitStandingLead(foldPart('B',{...pose.B,length:pose.B.length+releasedB}),false,field);
+  const parts=[a,adapterA,left,...standing,right,adapterB,b];
+  // Keep the fitted waist at the character's established belt height.
+  const verticalOffset=.03-height;
+  for(const part of parts){
+    part.positions=part.positions.map(p=>[p[0],p[1]+verticalOffset,p[2]]);
+    if(part.strip){
+      const sample=part.strip.sampleMaterialPoint;
+      part.strip.sampleMaterialPoint=(...args)=>{const p=sample(...args);return {...p,center:[p.center[0],p.center[1]+verticalOffset,p.center[2]]}};
+      if(part.strip.samples)part.strip.samples=part.strip.samples.map(p=>({...p,center:[p.center[0],p.center[1]+verticalOffset,p.center[2]]}));
+    }
+  }
   // The two short waist arcs exchange a fixed amount of material. Interpolating
   // their angles introduces sub-micrometre chord-length drift; correct only the
   // material coordinates, leaving every center-path position unchanged.
@@ -127,10 +161,14 @@ export function buildBlenderBelt(time){
     strip.segments=strip.material==='A'?[{name:'standing',fromS:0,toS:pose.A.creases[0].s},
       {name:'upper-return',fromS:pose.A.creases[0].s,toS:pose.A.creases[1]?.s??strip.totalMaterialS},
       {name:'outgoing-run',fromS:pose.A.creases[1]?.s??0,toS:strip.totalMaterialS}]:
-      [{name:'lifted-feed',fromS:0,toS:strip.totalMaterialS-.04},{name:'waist-feed',fromS:0,toS:strip.totalMaterialS-.04},
+      [{name:'lifted-feed',fromS:0,toS:strip.sourceMaterialLength-.04},{name:'waist-feed',fromS:0,toS:strip.sourceMaterialLength-.04},
        {name:'outgoing-run',fromS:pose.B.creases[1]?.s??0,toS:strip.totalMaterialS}];
+    for(const segment of strip.segments){
+      if(segment.toS!==strip.totalMaterialS)segment.toS=strip.sourceToMaterial(segment.toS);
+      segment.fromS=strip.sourceToMaterial(segment.fromS);
+    }
     strip.segments.push({name:'whole',fromS:0,toS:strip.totalMaterialS});
   }
-  return {...mesh,strips:[a.strip,b.strip],waist:[],pose,settling:{weight:settle,releasedA,releasedB},source:'blender-material-sequence-v1',displayWidth:DISPLAY_WIDTH,displayThickness:DISPLAY_THICKNESS,
+  return {...mesh,strips:[a.strip,b.strip],waist:[],pose,settling:{releasedA,releasedB},source:'blender-material-sequence-v1',displayWidth:DISPLAY_WIDTH,displayThickness:DISPLAY_THICKNESS,
     inference:{geometry:'Blender material-space folds retargeted to the character belt width; depth tested on the actual mesh',hiddenDepth:'authored',crossings:data.crossings}};
 }

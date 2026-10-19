@@ -24,9 +24,9 @@ Stages5/6 run at0.65x source speed, with pauses before insertion (13.75s,16.25s)
 
 From source time 8.5s, the website now uses the Blender-authored material sequence
 in `belt-blender-data.js` and `belt-blender-motion.js`. Display width is 0.078 and
-thickness is 0.006; the authored knot core and total material length
-7.060652279241386 remain fixed. The exposed waist connections are flattened
-during tightening as described below. The original export retains its 0.09/0.007
+thickness is 0.006; the marked crossing order and total material length
+7.060652279241386 remain fixed. The exposed waist connections stay horizontal
+through stages 4–7 as described below. The original export retains its 0.09/0.007
 dimensions for provenance. Both front and angled detail views depth-test the
 same closed surface, including the software fallback. At the marked 17.208s
 crossings, B remains in front of A in the left circle, and passes behind A in
@@ -68,8 +68,8 @@ length into depth, shortening, or rescaling. End exchanges are staggered so one
 hand remains in contact. Material laid around the torso stays on the accepted
 rear over/under route.
 This earlier motion is newly authored, not an additional approved Blender clip.
-The complete thick surface converges to the first Blender pose without changing
-that pose. Measured center-line arc length differs from the fixed material
+The complete thick surface converges to the first fitted Blender pose.
+Measured center-line arc length differs from the fixed material
 budget by less than 0.004 units across the preparation samples (tessellation).
 
 Hands attach to material coordinates throughout preparation and A threading,
@@ -86,21 +86,37 @@ against the evaluated Blender torso. This is sampled collision evidence, not a
 cloth simulation. Local baseline, screenshots, metrics and comparison report are
 in `artifacts/belt-continuity-review/` and remain outside the website commit.
 
-The next user correction removes the two raised shoulders beside the finished
-knot. From 18 to 19.5s, `belt-waist-settle.js` flattens the exposed connections.
-The inner wrap underneath the knot retains its previous height to clear A's
-return fold. Its extra arc length is subtracted from the length released by the
-shoulders, and that net material moves into the free ends. The A/B knot core and
-both marked over/under relationships remain unchanged. The measured rendered
-center-line length stays within 0.003 units of the fixed material budget through
-tightening; this bound includes mesh tessellation error. This is an authored
-ribbon deformation, not a cloth simulation. The wider preparation grips remain
-within the existing arm reach, and framewise tests check grip continuity.
-Actual app comparisons, 48 captured playback frames and surface audits for this
-correction are kept locally in `artifacts/belt-fixed-length-review/`. The audit
-checks 119 rendered thick surfaces, including every 60fps frame from 18 to 19.8s;
-none intersects itself or the evaluated Blender torso, and no tested belt vertex
-lies inside that torso. This does not certify continuous-time cloth physics.
+The subsequent user review rejected both the remaining shoulders at stages 4–6
+and the visible downward ramps at stage 7. `belt-waist-settle.js` now fits smooth
+connections from the first wrapped pose. Their curvature follows depth around
+the torso; the standing waist remains at a constant height across its entire
+width. A shared height adjustment straightens the standing leads and moves the
+other layers at the same position with them, preserving their depth order. It
+tapers away inside the knot and beyond the hips. The fitting follows the Blender
+waist height at each phase, retaining its
+threading clearance; a uniform translation keeps the displayed waist at the
+character's established belt height. The inner wrap remains flat throughout.
+
+Connection arc length is measured and balanced against the free ends. The tip
+currently being threaded retains its source coordinate, so fitting the waist
+cannot extend a tip through a layer. The first A passage also has a small
+finite-bend slope/radius correction: A aims inward before rising between the
+curved waist wraps, avoiding a surface overlap found in the previous version.
+Hands use the remapped material coordinates and remain attached through the
+preparation join. During wrapping, the free spans leave the torso tangentially
+and pass at separate depths behind the back; the grips move inward before the
+rear exchange. This avoids the surface overlaps exposed by dense sampling.
+These are authored website corrections; the raw Blender data
+is unchanged.
+The measured surface center-line length stays within 0.003 units of the fixed
+material budget across stages 4–7, including tessellation error. The initial
+rigid lowering, arm reach, contact continuity and closed surface are regression
+checked separately. Actual app baseline comparisons, front/oblique captures,
+playback and surface audits are kept in `artifacts/belt-horizontal-waist-review/`.
+The final audit checks 849 rendered thick surfaces: preparation at 20fps and
+stages 4-7 at 60fps. No strict self/body intersections or vertices inside the
+evaluated torso were found. This explanatory ribbon deformation and sampled
+audit do not establish continuous-time cloth physics.
 
 The following sections are historical notes on the earlier panel renderer,
 retained as regression utilities but no longer used to draw the product belt:

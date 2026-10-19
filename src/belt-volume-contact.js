@@ -24,9 +24,10 @@ export function applyVolumeContacts(frame,volume,inputRig){
  for(let i=0;i<rig.hands.length;i++){
   const old=rig.hands[i],identity=old.identity,control=frame.hands?.[identity],raw=control?.resolved;if(!raw)continue;
   const binding=volumeContactBinding(t,identity),strip=volume.strips.find(s=>s.material===binding.material);
-  let sample=strip?(binding.semantic==='whole'?strip.sampleMaterialPoint(strip.totalMaterialS*binding.fraction):contactpointBySemantic(strip,binding.semantic,binding.fraction,{visible:false})):null;
+  const materialAt=fraction=>strip.sourceToMaterial?strip.sourceToMaterial(strip.sourceMaterialLength*fraction):strip.totalMaterialS*fraction;
+  let sample=strip?(binding.semantic==='whole'?strip.sampleMaterialPoint(materialAt(binding.fraction)):contactpointBySemantic(strip,binding.semantic,binding.fraction,{visible:false})):null;
   // Acquire the late opening/support locations continuously on the same strip.
-  if(sample&&t>=14.8&&t<15.5){const start=volumeContactBinding(14.8-1e-8,identity),s=strip.totalMaterialS*start.fraction,q=smooth(t,14.8,15.5);sample=strip.sampleMaterialPoint(s+(sample.materialS-s)*q);binding.semantic='whole';binding.fraction=sample.materialS/strip.totalMaterialS;}
+  if(sample&&t>=14.8&&t<15.5){const start=volumeContactBinding(14.8-1e-8,identity),s=materialAt(start.fraction),q=smooth(t,14.8,15.5);sample=strip.sampleMaterialPoint(s+(sample.materialS-s)*q);binding.semantic='whole';binding.fraction=sample.materialS/strip.totalMaterialS;}
   // Incoming material is sampled from the FULL strip. Never move the grasp along
   // the material merely because a larger interval has emerged from the aperture.
   const visible=sample?(binding.role==='held'?clamp(smooth(strip.visibleMaterialS,sample.materialS,sample.materialS+Math.min(.12,Math.max(1e-6,(strip.totalMaterialS-sample.materialS)*.8)))):Number(sample.materialS<=strip.visibleMaterialS+1e-8)):0,acquisition=binding.weight*visible,weight=acquisition*activation*releasePosition;
@@ -56,7 +57,7 @@ function preparationContacts(frame,volume,inputRig){
   const approach=.34-.30*smooth(t,2.05,2.6)*(1-smooth(t,4,4.7));
   // Hold the wider straight span through lowering and the start of wrapping,
   // then slide toward the laying frontier before the retained rear exchange.
-  const stop=strip.totalMaterialS-(strip.material==='A'?1.245626545564495-.97:1.3-.70),s=Math.min(Math.max(1.06*(1-smooth(t,2.6,3.3)),volume.preparation.laid+approach),stop);
+  const stop=strip.totalMaterialS-(strip.material==='A'?1.245626545564495-.97:1.3-.70),s=Math.min(Math.max(1.06*(1-smooth(t,2.3,3)),volume.preparation.laid+approach),stop);
   targets[strip.material]={sample:strip.sampleMaterialPoint(s),strip,s};
  }
  for(const identity of ['Left','Right']){

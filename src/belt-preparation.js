@@ -22,7 +22,7 @@ function rotate(v,axis,angle){return add(add(mul(v,Math.cos(angle)),mul(cross(ax
 export function preparationProgress(t){
  // The back crossing is laid before either end returns to the front.
  if(t<=2)return 0;
- if(t<3.3)return 1.18*smooth(t,2,3.3);
+ if(t<3.3){const q=smooth(t,2,3.3);return 1.18*(q+.035*Math.sin(2*Math.PI*q));}
  if(t<4)return 1.18; // Both exchanges occur behind the back, before returning.
  if(t<5)return 1.18+.86*smooth(t,4,5);
  return 2.04+(Math.max(M,L-M)-2.04)*smooth(t,5,8.5);
@@ -37,6 +37,19 @@ export function buildPreparationBelt(t){
   // it reaches the back; taper to the original window for the authored join.
   const tangentWindow=.22-.165*smooth(laid,.9,1.5);
   root.tangent=unit(sub(source(rootS+tangentWindow).center,source(rootS-tangentWindow).center));
+  // At the front crossing, follow the unlaid end's tangent. Averaging across
+  // the curved waist connector would turn the free span into the other end.
+  const freeTangent=mul(unit(sub(source(rootS+sign*.18).center,root.center)),sign);
+  root.tangent=unit(mix(root.tangent,freeTangent,smooth(laid,1.9,2.3)));
+  // A free span leaving a convex waist must depart tangentially or outward.
+  // The smoothed chord can point inward near the front-to-side transition.
+  if(t<3.3){
+   const outward=unit([root.center[0]/(.456*.456),0,(root.center[2]+.225)/(.256*.256)]),inward=Math.min(0,dot(mul(root.tangent,sign),outward));
+   root.tangent=unit(sub(root.tangent,mul(outward,sign*inward*(1-smooth(t,2.65,2.8)))));
+  }
+  // Stagger the depth of the two hanging spans during the rear exchange.
+  // Turning their departure directions preserves material length.
+  root.tangent=rotate(root.tangent,[0,1,0],-.35*smooth(t,2.65,2.78)*(1-smooth(t,2.9,3.1)));
   root.widthAxis=unit(cross(root.normal,root.tangent));
   const tangent=mul(root.tangent,sign),down=[0,1,0],axis=unit(cross(tangent,down)),angle=Math.acos(Math.max(-1,Math.min(1,dot(tangent,down))));
   frames[sign]={rootS,root,tangent,axis,angle,end};
@@ -58,11 +71,13 @@ export function buildPreparationBelt(t){
  }
  const positions=[],normals=[],uv=reference.materialUV.map(v=>[...v]);
  for(let i=0;i<reference.midsurface.length;i++){
-  const s=uv[i][0],old=source(s),now=sample(s),d=sub(reference.midsurface[i],old.center);
+  const s=uv[i][0],now=sample(s);
   // Preserve the source surface exactly on laid material, including its seam
   // cross sections. The unlaid section uses the transported material frame.
-  const p=Math.abs(s-M)<=laid?add(reference.midsurface[i],shift):add(now.center,add(add(mul(now.widthAxis,dot(d,old.widthAxis)),mul(now.normal,dot(d,old.normal))),mul(now.tangent,dot(d,old.tangent))));
-  positions.push(p);normals.push(Math.abs(s-M)<=laid?reference.normals[i]:now.normal);
+  const remaining=Math.abs(s-M)-laid,blend=smooth(remaining,0,.06);
+  const offset=mix(sub(reference.midsurface[i],source(s).center),mul(now.widthAxis,-uv[i][1]),blend);
+  const p=remaining<=0?add(reference.midsurface[i],shift):add(now.center,offset);
+  positions.push(p);normals.push(remaining<=0?reference.normals[i]:unit(mix(reference.normals[i],now.normal,blend)));
  }
  const mesh=assembleBelt([{name:'continuous-preparation',length:L,positions,normals,uv,triangles:reference.midTriangles}]);
  const strips=['A','B'].map((material,i)=>{
