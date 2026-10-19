@@ -18,7 +18,13 @@ const fs=require('node:fs');
    assert.equal(await p.locator('#belt-detail').getAttribute('data-pts'),'15.5');
    assert.equal(await p.locator('#belt-canvas').getAttribute('data-rig-hands'),'2');
    assert.equal(await p.locator('#belt-canvas').getAttribute('data-paper-strips'),'2');
-   assert.equal(await p.locator('#belt-canvas').getAttribute('data-render-source'),'paper-flat');
+   assert.equal(await p.locator('#belt-canvas').getAttribute('data-render-source'),'ribbon-3d');
+   await p.locator('[data-belt-view="oblique"]').click();
+   await p.waitForFunction(()=>document.querySelector('#belt-detail').dataset.view==='oblique');
+   assert.equal(await p.locator('#belt-detail').getAttribute('data-pts'),'15.5');
+   await p.locator('[data-belt-step="0"]').click();
+   await p.waitForFunction(()=>document.querySelector('[data-belt-view="oblique"]').disabled);
+   assert.equal(await p.locator('#belt-detail').getAttribute('data-view'),'front');
    assert.equal(await p.locator('[data-belt-view="back"]').count(),0);assert.equal(await p.locator('[data-belt-view="side"]').count(),0);
    assert.deepEqual(errors,[]);await p.close();
   }
@@ -33,6 +39,6 @@ const fs=require('node:fs');
   assert.ok(resources.some(r=>r.encodedBodySize===expectedBytes),'actual transfer matches the shipped controls gzip');
   const pixels=await p.locator('#belt-canvas').evaluate(c=>({rigHands:c.dataset.rigHands,strips:c.dataset.paperStrips,panels:c.dataset.paperPanels,frame:c.dataset.frame,pts:c.dataset.pts,sourcePTS:c.dataset.sourcePts,nextSourcePTS:c.dataset.nextSourcePts,renderSource:c.dataset.renderSource}));
   fs.writeFileSync('.test-output/belt-source-browser.json',JSON.stringify({resources,pixels,errors},null,2));assert.deepEqual(errors,[]);
-  console.log('PASS source: failed download, bad hash, retry, close during fetch, reopen, actual gzip transfer, same PTS detail and front-only UI.');
+  console.log('PASS source: failed download, bad hash, retry, close during fetch, reopen, actual gzip transfer, shared PTS and Blender 3D view availability.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

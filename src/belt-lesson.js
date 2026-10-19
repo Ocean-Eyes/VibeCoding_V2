@@ -3,7 +3,7 @@ import {BELT_STEPS,BELT_SOURCE,BELT_REFERENCE_2,sourcePTS,trackedPlacement} from
 import {beltAnchor} from './belt-geometry.js';
 import {loadBeltSource} from './belt-source.js';
 import {sampleRenderFrame} from './belt-interpolation.js';
-import {paperMotion} from './paper-motion.js';
+import {lessonMotion as paperMotion} from './belt-volume-motion.js';
 import {drawPaperMotion} from './paper-scene.js';
 import {drawPaperOpeningCue} from './paper-inspection.js';
 import {sampleMarker,markerCandidates,newBeltTrack,updateBeltTrack,videoRect,videoToScreen,screenToVideo} from './belt-tracker.js';
@@ -115,8 +115,8 @@ function realOverlay(ctx,w,h,pose,anchor,now){
 function surface(canvas){const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);if(canvas.width!==Math.round(rect.width*dpr)||canvas.height!==Math.round(rect.height*dpr)){canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr)}const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,rect.width,rect.height);return {ctx,w:rect.width,h:rect.height}}
 // The paper renderer owns body/arm/panel occlusion and mirroring.
 // The UI does not mirror a second time or add folds/clearance routes.
-function drawCharacter(ctx,anchor,pose,{mirror=false,opacity=1,body=true,labels=true}={}){
- ctx.save();ctx.globalAlpha=opacity;drawPaperMotion(ctx,anchor,pose,{body,diagnostic:false,mirror,labels});ctx.restore();
+function drawCharacter(ctx,anchor,pose,{mirror=false,opacity=1,body=true,labels=true,yaw=0}={}){
+ ctx.save();ctx.globalAlpha=opacity;drawPaperMotion(ctx,anchor,pose,{body,diagnostic:false,mirror,labels,yaw});ctx.restore();
 }
 function currentPose(){
  const time=sourcePTS(step,progress);if(poseCache?.requestedPTS===time)return poseCache;
@@ -139,12 +139,12 @@ function draw(now){
  else anchor=trackedPlacement(w,h,step,progress);
  const beltTransform=anchor;
  if(mode==='real'){if(stream)realOverlay(ctx,w,h,pose,beltTransform,now)}else drawCharacter(ctx,beltTransform,pose,{mirror,opacity:stream?.94:1,body:!stream});
- const canvas=$('belt-canvas');canvas.dataset.phase=String(Math.max(0,step-1)+progress*(step?1:0));canvas.dataset.pts=String(pose.originalPTS);canvas.dataset.frame=String(pose.frameIndex);canvas.dataset.sourcePts=String(pose.sourceOriginalPTS);canvas.dataset.nextSourcePts=String(pose.nextSourcePTS);canvas.dataset.interpolationAlpha=String(pose.interpolationAlpha);canvas.dataset.renderSource='paper-flat';canvas.dataset.lessonMode=mode;canvas.dataset.step=String(step);canvas.dataset.mode=stream?'camera':'demo';canvas.dataset.anchor=JSON.stringify(anchor);canvas.dataset.paperStrips=String(pose.strips.length);canvas.dataset.paperPanels=String(pose.strips.reduce((n,s)=>n+s.panels.length,0));canvas.dataset.rigHands=String(pose.rig.hands.length);canvas.dataset.guideEnds=JSON.stringify(pose.guideEnds);
- $('belt-detail').dataset.view='front';$('belt-detail').dataset.pts=String(pose.originalPTS);
+ const canvas=$('belt-canvas');canvas.dataset.phase=String(Math.max(0,step-1)+progress*(step?1:0));canvas.dataset.pts=String(pose.originalPTS);canvas.dataset.frame=String(pose.frameIndex);canvas.dataset.sourcePts=String(pose.sourceOriginalPTS);canvas.dataset.nextSourcePts=String(pose.nextSourcePTS);canvas.dataset.interpolationAlpha=String(pose.interpolationAlpha);canvas.dataset.renderSource=pose.volume?'ribbon-3d':'paper-flat';canvas.dataset.lessonMode=mode;canvas.dataset.step=String(step);canvas.dataset.mode=stream?'camera':'demo';canvas.dataset.anchor=JSON.stringify(anchor);canvas.dataset.paperStrips=String(pose.strips.length);canvas.dataset.paperPanels=String(pose.strips.reduce((n,s)=>n+s.panels.length,0));canvas.dataset.rigHands=String(pose.rig.hands.length);canvas.dataset.guideEnds=JSON.stringify(pose.guideEnds);
+ const yaw=pose.volume&&detailView==='oblique'?.65:0;document.querySelector('[data-belt-view="oblique"]').disabled=!pose.volume;$('belt-detail').dataset.view=yaw?'oblique':'front';document.querySelectorAll('[data-belt-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.beltView===(yaw?'oblique':'front'))));$('belt-detail').dataset.pts=String(pose.originalPTS);
  const knotCloseup=step>=3,detailScale=knotCloseup?Math.min(detail.w/.92,detail.h/.62):Math.min(detail.w/1.8,detail.h/1.05);
  const detailAnchor={x:detail.w/2-(knotCloseup?.035:0)*detailScale*(mirror?-1:1),y:knotCloseup?detail.h*.42:detail.h*.10,scale:detailScale};
  $('belt-detail').dataset.anchor=JSON.stringify(detailAnchor);$('belt-detail').dataset.crop=knotCloseup?'knot':'waist-and-ends';
- drawCharacter(detail.ctx,detailAnchor,pose,{opacity:1,mirror,body:false});
+ drawCharacter(detail.ctx,detailAnchor,pose,{opacity:1,mirror,body:false,yaw});
  drawPaperOpeningCue(detail.ctx,detailAnchor,pose,{mirror,step});
  $('belt-progress').value=Math.min(1,progress);$('belt-scrub').value=String(Math.round((animation?.timeline.progress??1)*100));raf=requestAnimationFrame(draw);
 }

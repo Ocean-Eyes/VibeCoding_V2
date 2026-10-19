@@ -2,6 +2,7 @@ import {tr} from './i18n.js';
 // Instructional emphasis on existing ribbon edges; no new cloth, fold, or loop.
 export function drawPaperOpeningCue(ctx,anchor,state,{mirror=false,step}={}){
  if(step!==4&&step!==5)return;
+ if(state.volume)return; // Inspect the actual 3D passage in the angled detail view.
  const A=state.strips.find(s=>s.material==='A');
  const spans=[['upper-return',1],['front-cross',-1]];
  ctx.save();ctx.translate(anchor.x,anchor.y);ctx.scale(anchor.scale*(mirror?-1:1),anchor.scale);

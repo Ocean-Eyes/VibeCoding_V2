@@ -22,6 +22,49 @@ Stages5/6 run at0.65x source speed, with pauses before insertion (13.75s,16.25s)
 
 ## Native drawing and readable entry
 
+From source time 8.5s, the website now uses the Blender-authored material sequence
+in `belt-blender-data.js` and `belt-blender-motion.js`. Display width is 0.078 and
+thickness is 0.006; the authored center paths and total material length
+7.060652279241386 remain fixed. The original export retains its 0.09/0.007
+dimensions for provenance. Both front and angled detail views depth-test the
+same closed surface, including the software fallback. At the marked 17.208s
+crossings, B remains in front of A in the left circle, and passes behind A in
+the central square. Yellow A / blue B refer to the Blender review colors; the
+product continues to show a black belt.
+
+The user also marked that same return crossing in the final 19.5s pose. A new
+Blender render of `source-square-crossing/pose-19.500/pose.json` and a web render
+with only A/B pigment changed confirm yellow A in front of blue B there. The
+older `source-sequence-survey/source-19.500/front.png` predates that correction
+and is not the final reference. Regression checks include 17.208, 18.125, 19.5
+and the held finish at 19.8s. The prepared temporary folder and repository use
+identical motion data; only display cross section, material-coordinate rounding
+and body visibility have been changed during website integration.
+
+Waist occlusion follows a curved front surface matching the illustrated hips.
+The previous flat clipping plane hid the side wraps before they reached the
+character's silhouette. This correction changes visibility, not the mannequin's
+proportions or belt trajectory. Shared material vertices weld the parts;
+interpolated adapter mismatch is bounded below 0.00075 (one eighth of display
+thickness), while authored keys join within 1e-7. A sub-micrometre waist-arc
+sampling drift is corrected in material coordinates without moving the path.
+
+The 2026-10-19 review captured actual front/oblique app views, playback and mobile
+layout. Nineteen sampled closed meshes from 8.5 to 19.8s had no strict self/body
+intersections or vertices inside the evaluated Blender torso. This is sampled
+geometry evidence, not a continuous-time physics guarantee or a volumetric model
+of the illustrated judogi. Local evidence is in `artifacts/web-integration-review/`
+and is deliberately excluded from the website commit.
+
+Known integration limit: no Blender poses before 8.5s were supplied. The earlier
+accepted 2D wrap is retained, and its shortened ends visibly change shape at
+the 8.5s handoff to the full-length Blender belt. That boundary is not claimed
+to be a continuous material motion; fixing it requires compatible earlier
+authored poses rather than changing the accepted Blender center paths.
+
+The following description records the earlier panel renderer, which remains in
+use before 8.5s:
+
 The character uses a fixed upper arm0.65 and forearm0.60 in local waist units. Only the belt mannequin disables its old hanging arms; other judo idle/tap rendering remains unchanged. Belt faces are flat 3D material panels of width0.09 and thickness0.008, sharing exact crease-edge objects. Coplanar subdivisions are not additional folds. The reviewed result uses the existing faces and two outgoing ends, without decorative extra folds.
 
 Stages4-7 crop the detail view around the knot. Stages5/6 emphasize existing face edges and label the intended A/B entry. This overlay changes no panel geometry. It supplies instructional readability; the unannotated black silhouette alone is not claimed to reveal an obvious hole. The detail and main view use the same pose and mirror mapping.
