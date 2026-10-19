@@ -33,8 +33,10 @@ export function buildPreparationBelt(t){
  for(const sign of [-1,1]){
   const end=sign<0?0:L,rootS=Math.max(0,Math.min(L,M+sign*laid)),root=source(rootS);
   // A moving grip must not inherit the discontinuous chord direction of an
-  // exported triangle row. Average the material tangent over one belt width.
-  root.tangent=unit(sub(source(rootS+.055).center,source(rootS-.055).center));
+  // exported triangle row. The wide held span needs a broader average until
+  // it reaches the back; taper to the original window for the authored join.
+  const tangentWindow=.22-.165*smooth(laid,.9,1.5);
+  root.tangent=unit(sub(source(rootS+tangentWindow).center,source(rootS-tangentWindow).center));
   root.widthAxis=unit(cross(root.normal,root.tangent));
   const tangent=mul(root.tangent,sign),down=[0,1,0],axis=unit(cross(tangent,down)),angle=Math.acos(Math.max(-1,Math.min(1,dot(tangent,down))));
   frames[sign]={rootS,root,tangent,axis,angle,end};
@@ -44,20 +46,13 @@ export function buildPreparationBelt(t){
   if(distance<=0)return {...original,center:add(original.center,shift)};
   // A straight held span, a finite-radius gravity bend, then a hanging end.
   // Arc distance is material distance; no shortening/fading of hidden tails.
-  const straight=.38, radius=.12,bend=f.angle*radius,x=Math.max(0,distance-straight),a=Math.min(f.angle,x/radius),axis=f.axis;
+  // Spend the initial length in the visible held span, not in a floor turn.
+  // Lowering is a rigid translation; wrapping then consumes this same span.
+  const straight=Math.max(.38,1.12-laid), radius=.12,bend=f.angle*radius,x=Math.max(0,distance-straight),a=Math.min(f.angle,x/radius),axis=f.axis;
   let p=add(f.root.center,mul(f.tangent,Math.min(straight,distance)));
   if(x>0)p=add(p,add(mul(f.tangent,radius*Math.sin(a)),mul(cross(axis,f.tangent),radius*(1-Math.cos(a)))));
   let tangent=mul(rotate(f.tangent,axis,a),sign),widthAxis=rotate(f.root.widthAxis,axis,a);
-  if(x>bend){
-   // A full-length belt reaches the ground before wrapping. Let excess length
-   // lie on the floor through a cylindrical bend, rather than pass through it
-   // or shorten the ends. Floor height follows the mannequin's soles.
-   const floor=2.41,r=.12,down=x-bend,vertical=Math.max(0,floor-r-p[1]-shift[1]),rest=Math.max(0,down-vertical),turn=Math.min(Math.PI/2,rest/r);
-   p=add(p,[0,Math.min(down,vertical)+r*Math.sin(turn),0]);
-   let out=unit(cross(widthAxis,[0,1,0]));if(out[2]<0)out=mul(out,-1);
-   p=add(p,mul(out,r*(1-Math.cos(turn))+Math.max(0,rest-r*Math.PI/2)));
-   const floorAxis=unit(cross([0,1,0],out));tangent=mul(rotate([0,1,0],floorAxis,turn),sign);widthAxis=rotate(widthAxis,floorAxis,turn);
-  }
+  if(x>bend)p=add(p,[0,x-bend,0]);
   const normal=unit(cross(tangent,widthAxis));
   return {center:add(p,shift),tangent,widthAxis,normal,materialS:s};
  }

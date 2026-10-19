@@ -2,7 +2,7 @@ import {normalizeControls} from './belt-controls.js';
 // Exact reviewed control data. Hidden contacts remain authored inference.
 export const BELT_REVIEW=Object.freeze({
  "status": "reference-reviewed",
- "scope": "authored chest-to-waist continuous material preparation; unchanged Blender tying from 8.5s; material-attached hands; front body occlusion and oblique surface review; hidden depth authored",
+ "scope": "fixed-length chest-to-waist preparation; Blender knot core with flattened waist connections during tightening; material-attached hands; front body occlusion and oblique surface review; hidden depth authored",
  "controlSHA256": "ebcf8e7605ad0c46e4c5067bab2406c3a7d1ed8f68f9fea213316df20f83f86a",
  "sourceVideoSHA256": "661ed0670e8afbadd42a0c3cc21eb9ae86f171c0d5f5c826272b471f4b689822",
  "rigSHA256": "374ee28feaf898b97d5a6b374336af3f39e101bd1409099b2eebbacfeebfb70b",

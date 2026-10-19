@@ -24,7 +24,7 @@ test('the product uses one finite, fixed-length Blender belt from the first auth
   }
 });
 
-test('display cross section shrinks without changing authored center paths or material reach',()=>{
+test('display cross section preserves the authored knot core and pre-tightening center paths',()=>{
   for(const key of BLENDER_BELT.keys){
     const mesh=buildBlenderBelt(key.t);
     assert.equal(mesh.displayWidth,.078);assert.equal(mesh.displayThickness,.006);
@@ -34,14 +34,16 @@ test('display cross section shrinks without changing authored center paths or ma
       const part=mesh.parts.find(p=>p.name===name.replace('adapter','adapter-'));
       const original=foldMaterialStrip(name,{...key[name],sampleOnly:true});
       assert.equal(part.strip.width,.078);assert.equal(part.strip.thickness,.006);
+      if(name.startsWith('adapter')&&key.t>18)continue; // Explicitly flattened by the subsequent user correction.
       for(let j=0;j<=20;j++){
-        const s=part.length*j/20,p=part.strip.sampleMaterialPoint(s);
+        const s=key[name].length*j/20,p=part.strip.sampleMaterialPoint(s);
         assert.ok(distance(p.center,original.sampleMaterialPoint(s).center)<1e-10);
         assert.ok(Math.abs(distance(part.strip.sampleMaterialPoint(s,0,1).center,part.strip.sampleMaterialPoint(s,0,-1).center)-.006)<1e-10);
       }
     }
     for(const source of BLENDER_BELT.standing){
       const part=mesh.parts.find(p=>p.name===source.name);
+      if(source.name==='middle-inner'&&key.t>18)continue;
       for(let i=0;i<part.positions.length;i+=5){
         const row=Math.min(i/5*3,source.rows-1),center=source.positions.slice(row*15+6,row*15+9);
         center[1]-=2*mesh.pose.waist.dropM;
@@ -51,6 +53,31 @@ test('display cross section shrinks without changing authored center paths or ma
       }
     }
   }
+});
+
+test('tightening conserves measured surface length while flattening the exposed waist connections',()=>{
+ for(let t=18;t<=19.5+1e-8;t+=.025){
+  const mesh=buildBlenderBelt(t);let measured=0;
+  for(const part of mesh.parts){
+   const rows=part.uv.map((uv,i)=>({s:uv[0],v:uv[1],p:part.positions[i]})).filter(row=>Math.abs(row.v)<1e-9).sort((a,b)=>a.s-b.s);
+   for(let i=1;i<rows.length;i++)measured+=distance(rows[i].p,rows[i-1].p);
+  }
+  assert.ok(Math.abs(measured-BLENDER_BELT.length)<.003,`actual surface length at ${t}: ${measured}`);
+ }
+ const mesh=buildBlenderBelt(19.5);
+ for(const name of ['adapter-A','adapter-B']){
+  const part=mesh.parts.find(p=>p.name===name);
+  for(let i=0;i<part.positions.length;i++){
+   // The user marked the shoulders, not the retained folded knot core.
+   assert.ok(part.positions[i][1]>=-.01&&part.positions[i][1]<=.08,'raised shoulder remains');
+   if(Math.abs(part.uv[i][1])<1e-9)assert.ok(part.positions[i][1]>=.03-1e-9&&part.positions[i][1]<=.04+1e-9,'waist connection is not horizontal');
+  }
+ }
+ const inner=mesh.parts.find(p=>p.name==='middle-inner');
+ for(let i=2;i<inner.positions.length;i+=5){const p=inner.positions[i];
+  if(Math.abs(p[0])>=.29)assert.ok(Math.abs(p[1]-.03)<1e-10,'exposed inner wrap is not flat');
+  if(Math.abs(p[0])<=.17)assert.ok(Math.abs(p[1]-.098)<1e-10,'inner wrap moved into the knot core');
+ }
 });
 
 test('the rendered thick surface stays closed through keys and intervening folds',()=>{

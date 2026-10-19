@@ -2,6 +2,7 @@
 // per-panel painter order: both crossing regions use the actual surface depth.
 import {BLENDER_BELT as data} from './belt-blender-data.js';
 import {foldMaterialStrip} from './belt-material-folds.js';
+import {settleWaistAdapter,settleStandingWaist,waistSettleWeight} from './belt-waist-settle.js';
 const DISPLAY_WIDTH=.078,DISPLAY_THICKNESS=.006;
 const mix=(a,b,q)=>a+(b-a)*q, lerp=(a,b,q)=>a.map((v,i)=>mix(v,b[i],q));
 const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
@@ -102,9 +103,13 @@ export function assembleBelt(parts){
   return {vertexData,midsurface:positions,normals,materialUV:uv,midTriangles:triangles,length:offset,maxJoin,parts};
 }
 export function buildBlenderBelt(time){
-  const pose=blenderPose(time),a=foldPart('A',pose.A,true),b=foldPart('B',pose.B),
-    adapterA=foldPart('adapter-A',pose.adapterA),adapterB=foldPart('adapter-B',pose.adapterB,true);
-  const standing=fixed.map(p=>({...p,positions:p.positions.map(v=>[v[0],v[1]-2*pose.waist.dropM,v[2]])}));
+  const pose=blenderPose(time),settle=waistSettleWeight(time),
+    adapterA=settleWaistAdapter(foldPart('adapter-A',pose.adapterA),settle),adapterB=settleWaistAdapter(foldPart('adapter-B',pose.adapterB,true),settle,true);
+  const standing=fixed.map(p=>settleStandingWaist(p,pose.waist.dropM,settle));
+  const standingGrowth=standing.reduce((sum,p,i)=>sum+p.length-fixed[i].length,0);
+  const releasedA=pose.adapterA.length-adapterA.length-standingGrowth/2,releasedB=pose.adapterB.length-adapterB.length-standingGrowth/2;
+  const a=foldPart('A',{...pose.A,length:pose.A.length+releasedA},true),b=foldPart('B',{...pose.B,length:pose.B.length+releasedB});
+  pose.waist={...pose.waist,dropM:pose.waist.dropM*(1-settle)};
   const parts=[a,adapterA,arcPart('outer-left',-pose.thetaA,-1.25,pose.waist.dropM),...standing,
     arcPart('outer-right',-2*Math.PI-5,-4*Math.PI+pose.thetaB,pose.waist.dropM),adapterB,b];
   // The two short waist arcs exchange a fixed amount of material. Interpolating
@@ -126,6 +131,6 @@ export function buildBlenderBelt(time){
        {name:'outgoing-run',fromS:pose.B.creases[1]?.s??0,toS:strip.totalMaterialS}];
     strip.segments.push({name:'whole',fromS:0,toS:strip.totalMaterialS});
   }
-  return {...mesh,strips:[a.strip,b.strip],waist:[],pose,source:'blender-material-sequence-v1',displayWidth:DISPLAY_WIDTH,displayThickness:DISPLAY_THICKNESS,
+  return {...mesh,strips:[a.strip,b.strip],waist:[],pose,settling:{weight:settle,releasedA,releasedB},source:'blender-material-sequence-v1',displayWidth:DISPLAY_WIDTH,displayThickness:DISPLAY_THICKNESS,
     inference:{geometry:'Blender material-space folds retargeted to the character belt width; depth tested on the actual mesh',hiddenDepth:'authored',crossings:data.crossings}};
 }

@@ -16,8 +16,19 @@ test('the same unwrapped midpoint lowers from chest to waist before material is 
  assert.ok(first.preparation.midpoint[1]<-.5);assert.ok(Math.abs(waist.preparation.midpoint[1]-.03)<1e-8);
  for(const state of [first,waist]){
   assert.equal(state.displayWidth,.078);assert.equal(state.displayThickness,.006);
-  for(const strip of state.strips)assert.ok(strip.samples.at(-1).center[1]>1.8,'full-length free ends hang below the waist');
+  for(const strip of state.strips)assert.ok(strip.samples.at(-1).center[1]>state.preparation.midpoint[1]+2,'full-length free ends hang below the held span');
   assert.ok(state.midsurface.every(p=>p[1]<=2.415),'free ends pass through the floor');
+ }
+});
+
+test('lowering translates every surface vertex without shortening or reshaping the belt',()=>{
+ const first=buildPreparationBelt(0);
+ for(let t=0;t<=2;t+=.05){
+  const next=buildPreparationBelt(t),shift=next.preparation.midpoint.map((v,i)=>v-first.preparation.midpoint[i]);
+  for(let i=0;i<first.midsurface.length;i++){
+   assert.ok(distance(next.midsurface[i],first.midsurface[i].map((v,k)=>v+shift[k]))<1e-12,`material shape changed at ${t}`);
+   assert.ok(distance(next.normals[i],first.normals[i])<1e-12);
+  }
  }
 });
 
