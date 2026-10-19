@@ -8,15 +8,15 @@ All 1,285 original controls and PTS at 60fps (0 through21.4s) remain in the hash
 
 | Stage | Source interval | Action |
 | --- | --- | --- |
-| 1 | 2s hold | Midpoint at the waist |
-| 2 | 2-4.1s | Wrap behind the body |
-| 3 | 4.1-5.4s | Bring ends forward and cross |
-| 4 | 5.4-12.5s | A under both standing layers |
+| 1 | 0-2s authored preparation | Hold midpoint at chest, lower to waist |
+| 2 | 2-5s authored preparation | Wrap behind the body and exchange ends |
+| 3 | 5-8.5s authored preparation | Bring ends forward and cross |
+| 4 | 8.5-12.5s | A under both standing layers |
 | 5 | 12.5-15.5s | Return A through layers, retain a loose opening |
 | 6 | 15.5-18s | Feed B tip first through the retained passage |
 | 7 | 18-19.8s | Pull ends and flatten the final knot |
 
-A is the first threaded material end, initially viewer-left; B starts viewer-right. These are material names, not anatomical hands. The standalone end-length adjustment stage remains removed. Display ends are deliberately shortened for teaching; their A/B markers are authored guide endpoints and are not sparse source-observed physical tips. Hidden free ends suppress their marker.
+A is the first threaded material end, initially viewer-right in the new chest-held preparation; B starts viewer-left. Material identity stays fixed through the rear exchange and front crossing. The full material length is displayed throughout. A/B markers follow actual mesh endpoints and are hidden behind the body.
 
 Stages5/6 run at0.65x source speed, with pauses before insertion (13.75s,16.25s) and after B passes (17.5s). Only the rapid first passage10.65-11.0s slows to0.3x, adding0.817s. This avoids dragging out the whole lesson. User playback speed multiplies these rates.
 
@@ -56,14 +56,34 @@ geometry evidence, not a continuous-time physics guarantee or a volumetric model
 of the illustrated judogi. Local evidence is in `artifacts/web-integration-review/`
 and is deliberately excluded from the website commit.
 
-Known integration limit: no Blender poses before 8.5s were supplied. The earlier
-accepted 2D wrap is retained, and its shortened ends visibly change shape at
-the 8.5s handoff to the full-length Blender belt. That boundary is not claimed
-to be a continuous material motion; fixing it requires compatible earlier
-authored poses rather than changing the accepted Blender center paths.
+The earlier 8.5s shape discontinuity is now removed. `belt-preparation.js`
+progressively unrolls the first Blender pose from its material midpoint. At the
+user's request, preparation starts with the belt held at chest height and lowers
+to the waist before wrapping. The unlaid ends hang through finite-radius bends;
+excess length rests on the floor at the mannequin's sole height instead of
+passing below it. End exchanges are staggered so one hand remains in contact.
+material laid around the torso stays on the accepted rear over/under route.
+This earlier motion is newly authored, not an additional approved Blender clip.
+The complete thick surface converges to the first Blender pose without changing
+that pose. Measured center-line arc length differs from the fixed material
+budget by less than 0.004 units across the preparation samples (tessellation).
 
-The following description records the earlier panel renderer, which remains in
-use before 8.5s:
+Hands attach to material coordinates throughout preparation and A threading,
+with explicit rear/front exchanges and a continuous acquisition of the late
+opening/support contacts. Wrist orientation respects fixed arm reach; finger
+bone geometry is retained. Hidden hands, rear tails and endpoint markers are
+occluded by the waist, judogi skirt and trouser legs. Front detail uses the same
+body occlusion; angled inspection exposes the geometry without the body mask.
+
+The continuity review checks chest placement, the 8.5s thick-surface join,
+framewise hand reach/contact, actual center-line length and rear-tail visibility.
+Twenty sampled preparation surfaces have no strict self/body intersections
+against the evaluated Blender torso. This is sampled collision evidence, not a
+cloth simulation. Local baseline, screenshots, metrics and comparison report are
+in `artifacts/belt-continuity-review/` and remain outside the website commit.
+
+The following sections are historical notes on the earlier panel renderer,
+retained as regression utilities but no longer used to draw the product belt:
 
 The character uses a fixed upper arm0.65 and forearm0.60 in local waist units. Only the belt mannequin disables its old hanging arms; other judo idle/tap rendering remains unchanged. Belt faces are flat 3D material panels of width0.09 and thickness0.008, sharing exact crease-edge objects. Coplanar subdivisions are not additional folds. The reviewed result uses the existing faces and two outgoing ends, without decorative extra folds.
 

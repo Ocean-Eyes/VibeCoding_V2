@@ -23,8 +23,9 @@ const fs=require('node:fs');
    await p.waitForFunction(()=>document.querySelector('#belt-detail').dataset.view==='oblique');
    assert.equal(await p.locator('#belt-detail').getAttribute('data-pts'),'15.5');
    await p.locator('[data-belt-step="0"]').click();
-   await p.waitForFunction(()=>document.querySelector('[data-belt-view="oblique"]').disabled);
-   assert.equal(await p.locator('#belt-detail').getAttribute('data-view'),'front');
+   await p.waitForFunction(()=>document.querySelector('#belt-canvas').dataset.pts==='2');
+   assert.ok(await p.locator('[data-belt-view="oblique"]').isEnabled());
+   assert.equal(await p.locator('#belt-canvas').getAttribute('data-render-source'),'ribbon-3d');
    assert.equal(await p.locator('[data-belt-view="back"]').count(),0);assert.equal(await p.locator('[data-belt-view="side"]').count(),0);
    assert.deepEqual(errors,[]);await p.close();
   }

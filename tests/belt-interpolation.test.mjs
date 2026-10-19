@@ -20,7 +20,7 @@ test('angular interpolation crosses pi by its shortest arc',()=>{
 });
 test('rapid passage alone slows to 0.3x and adds less than one second',()=>{
  const segments=clockSegments(BELT_INTERVALS[3],3),slow=segments.filter(x=>x.rate===.3);assert.equal(slow.length,1);assert.equal(slow[0].sourceFrom,10.65);assert.equal(slow[0].sourceTo,11);
- const added=segments.reduce((s,p)=>s+p.duration,0)-(12.5-5.4)*1000;assert.ok(Math.abs(added-816.6666666667)<1e-6);
+ const added=segments.reduce((s,p)=>s+p.duration,0)-(BELT_INTERVALS[3].to-BELT_INTERVALS[3].from)*1000;assert.ok(Math.abs(added-816.6666666667)<1e-6);
  assert.deepEqual(segments.filter(p=>p.hold).map(p=>p.sourceTo),[9.5,11.5]);
 });
 test('anime timeline crosses slow boundaries continuously and preserves all source times',()=>{

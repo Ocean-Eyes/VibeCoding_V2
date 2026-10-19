@@ -99,7 +99,7 @@ export function assembleBelt(parts){
     const n=unit(cross(sub(positions[b],positions[a]),normals[a]));
     emit([a,b,b],[-1,-1,1],n);emit([a,b,a],[-1,1,1],n);
   }
-  return {vertexData,midsurface:positions,materialUV:uv,midTriangles:triangles,length:offset,maxJoin,parts};
+  return {vertexData,midsurface:positions,normals,materialUV:uv,midTriangles:triangles,length:offset,maxJoin,parts};
 }
 export function buildBlenderBelt(time){
   const pose=blenderPose(time),a=foldPart('A',pose.A,true),b=foldPart('B',pose.B),
@@ -124,6 +124,7 @@ export function buildBlenderBelt(time){
       {name:'outgoing-run',fromS:pose.A.creases[1]?.s??0,toS:strip.totalMaterialS}]:
       [{name:'lifted-feed',fromS:0,toS:strip.totalMaterialS-.04},{name:'waist-feed',fromS:0,toS:strip.totalMaterialS-.04},
        {name:'outgoing-run',fromS:pose.B.creases[1]?.s??0,toS:strip.totalMaterialS}];
+    strip.segments.push({name:'whole',fromS:0,toS:strip.totalMaterialS});
   }
   return {...mesh,strips:[a.strip,b.strip],waist:[],pose,source:'blender-material-sequence-v1',displayWidth:DISPLAY_WIDTH,displayThickness:DISPLAY_THICKNESS,
     inference:{geometry:'Blender material-space folds retargeted to the character belt width; depth tested on the actual mesh',hiddenDepth:'authored',crossings:data.crossings}};

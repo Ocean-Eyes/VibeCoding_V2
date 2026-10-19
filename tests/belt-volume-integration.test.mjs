@@ -7,7 +7,6 @@ import {lessonMotion} from '../src/belt-volume-motion.js';
 import {buildBlenderBelt} from '../src/belt-blender-motion.js';
 import {BLENDER_BELT} from '../src/belt-blender-data.js';
 import {foldMaterialStrip} from '../src/belt-material-folds.js';
-import {paperMotion} from '../src/paper-motion.js';
 
 const frames=normalizeControls(JSON.parse(gunzipSync(readFileSync(new URL('../assets/belt/controls-ebcf8e7605ad.json.gz',import.meta.url))))).frames;
 const distance=(a,b)=>Math.hypot(...a.map((value,i)=>value-b[i]));
@@ -16,8 +15,7 @@ test('the product uses one finite, fixed-length Blender belt from the first auth
   const expected=BLENDER_BELT.length;
   for(const frame of frames.filter((_,i)=>i%6===0||[510,888,990,1032,1170].includes(i))){
     const state=lessonMotion(frame);
-    if(frame.originalPTS<8.5){assert.deepEqual(state,paperMotion(frame));continue;}
-    assert.equal(state.volume.source,'blender-material-sequence-v1');
+    assert.equal(state.volume.source,frame.originalPTS<8.5?'continuous-material-preparation':'blender-material-sequence-v1');
     assert.ok(state.volume.vertexData.every(Number.isFinite),`non-finite mesh at ${frame.originalPTS}`);
     assert.ok(Math.abs(state.volume.length-expected)<2e-8,`length changed at ${frame.originalPTS}`);
     // Assembly welds shared material vertices. Interpolated adapter frames have

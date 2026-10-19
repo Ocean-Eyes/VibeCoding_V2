@@ -32,7 +32,7 @@ test('inspection callback reports the exact held pose from its first frame',()=>
 });
 
 test('all seven intervals join without skipping original source motion',()=>{
- assert.equal(BELT_INTERVALS[0].from,2);assert.equal(BELT_INTERVALS.at(-1).to,19.8);
+ assert.equal(BELT_INTERVALS[0].from,0);assert.equal(BELT_INTERVALS.at(-1).to,19.8);
  for(let i=1;i<7;i++)assert.equal(BELT_INTERVALS[i-1].to,BELT_INTERVALS[i].from);
  assert.deepEqual(BELT_INTERVALS[4].holds,[13.75]);assert.deepEqual(BELT_INTERVALS[5].holds,[16.25,17.5]);
 });

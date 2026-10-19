@@ -1,14 +1,14 @@
 import {paperMotion} from './paper-motion.js';
 import {buildBlenderBelt} from './belt-blender-motion.js';
 import {applyVolumeContacts} from './belt-volume-contact.js';
+import {buildPreparationBelt} from './belt-preparation.js';
 
-// The tracked source remains the timing authority. From the first Blender pose
-// onward the belt is the single, fixed-length material route authored in Blender.
+// Preparation and tying share one fixed-length material route. The original
+// Blender folds remain authoritative from 8.5s onward.
 export function lessonMotion(frame){
   const legacy=paperMotion(frame),t=frame.originalPTS;
-  if(t<8.5)return legacy;
-  const volume=buildBlenderBelt(t);
-  const attached=t>=14.8?applyVolumeContacts(frame,volume,legacy.rig):{rig:legacy.rig,contacts:[]};
+  const volume=t<8.5?buildPreparationBelt(t):buildBlenderBelt(t);
+  const attached=applyVolumeContacts(frame,volume,legacy.rig);
   const strips=volume.strips.map(strip=>({...strip,freeEndVisible:true,panels:strip.triangles}));
   return {...legacy,volume,strips,rig:attached.rig,contacts:attached.contacts,
     guideEnds:Object.fromEntries(strips.map(strip=>{
