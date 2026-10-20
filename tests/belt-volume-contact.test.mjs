@@ -49,7 +49,7 @@ test('both hands pull outward with closed grips and retain the balanced finish',
     for(const contact of state.contacts){
       assert.equal(contact.role,'held');assert.equal(contact.acquisitionWeight,1);
       const strip=state.volume.strips.find(s=>s.material===contact.material);
-      assert.ok(Math.abs(strip.totalMaterialS-contact.materialS-.09)<1e-9,'grip slides toward or away from the tip');
+      assert.ok(Math.abs(strip.totalMaterialS-contact.materialS-.045)<1e-9,'grip slides toward or away from the tip');
     }
     for(const hand of state.rig.hands)assert.ok(hand.curl.every(value=>value>=.86-1e-12),'hand opens during the pull');
   }

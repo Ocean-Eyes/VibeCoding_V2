@@ -38,10 +38,11 @@ test('display cross section and relative knot geometry survive fitting to a flat
       for(let j=0;j<=20;j++){
         const sourceS=Math.min(key[name].length,part.strip.sourceMaterialLength)*j/20,s=part.strip.sourceToMaterial(sourceS),p=part.strip.sampleMaterialPoint(s);
         const expected=original.sampleMaterialPoint(sourceS).center;
-        // Preserve the knot core. A's under-wrap bend has a clearance correction;
-        // after threading, B's small tip bend travels with its redistributed end.
+        // Preserve authored geometry before the final tension adjustment.
+        // A's earlier under-wrap bend has a clearance correction; B's small
+        // tip bend travels with its redistributed end after threading.
         const movingTip=name==='B'&&key.t>18&&sourceS>part.strip.sourceMaterialLength-.08;
-        if(!movingTip&&(name!=='A'||key.t<=10.35||key.t>=11.4)){assert.ok(Math.abs(p.center[0]-expected[0])<1e-9);assert.ok(Math.abs(p.center[2]-expected[2])<1e-9);if(Math.abs(expected[0])<.04)assert.ok(Math.abs(p.center[1]-(expected[1]+2*mesh.pose.waist.dropM))<1e-9);}
+        if(key.t<=18.8&&!movingTip&&(name!=='A'||key.t<=10.35||key.t>=11.4)){assert.ok(Math.abs(p.center[0]-expected[0])<1e-9);assert.ok(Math.abs(p.center[2]-expected[2])<1e-9);if(Math.abs(expected[0])<.04)assert.ok(Math.abs(p.center[1]-(expected[1]+2*mesh.pose.waist.dropM))<1e-9);}
         assert.ok(Math.abs(distance(part.strip.sampleMaterialPoint(s,0,1).center,part.strip.sampleMaterialPoint(s,0,-1).center)-.006)<1e-10);
       }
     }
@@ -49,9 +50,14 @@ test('display cross section and relative knot geometry survive fitting to a flat
       const part=mesh.parts.find(p=>p.name===source.name);
       for(let i=0;i<part.positions.length;i+=5){
         const row=Math.min(i/5*3,source.rows-1),center=source.positions.slice(row*15+6,row*15+9);
-        assert.ok(Math.abs(part.positions[i+2][0]-center[0])<1e-10);
+        const pulledRear=key.t>18.8&&source.name.startsWith('rear-smooth');
+        if(pulledRear){
+          const actual=part.positions[i+2];
+          assert.ok(Math.abs(actual[0]*(center[2]+.225)-center[0]*(actual[2]+.225))<1e-10,'rear take-up changed the wrap direction');
+          assert.ok(Math.hypot(actual[0]/.44,(actual[2]+.225)/.24)<=Math.hypot(center[0]/.44,(center[2]+.225)/.24)+1e-10,'rear wrap grew instead of tightening');
+        }else assert.ok(Math.abs(part.positions[i+2][0]-center[0])<1e-10);
         assert.ok(Math.abs(part.positions[i+2][1]-center[1])<1e-10);
-        assert.ok(Math.abs(part.positions[i+2][2]-center[2])<1e-10);
+        if(!pulledRear)assert.ok(Math.abs(part.positions[i+2][2]-center[2])<1e-10);
         const sourceWidth=distance(source.positions.slice(row*15,row*15+3),source.positions.slice(row*15+12,row*15+15));
         assert.ok(Math.abs(distance(part.positions[i],part.positions[i+4])-sourceWidth*.078/.09)<1e-10);
       }
@@ -117,23 +123,22 @@ function crossing(a,b,c,d){
   const q=((c[0]-a[0])*(d[1]-c[1])-(c[1]-a[1])*(d[0]-c[0]))/den;
   const r=((c[0]-a[0])*(b[1]-a[1])-(c[1]-a[1])*(b[0]-a[0]))/den;
   if(q<0||q>1||r<0||r>1)return null;
-  return {point:[a[0]+q*(b[0]-a[0]),a[1]+q*(b[1]-a[1])],aMinusB:(a[2]+q*(b[2]-a[2]))-(c[2]+r*(d[2]-c[2]))};
+  return {q,r,point:[a[0]+q*(b[0]-a[0]),a[1]+q*(b[1]-a[1])],aMinusB:(a[2]+q*(b[2]-a[2]))-(c[2]+r*(d[2]-c[2]))};
 }
 test('the two user-marked crossings keep their separate front/back relationships',()=>{
- for(const [time,circlePoint,squarePoint] of [
-  [17.208333333333336,[-.208,.075],[-.009,-.015]],
-  [18.125,[-.165,.090],[.017,-.002]],
-  [19.5,[-.096,.115],[.026,.036]],
-  [19.8,[-.096,.115],[.026,.036]],
- ]){
+ for(const time of [17.208333333333336,18.125,19.5,19.8]){
   const mesh=buildBlenderBelt(time),[A,B]=mesh.strips,samples=strip=>{
     const out=[];for(let s=0;s<=strip.totalMaterialS;s+=.003)out.push(strip.sampleMaterialPoint(s).center);return out;
   },a=samples(A),b=samples(B),hits=[];
-  for(let i=0;i<a.length-1;i++)for(let j=0;j<b.length-1;j++){const hit=crossing(a[i],a[i+1],b[j],b[j+1]);if(hit)hits.push(hit);}
-  const nearest=target=>hits.reduce((best,hit)=>distance(hit.point,target)<distance(best.point,target)?hit:best);
-  const circle=nearest([circlePoint[0],circlePoint[1]+2*mesh.pose.waist.dropM]),square=nearest([squarePoint[0],squarePoint[1]+2*mesh.pose.waist.dropM]);
-  assert.ok(circle.aMinusB<-.01,'circle: blue B must remain in front of yellow A');
-  assert.ok(square.aMinusB>.01,'square: blue B must pass behind yellow A');
+  for(let i=0;i<a.length-1;i++)for(let j=0;j<b.length-1;j++){const hit=crossing(a[i],a[i+1],b[j],b[j+1]);if(hit)hits.push({...hit,a:(i+hit.q)*.003,b:(j+hit.r)*.003});}
+  const [a0,a1]=mesh.pose.A.creases.map(c=>A.sourceToMaterial(c.s)),[b0,b1]=mesh.pose.B.creases.map(c=>B.sourceToMaterial(c.s));
+  // The knot moves and contracts. Follow the marked material spans rather
+  // than whichever unrelated crossing is nearest their former screen position.
+  const circle=hits.filter(h=>h.a<a0&&h.b>b0&&h.b<b1),square=hits.filter(h=>h.a>a1&&h.b>b1);
+  assert.equal(circle.length,1);assert.equal(square.length,1);
+  const clearance=mesh.displayThickness+.0015;
+  assert.ok(circle[0].aMinusB<-clearance,'circle: blue B must remain in front of yellow A');
+  assert.ok(square[0].aMinusB>clearance,'square: blue B must pass behind yellow A');
  }
 });
 

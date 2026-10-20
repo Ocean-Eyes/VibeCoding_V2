@@ -1,9 +1,47 @@
 // Horizontal waist connections. Curvature is in depth around the torso, not
 // a visible vertical fold. Their measured length is balanced by the free ends.
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,k)=>a.map(v=>v*k),mix=(a,b,q)=>a.map((v,i)=>v+(b[i]-v)*q),unit=a=>mul(a,1/(Math.hypot(...a)||1)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-export function fitWaistWrap(part,height){
+export function waistTakeupProfile(parts){
+ // Both rear passes use the same radial displacement. Their authored order
+ // changes around the back, so projecting them onto separate fixed ellipses
+ // would cross the layers. Keep their radial separation and the front seams.
+ const curves=parts.filter(p=>p.name.startsWith('rear-smooth')).map(p=>{
+  const rows=[];for(let i=2;i<p.positions.length;i+=5){const [x,,z]=p.positions[i];rows.push([Math.atan2(x/.44,-(z+.225)/.24),Math.hypot(x/.44,(z+.225)/.24)]);}
+  return rows.sort((a,b)=>a[0]-b[0]);
+ });
+ const at=(curve,t)=>{let lo=0,hi=curve.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(curve[m][0]<t)lo=m;else hi=m;}const q=Math.max(0,Math.min(1,(t-curve[lo][0])/(curve[hi][0]-curve[lo][0])));return curve[lo][1]+q*(curve[hi][1]-curve[lo][1])};
+ // The reference torso and the tilted ribbon edges both fit inside this
+ // clearance envelope. The retained margin includes the actual belt thickness.
+ return p=>{const theta=Math.atan2(p[0]/.44,-(p[2]+.225)/.24);return Math.max(0,Math.min(...curves.map(c=>at(c,theta)))-1.06)};
+}
+export function fitWaistWrap(part,height,tension=0,profile=()=>0){
  const positions=part.positions.map(v=>[v[0],v[1]+height-.03,v[2]]);
- return {...part,positions};
+ if(!tension||!part.name.startsWith('rear-smooth'))return {...part,positions};
+ const warp=p=>{
+  const q=Math.max(0,Math.min(1,(-p[2]-.16)/.11)),a=tension*q*q*(3-2*q);
+  const radius=Math.hypot(p[0]/.44,(p[2]+.225)/.24),scale=1-a*profile(p)/radius;
+  return [p[0]*scale,p[1],-.225+(p[2]+.225)*scale];
+ };
+ // Release only the measured change in centerline length into the held ends.
+ // Reconstruct each width row at its original width after the radial move.
+ const fitted=[],normals=[],uv=[];let before=0,after=0,prior=null,nextPrior=null;
+ for(let row=0;row<positions.length/5;row++){
+  const center=positions[row*5+2],target=warp(center);
+  const first=positions[row*5],last=positions[row*5+4],width=Math.hypot(...sub(last,first)),axis=unit(sub(warp(last),warp(first)));
+  if(prior){before+=Math.hypot(...sub(center,prior));after+=Math.hypot(...sub(target,nextPrior));}
+  for(let col=0;col<5;col++){
+   const index=row*5+col;
+   fitted.push(add(target,mul(axis,(col/4-.5)*width)));
+   normals.push(part.normals[index]);
+   uv.push([part.uv[index][0]+after-before,part.uv[index][1]]);
+  }
+  prior=center;nextPrior=target;
+ }
+ for(let row=1;row<fitted.length/5-1;row++){
+  const tangent=sub(fitted[(row+1)*5+2],fitted[(row-1)*5+2]),width=sub(fitted[row*5+4],fitted[row*5]),n=unit(cross(width,tangent));
+  for(let col=0;col<5;col++){const at=row*5+col;normals[at]=mul(n,n.reduce((sum,v,k)=>sum+v*part.normals[at][k],0)<0?-1:1);}
+ }
+ return {...part,positions:fitted,normals,uv,length:part.length+after-before};
 }
 export function standingField(pose,height){
  // The original waist changes height relative to the knot while tightening. Flatten
@@ -18,12 +56,44 @@ export function standingField(pose,height){
   return [cap-(cap+edge-lo[0])**2/(4*edge),lo[1]*(cap+edge-lo[0])/(2*edge)];
  };
 }
-export function planStandingLead(strip,field){
+export function planStandingLead(strip,field,centerOffset=0,tension=0){
  const join=strip.totalMaterialS;
+ // Retain the verified contact route through the knot. Only after the outgoing
+ // span clears the last loop may it aim at the wider, equally high hand grips.
+ const fold=strip.creases[1],exit=fold?fold.at+fold.half*fold.n+Math.abs(fold.k)*strip.width/2:join;
+ const h0=tension&&exit<join?field(strip.sampleMaterialPoint(exit).center[0])[0]:0;
+ const rootPoint=strip.sampleMaterialPoint(0).center,waistHeight=rootPoint[1]+field(rootPoint[0])[0];
+ // Material lengths of the validated contact pose before taking up rear slack.
+ // Holding this slope fixed keeps extending the ends from moving a crossing.
+ const referenceJoin=strip.material==='A'?1.3456725433515904:1.3155529429896746;
+ const h1=tension?field(strip.sampleMaterialPoint(referenceJoin).center[0])[0]:0;
+ const targetH=tension?.25+waistHeight-.03-strip.sampleMaterialPoint(join).center[1]:0;
+ const first=strip.creases[0],entry=first?first.at-first.half*first.n-Math.abs(first.k)*strip.width/2:0;
+ const fittedField=(s,x)=>{
+  const [h,k]=field(x);
+  if(!tension||s<=exit||exit>=join)return [h,k,0];
+  const q=Math.min(1,(s-exit)/.04),w=tension*q*q*(3-2*q),dw=tension*6*q*(1-q)/.04;
+  const slope=(h1-h0)/(referenceJoin-exit),line=h0+slope*(s-exit),anchor=exit+.24;
+  let correction=0,derivative=0;
+  if(join>anchor+.02&&s>anchor){
+   const a=Math.min(1,(s-anchor)/.02),weight=tension*a*a*(3-2*a),dv=tension*6*a*(1-a)/.02;
+   const anchorH=h0+slope*(anchor-exit),nextSlope=(targetH-anchorH)/(join-anchor),next=anchorH+nextSlope*(s-anchor);
+   correction=weight*(next-line);derivative=dv*(next-line)+weight*(nextSlope-slope);
+  }
+  return [h+w*(line-h)+correction,(1-w)*k,dw*(line-h)+w*slope+derivative];
+ };
  const sampleSource=(s,v=0,side=0)=>{
-  const mid=strip.sampleMaterialPoint(s),slope=field(mid.center[0])[1],w=mid.widthAxis,scale=Math.hypot(w[0],w[1]+slope*w[0],w[2]);
-  const p=v?strip.sampleMaterialPoint(s,v/scale):mid,[h,k]=field(p.center[0]),tangent=unit([p.tangent[0],p.tangent[1]+k*p.tangent[0],p.tangent[2]]),normal=unit([p.normal[0]-k*p.normal[1],p.normal[1],p.normal[2]]),widthAxis=unit([p.widthAxis[0],p.widthAxis[1]+k*p.widthAxis[0],p.widthAxis[2]]);
-  return {...p,center:add([p.center[0],p.center[1]+h,p.center[2]],mul(normal,side*strip.thickness/2)),tangent,widthAxis,normal};
+  const mid=strip.sampleMaterialPoint(s),slope=fittedField(s,mid.center[0])[1],w=mid.widthAxis,scale=Math.hypot(w[0],w[1]+slope*w[0],w[2]);
+  let extra=0,derivative=0;
+  if(tension&&strip.material==='A'&&s<entry){
+   // The standing span settles onto the horizontal waist band. Stop before the
+   // first finite bend so A still passes underneath both waist layers.
+   const q=Math.max(0,Math.min(1,(s-entry+.04)/.04)),weight=tension*(1-q*q*(3-2*q)),dw=-tension*6*q*(1-q)/.04;
+   const [h,k]=field(mid.center[0]),d=waistHeight-mid.center[1]-h;
+   extra=weight*d;derivative=dw*d-weight*(mid.tangent[1]+k*mid.tangent[0]);
+  }
+  const p=v?strip.sampleMaterialPoint(s,v/scale):mid,[h,k,ds]=fittedField(s,p.center[0]),tangent=unit([p.tangent[0],p.tangent[1]+k*p.tangent[0]+ds+derivative,p.tangent[2]]),widthAxis=unit([p.widthAxis[0],p.widthAxis[1]+k*p.widthAxis[0],p.widthAxis[2]]),normal=ds||derivative?unit(cross(widthAxis,tangent)):unit([p.normal[0]-k*p.normal[1],p.normal[1],p.normal[2]]);
+  return {...p,center:add([p.center[0]+centerOffset,p.center[1]+h+extra,p.center[2]],mul(normal,side*strip.thickness/2)),tangent,widthAxis,normal};
  };
  // Reparameterize the fitted centreline by measured arc distance. Contacts
  // retain their authored source coordinates through this mapping.
@@ -33,8 +103,8 @@ export function planStandingLead(strip,field){
  const fromMaterial=s=>{if(s>=arc.at(-1))return s+saved;let lo=0,hi=n;while(hi-lo>1){const m=(lo+hi)>>1;if(arc[m]<=s)lo=m;else hi=m;}return (lo+(s-arc[lo])/(arc[hi]-arc[lo]))*join/n};
  return {saved,sampleSource,toMaterial,fromMaterial,root:sampleSource(0)};
 }
-export function fitStandingLead(part,reverse=false,field){
- const plan=planStandingLead(part.strip,field),length=part.length-plan.saved,positions=[],normals=[],uv=[];
+export function fitStandingLead(part,reverse=false,field,centerOffset=0,tension=0){
+ const plan=planStandingLead(part.strip,field,centerOffset,tension),length=part.length-plan.saved,positions=[],normals=[],uv=[];
  for(let i=0;i<part.positions.length;i++){
   const s=reverse?part.length-part.uv[i][0]:part.uv[i][0],v=reverse?-part.uv[i][1]:part.uv[i][1],p=plan.sampleSource(s,v);
   positions.push(p.center);normals.push(p.normal);uv.push([reverse?length-plan.toMaterial(s):plan.toMaterial(s),part.uv[i][1]]);
@@ -43,9 +113,11 @@ export function fitStandingLead(part,reverse=false,field){
  const strip={...part.strip,totalMaterialS:length,visibleMaterialS:length,sourceMaterialLength:part.length,sourceToMaterial:plan.toMaterial,sampleMaterialPoint,samples:part.strip.samples.map(p=>sampleMaterialPoint(plan.toMaterial(p.materialS)))};
  return {...part,positions,normals,uv,length,strip,leadSaved:plan.saved};
 }
-export function buildWaistAdapter(part,reverse=false,root,height,rootSample){
+export function buildWaistAdapter(part,reverse=false,root,height,rootSample,tighten=0){
  const first=root?{...root,widthAxis:mul(root.widthAxis,-1),tangent:mul(root.tangent,-1)}:part.strip.sampleMaterialPoint(0),last=part.strip.sampleMaterialPoint(part.length),sign=first.center[0]<0?-1:1;
- const a=first.center,e=[last.center[0],height,last.center[2]],b=add(a,mul(first.tangent,.04)),c=add(a,[sign*.23,0,-.04]),d=add(e,[-sign*.04,0,.06]);
+ // Remove the shoulder lead's excess curvature only during the final pull.
+ // Its measured length is released into the held ends by the length solver.
+ const a=first.center,e=[last.center[0],height,last.center[2]],b=add(a,mul(first.tangent,.04)),c=add(a,[sign*(.23-.15*tighten),0,-.04]),d=add(e,[-sign*.04,0,.06]);
  b[1]=Math.max(e[1],Math.min(a[1],b[1]));
  const curve=u=>add(add(add(mul(a,(1-u)**4),mul(b,4*(1-u)**3*u)),add(mul(c,6*(1-u)**2*u*u),mul(d,4*(1-u)*u**3))),mul(e,u**4));
  const derivative=u=>add(add(mul(sub(b,a),4*(1-u)**3),mul(sub(c,b),12*(1-u)**2*u)),add(mul(sub(d,c),12*(1-u)*u*u),mul(sub(e,d),4*u**3)));

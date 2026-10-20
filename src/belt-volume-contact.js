@@ -30,7 +30,7 @@ export function applyVolumeContacts(frame,volume,inputRig){
    const segment=strip.segments.find(s=>s.name===binding.semantic);
    // Grasp a fixed distance from each tip through tightening, rather than
    // sliding the fingers as the knot feeds material into the free ends.
-   binding.fraction=clamp((strip.totalMaterialS-.09-segment.fromS)/(segment.toS-segment.fromS));
+   binding.fraction=clamp((strip.totalMaterialS-.045-segment.fromS)/(segment.toS-segment.fromS));
   }
   const materialAt=fraction=>strip.sourceToMaterial?strip.sourceToMaterial(strip.sourceMaterialLength*fraction):strip.totalMaterialS*fraction;
   let sample=strip?(binding.semantic==='whole'?strip.sampleMaterialPoint(materialAt(binding.fraction)):contactpointBySemantic(strip,binding.semantic,binding.fraction,{visible:false})):null;
