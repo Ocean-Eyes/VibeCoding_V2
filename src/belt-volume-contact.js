@@ -20,10 +20,18 @@ function feasibleOrientation(orientation,point,identity){
 export function applyVolumeContacts(frame,volume,inputRig){
  const t=frame.originalPTS;
  if(t<8.5)return preparationContacts(frame,volume,inputRig);
- const rig={...inputRig,hands:[...inputRig.hands]},contacts=[],activation=1,releasePosition=1-smooth(t,19.48,19.9),releaseCurl=1-smooth(t,19.48,19.6);
+ // The lesson ends at 19.8: retain the completed pull for its final hold.
+ const releaseStart=20,releaseEnd=20.42;
+ const rig={...inputRig,hands:[...inputRig.hands]},contacts=[],activation=1,releasePosition=1-smooth(t,releaseStart,releaseEnd),releaseCurl=1-smooth(t,releaseStart,20.12);
  for(let i=0;i<rig.hands.length;i++){
   const old=rig.hands[i],identity=old.identity,control=frame.hands?.[identity],raw=control?.resolved;if(!raw)continue;
   const binding=volumeContactBinding(t,identity),strip=volume.strips.find(s=>s.material===binding.material);
+  if(strip&&binding.role==='held'){
+   const segment=strip.segments.find(s=>s.name===binding.semantic);
+   // Grasp a fixed distance from each tip through tightening, rather than
+   // sliding the fingers as the knot feeds material into the free ends.
+   binding.fraction=clamp((strip.totalMaterialS-.09-segment.fromS)/(segment.toS-segment.fromS));
+  }
   const materialAt=fraction=>strip.sourceToMaterial?strip.sourceToMaterial(strip.sourceMaterialLength*fraction):strip.totalMaterialS*fraction;
   let sample=strip?(binding.semantic==='whole'?strip.sampleMaterialPoint(materialAt(binding.fraction)):contactpointBySemantic(strip,binding.semantic,binding.fraction,{visible:false})):null;
   // Acquire the late opening/support locations continuously on the same strip.
@@ -32,7 +40,7 @@ export function applyVolumeContacts(frame,volume,inputRig){
   // the material merely because a larger interval has emerged from the aperture.
   const visible=sample?(binding.role==='held'?clamp(smooth(strip.visibleMaterialS,sample.materialS,sample.materialS+Math.min(.12,Math.max(1e-6,(strip.totalMaterialS-sample.materialS)*.8)))):Number(sample.materialS<=strip.visibleMaterialS+1e-8)):0,acquisition=binding.weight*visible,weight=acquisition*activation*releasePosition;
   const source=handRig(control,identity)??old,free=blend(old.grip,source.grip,activation),point=sample?.center.slice(0,2),target=point?blend(free,point,weight):free;
-  const curl=(raw.curl??[.5,.5,.5,.5,.5]).map((v,j)=>{const held=v+(Math.max(v,j===0?.88:.86)-v)*acquisition*releaseCurl,relaxed=held+(.15-held)*smooth(t,19.48,19.9);return activation===1?relaxed:old.curl[j]+(relaxed-old.curl[j])*activation;});
+  const curl=(raw.curl??[.5,.5,.5,.5,.5]).map((v,j)=>{const held=v+(Math.max(v,j===0?.88:.86)-v)*acquisition*releaseCurl,relaxed=held+(.15-held)*smooth(t,releaseStart,releaseEnd);return activation===1?relaxed:old.curl[j]+(relaxed-old.curl[j])*activation;});
   let orientation=raw.orientationRad;
   if(t<15.5){const start=identity==='Left'?2:Math.PI-2;orientation=start+delta(start,orientation)*smooth(t,14.8,15.5);}
   if(sample&&weight&&t<14.8){const across=Math.atan2(sample.tangent[1],sample.tangent[0])+Math.PI/2;orientation+=.4*Math.sin(2*(across-orientation))*weight*(1-smooth(t,14,14.8));}
@@ -41,9 +49,9 @@ export function applyVolumeContacts(frame,volume,inputRig){
   if(sample&&weight)orientation=feasibleOrientation(orientation,target,identity);
   orientation=old.angle-Math.PI/2+delta(old.angle-Math.PI/2,orientation)*activation;
   const fit=handRig({...control,resolved:{...raw,gripCenter:[(target[0]-RIG.waist[0])/RIG.waistWidth,(target[1]-RIG.waist[1])/RIG.waistWidth],orientationRad:orientation,curl}},identity);
-  if(!fit)continue;fit.contactPose=t>=19.48?'authored relaxed fingers after observed release':weight?'3D mesh material attachment':'source free hand';fit.materialContactDepth=sample?.center[2]??null;rig.hands[i]=fit;
+  if(!fit)continue;fit.contactPose=t>=releaseStart?'relaxed fingers after completed pull':weight?'3D mesh material attachment':'source free hand';fit.materialContactDepth=sample?.center[2]??null;rig.hands[i]=fit;
   if(!sample||weight===0)continue;
-  contacts.push({identity,material:binding.material,semantic:binding.semantic,panel:`${binding.material}:${binding.semantic}`,materialS:sample.materialS,materialFraction:binding.fraction,contactSpan:binding.span,role:t>=19.48?'releasing':binding.role,sourceTarget:source.inputGrip,assignedPoint:point,point3D:[...sample.center],surfaceTangent:[...sample.tangent],actualContactPoint:fit.grip,feature:'grip',featureBlend:0,acquisitionWeight:weight,holdWeight:acquisition*activation*releaseCurl,correction:length(fit.grip.map((x,j)=>x-source.inputGrip[j])),certainty:'authored contact on reconstructed 3D mesh; hidden depth inferred'});
+  contacts.push({identity,material:binding.material,semantic:binding.semantic,panel:`${binding.material}:${binding.semantic}`,materialS:sample.materialS,materialFraction:binding.fraction,contactSpan:binding.span,role:t>=releaseStart?'releasing':binding.role,sourceTarget:source.inputGrip,assignedPoint:point,point3D:[...sample.center],surfaceTangent:[...sample.tangent],actualContactPoint:fit.grip,feature:'grip',featureBlend:0,acquisitionWeight:weight,holdWeight:acquisition*activation*releaseCurl,correction:length(fit.grip.map((x,j)=>x-source.inputGrip[j])),certainty:'authored contact on reconstructed 3D mesh; hidden depth inferred'});
  }
  return {rig,contacts};
 }

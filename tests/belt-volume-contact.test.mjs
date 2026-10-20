@@ -36,8 +36,29 @@ test('contact handover and release do not teleport either anatomical hand',()=>{
     const angle=Math.abs(Math.atan2(Math.sin(hand.angle-prior.angle),Math.cos(hand.angle-prior.angle)));
     assert.ok(angle<.20,`wrist flip at ${states[i].frame.frameIndex}: ${angle}`);
   }
-  for(const state of states.filter(item=>item.frame.originalPTS>=19.9)){
+  for(const state of states.filter(item=>item.frame.originalPTS>=20.42)){
     assert.equal(state.contacts.length,0);
     for(const hand of state.rig.hands)assert.ok(hand.curl.every(value=>Math.abs(value-.15)<1e-8));
   }
+});
+
+test('both hands pull outward with closed grips and retain the balanced finish',()=>{
+  const pull=states.filter(item=>item.frame.originalPTS>=18&&item.frame.originalPTS<=19.8);
+  for(const state of pull){
+    assert.equal(state.contacts.length,2);
+    for(const contact of state.contacts){
+      assert.equal(contact.role,'held');assert.equal(contact.acquisitionWeight,1);
+      const strip=state.volume.strips.find(s=>s.material===contact.material);
+      assert.ok(Math.abs(strip.totalMaterialS-contact.materialS-.09)<1e-9,'grip slides toward or away from the tip');
+    }
+    for(const hand of state.rig.hands)assert.ok(hand.curl.every(value=>value>=.86-1e-12),'hand opens during the pull');
+  }
+  const first=pull[0],last=pull.at(-1);
+  for(const identity of ['Right','Left']){
+    const start=first.rig.hands.find(h=>h.identity===identity),end=last.rig.hands.find(h=>h.identity===identity);
+    assert.ok(Math.abs(end.grip[0])-Math.abs(start.grip[0])>.08,`${identity} does not pull outward`);
+  }
+  const [a,b]=last.rig.hands;
+  assert.ok(Math.abs(a.grip[0]+b.grip[0])<.015,'unequal lateral reach');
+  assert.ok(Math.abs(a.grip[1]-b.grip[1])<.035,'unequal pulling height');
 });

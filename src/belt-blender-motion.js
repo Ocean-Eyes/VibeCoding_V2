@@ -4,6 +4,7 @@ import {BLENDER_BELT as data} from './belt-blender-data.js';
 import {foldMaterialStrip} from './belt-material-folds.js';
 import {buildWaistAdapter,planStandingLead,fitStandingLead,fitWaistWrap,standingField} from './belt-waist-settle.js';
 const DISPLAY_WIDTH=.078,DISPLAY_THICKNESS=.006;
+let pullStartReach;
 const mix=(a,b,q)=>a+(b-a)*q, lerp=(a,b,q)=>a.map((v,i)=>mix(v,b[i],q));
 const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -120,7 +121,11 @@ export function buildBlenderBelt(time){
   const pose=blenderPose(time),height=.03-2*pose.waist.dropM,field=standingField(pose,height);
   pose.A.creases[0].k-=.16*smooth(10.35,10.65)*(1-smooth(11,11.4));
   pose.A.creases[0].radius-=.0065*smooth(10.65,10.95)*(1-smooth(11.1,11.35));
-  const plan=(name,length=pose[name].length)=>planStandingLead(foldMaterialStrip(name,{...pose[name],length,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,sampleOnly:true}),field);
+  // After B has passed through, material can slide between the two free ends.
+  // Its small terminal bend travels with the tip, not with the knot's folds.
+  const endOptions=(name,length=pose[name].length)=>({...pose[name],length,
+    creases:pose[name].creases.map((c,i)=>i>=2&&time>18?{...c,s:c.s+length-pose[name].length}:c)});
+  const plan=(name,length=pose[name].length)=>planStandingLead(foldMaterialStrip(name,{...endOptions(name,length),width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,sampleOnly:true}),field);
   const leadA=plan('A'),leadB=plan('B'),
     adapterA=buildWaistAdapter(foldPart('adapter-A',pose.adapterA),false,leadA.root,height,leadA.sampleSource),adapterB=buildWaistAdapter(foldPart('adapter-B',pose.adapterB,true),true,leadB.root,height,leadB.sampleSource);
   const standing=fixed.map(p=>fitWaistWrap(p,height));
@@ -134,7 +139,23 @@ export function buildBlenderBelt(time){
     const speed=(name,length)=>{const p=foldMaterialStrip(name,{...pose[name],length,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,sampleOnly:true}).sampleMaterialPoint(length),k=field(p.center[0])[1];return Math.hypot(p.tangent[0],p.tangent[1]+k*p.tangent[0],p.tangent[2])};
     releasedA+=shareA*error/speed('A',la);releasedB+=(1-shareA)*error/speed('B',lb);
   }
-  const a=fitStandingLead(foldPart('A',{...pose.A,length:pose.A.length+releasedA},true),true,field),b=fitStandingLead(foldPart('B',{...pose.B,length:pose.B.length+releasedB}),false,field);
+  const pull=smooth(18,19.5);
+  if(pull){
+    const end=(name,length)=>{const p=plan(name,length);return {length:length-p.saved,x:p.sampleSource(length).center[0]}};
+    let la=pose.A.length+releasedA,lb=pose.B.length+releasedB;
+    if(pullStartReach===undefined)pullStartReach=buildBlenderBelt(18).strips.reduce((sum,s)=>sum+s.sampleMaterialPoint(s.totalMaterialS).center[0],0);
+    const targetX=pullStartReach*(1-pull);
+    // Solve measured length and balanced reach together; do not scale the belt
+    // or move the accepted knot crossings to make its tips look symmetrical.
+    for(let i=0;i<4;i++){
+      const a=end('A',la),b=end('B',lb),dl=available-a.length-b.length,dx=targetX-a.x-b.x;
+      if(Math.max(Math.abs(dl),Math.abs(dx))<1e-9)break;
+      const h=1e-4,aa=end('A',la+h),bb=end('B',lb+h),al=(aa.length-a.length)/h,bl=(bb.length-b.length)/h,ax=(aa.x-a.x)/h,bx=(bb.x-b.x)/h,det=al*bx-bl*ax;
+      la+=(dl*bx-dx*bl)/det;lb+=(al*dx-ax*dl)/det;
+    }
+    releasedA=la-pose.A.length;releasedB=lb-pose.B.length;
+  }
+  const a=fitStandingLead(foldPart('A',endOptions('A',pose.A.length+releasedA),true),true,field),b=fitStandingLead(foldPart('B',endOptions('B',pose.B.length+releasedB)),false,field);
   const parts=[a,adapterA,left,...standing,right,adapterB,b];
   // Keep the fitted waist at the character's established belt height.
   const verticalOffset=.03-height;

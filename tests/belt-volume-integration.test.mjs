@@ -38,8 +38,10 @@ test('display cross section and relative knot geometry survive fitting to a flat
       for(let j=0;j<=20;j++){
         const sourceS=Math.min(key[name].length,part.strip.sourceMaterialLength)*j/20,s=part.strip.sourceToMaterial(sourceS),p=part.strip.sampleMaterialPoint(s);
         const expected=original.sampleMaterialPoint(sourceS).center;
-        // Only the first A under-wrap bend is corrected for full-width clearance.
-        if(name!=='A'||key.t<=10.35||key.t>=11.4){assert.ok(Math.abs(p.center[0]-expected[0])<1e-9);assert.ok(Math.abs(p.center[2]-expected[2])<1e-9);if(Math.abs(expected[0])<.04)assert.ok(Math.abs(p.center[1]-(expected[1]+2*mesh.pose.waist.dropM))<1e-9);}
+        // Preserve the knot core. A's under-wrap bend has a clearance correction;
+        // after threading, B's small tip bend travels with its redistributed end.
+        const movingTip=name==='B'&&key.t>18&&sourceS>part.strip.sourceMaterialLength-.08;
+        if(!movingTip&&(name!=='A'||key.t<=10.35||key.t>=11.4)){assert.ok(Math.abs(p.center[0]-expected[0])<1e-9);assert.ok(Math.abs(p.center[2]-expected[2])<1e-9);if(Math.abs(expected[0])<.04)assert.ok(Math.abs(p.center[1]-(expected[1]+2*mesh.pose.waist.dropM))<1e-9);}
         assert.ok(Math.abs(distance(part.strip.sampleMaterialPoint(s,0,1).center,part.strip.sampleMaterialPoint(s,0,-1).center)-.006)<1e-10);
       }
     }
@@ -83,6 +85,16 @@ test('stages four through seven keep horizontal waist edges and conserve actual 
 test('connection fitting does not advance or retract the tip while it is threading',()=>{
  for(let t=10;t<=12;t+=.1)assert.ok(Math.abs(buildBlenderBelt(t).strips[0].sourceMaterialLength-BLENDER_BELT.keys[0].A.length)<1e-12);
  for(let t=15.5;t<=18;t+=.1)assert.ok(Math.abs(buildBlenderBelt(t).strips[1].sourceMaterialLength-BLENDER_BELT.keys[0].B.length)<1e-12);
+});
+
+test('the finished belt has equal lateral end reach without changing its total length',()=>{
+ for(const t of [19.5,19.65,19.8]){
+  const mesh=buildBlenderBelt(t),[a,b]=mesh.strips.map(s=>s.sampleMaterialPoint(s.totalMaterialS).center);
+  assert.ok(a[0]<-.4&&b[0]>.4,'ends were not pulled clear of the knot');
+  assert.ok(Math.abs(a[0]+b[0])<1e-8,'one end remains longer in the finish');
+  assert.ok(Math.abs(a[1]-b[1])<.035,'ends finish at different heights');
+  assert.ok(Math.abs(mesh.length-BLENDER_BELT.length)<1e-10);
+ }
 });
 
 test('the rendered thick surface stays closed through keys and intervening folds',()=>{
