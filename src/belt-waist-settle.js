@@ -1,3 +1,4 @@
+import {depthSampler} from './belt-depth-contact.js';
 import {contactPullSampler} from './belt-contact-pull.js';
 // Horizontal waist connections. Curvature is in depth around the torso, not
 // a visible vertical fold. Their measured length is balanced by the free ends.
@@ -103,13 +104,14 @@ export function planStandingLead(strip,field,centerOffset=0,tension=0){
   const p=v?strip.sampleMaterialPoint(s,v/scale):mid,[h,k,ds]=fittedField(s,p.center[0]),tangent=unit([p.tangent[0],p.tangent[1]+k*p.tangent[0]+ds+derivative,p.tangent[2]]),widthAxis=unit([p.widthAxis[0],p.widthAxis[1]+k*p.widthAxis[0],p.widthAxis[2]]),normal=ds||derivative?unit(cross(widthAxis,tangent)):unit([p.normal[0]-k*p.normal[1],p.normal[1],p.normal[2]]);
   return {...p,center:add([p.center[0]+centerOffset,p.center[1]+h+extra,p.center[2]],mul(normal,side*strip.thickness/2)),tangent,widthAxis,normal};
  };
- const sampleSource=contactPullSampler(strip,rawSample,tension);
+ const sampleSource=depthSampler(contactPullSampler(strip,rawSample,tension),strip,field.depthWeight??0,field.depthTime);
  // Reparameterize the fitted centreline by measured arc distance. Contacts
  // retain their authored source coordinates through this mapping.
  // A fixed source grid lets the length iterations reuse the expensive contact
  // samples. Changing the end length does not change those interior contacts.
- const step=tension?.002:join/800,n=tension?Math.ceil(join/step):800,arc=[0],source=i=>tension?Math.min(join,i*step):join*i/n;let prior=sampleSource(0).center;
- for(let i=1;i<=n;i++){const p=sampleSource(source(i)).center;arc.push(arc.at(-1)+Math.hypot(...sub(p,prior)));prior=p;}
+ const centerAt=sampleSource.centerAt??(s=>sampleSource(s).center);
+ const step=tension?.002:join/800,n=tension?Math.ceil(join/step):800,arc=[0],source=i=>tension?Math.min(join,i*step):join*i/n;let prior=centerAt(0);
+ for(let i=1;i<=n;i++){const p=centerAt(source(i));arc.push(arc.at(-1)+Math.hypot(...sub(p,prior)));prior=p;}
  const saved=join-arc.at(-1),toMaterial=s=>{if(s>=join)return s-saved;if(!tension){const x=Math.max(0,s/join*n),i=Math.min(n-1,Math.floor(x));return arc[i]+(arc[i+1]-arc[i])*(x-i)}const i=Math.max(0,Math.min(n-1,Math.floor(s/step)));return arc[i]+(arc[i+1]-arc[i])*(s-source(i))/(source(i+1)-source(i))};
  const fromMaterial=s=>{if(s>=arc.at(-1))return s+saved;let lo=0,hi=n;while(hi-lo>1){const m=(lo+hi)>>1;if(arc[m]<=s)lo=m;else hi=m;}if(!tension)return (lo+(s-arc[lo])/(arc[hi]-arc[lo]))*join/n;return source(lo)+(s-arc[lo])/(arc[hi]-arc[lo])*(source(hi)-source(lo))};
  return {saved,sampleSource,toMaterial,fromMaterial,root:sampleSource(0)};
@@ -128,7 +130,9 @@ export function buildWaistAdapter(part,reverse=false,root,height,rootSample,tigh
  const first=root?{...root,widthAxis:mul(root.widthAxis,-1),tangent:mul(root.tangent,-1)}:part.strip.sampleMaterialPoint(0),last=part.strip.sampleMaterialPoint(part.length),sign=first.center[0]<0?-1:1;
  // Remove the shoulder lead's excess curvature only during the final pull.
  // Its measured length is released into the held ends by the length solver.
- const a=first.center,e=[last.center[0],height,last.center[2]],b=add(a,mul(first.tangent,.04)),c=add(a,[sign*(.23-.20*tighten),0,-.04]),d=add(e,[-sign*.04,0,.06]);
+ // A depth tilt changes the unit tangent length in XY. Preserve the original
+ // front handle while allowing its depth to follow the seated layer.
+ const a=first.center,e=[last.center[0],height,last.center[2]],b=add(a,mul(first.tangent,.04*(first.referenceTangent?Math.hypot(...first.referenceTangent.slice(0,2))/Math.hypot(...first.tangent.slice(0,2)):1))),c=add(a,[sign*(.23-.20*tighten),0,-.04]),d=add(e,[-sign*.04,0,.06]);
  b[1]=Math.max(e[1],Math.min(a[1],b[1]));
  const curve=u=>add(add(add(mul(a,(1-u)**4),mul(b,4*(1-u)**3*u)),add(mul(c,6*(1-u)**2*u*u),mul(d,4*(1-u)*u**3))),mul(e,u**4));
  const derivative=u=>add(add(mul(sub(b,a),4*(1-u)**3),mul(sub(c,b),12*(1-u)**2*u)),add(mul(sub(d,c),12*(1-u)*u*u),mul(sub(e,d),4*u**3)));

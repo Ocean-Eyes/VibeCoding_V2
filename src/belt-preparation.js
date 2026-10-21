@@ -3,24 +3,29 @@
 import {buildBlenderBelt,assembleBelt} from './belt-blender-motion.js';
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,k)=>a.map(v=>v*k),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=a=>mul(a,1/(Math.hypot(...a)||1)),mix=(a,b,q)=>add(mul(a,1-q),mul(b,q));
 const clamp=x=>Math.max(0,Math.min(1,x)),smooth=(t,a,b)=>{const q=clamp((t-a)/(b-a));return q*q*(3-2*q)};
-const reference=buildBlenderBelt(8.5),L=reference.length,M=L/2;
-// The final preparation grips must meet the first threading pose on the same
-// material, including any waist slack already transferred to the free ends.
-const gripStops=Object.fromEntries(reference.strips.map(s=>[s.material,M-s.totalMaterialS+s.sourceToMaterial(s.sourceMaterialLength*(s.material==='A'?.97/1.245626545564495:.70/1.3))]));
-const rows=[];let offset=0;
-for(const part of reference.parts){
- for(let i=0;i<part.uv.length;i++)if(Math.abs(part.uv[i][1])<1e-9)rows.push({s:offset+part.uv[i][0],center:part.positions[i],normal:part.normals[i]});
- offset+=part.length;
+function preparationReference(depthScale){
+ const reference=buildBlenderBelt(8.5,{depthScale}),L=reference.length,M=L/2;
+ // The final preparation grips must meet the first threading pose on the same
+ // material, including any waist slack already transferred to the free ends.
+ const gripStops=Object.fromEntries(reference.strips.map(s=>[s.material,M-s.totalMaterialS+s.sourceToMaterial((s.gripSourceLength??s.sourceMaterialLength)*(s.material==='A'?.97/1.245626545564495:.70/1.3))]));
+ const rows=[];let offset=0;
+ for(const part of reference.parts){
+  for(let i=0;i<part.uv.length;i++)if(Math.abs(part.uv[i][1])<1e-9)rows.push({s:offset+part.uv[i][0],center:part.positions[i],normal:part.normals[i]});
+  offset+=part.length;
+ }
+ rows.sort((a,b)=>a.s-b.s);
+ const unique=rows.filter((r,i)=>!i||r.s-rows[i-1].s>1e-8);
+ function source(s){
+  s=Math.max(0,Math.min(L,s));let lo=0,hi=unique.length-1;
+  while(hi-lo>1){const m=(lo+hi)>>1;if(unique[m].s<=s)lo=m;else hi=m;}
+  const a=unique[lo],b=unique[hi],q=(s-a.s)/(b.s-a.s),tangent=unit(sub(b.center,a.center)),normal=unit(mix(a.normal,b.normal,q));
+  return {center:mix(a.center,b.center,q),tangent,normal,widthAxis:unit(cross(normal,tangent)),materialS:s};
+ }
+ const mid=source(M);
+ return {reference,L,M,source,mid,gripStops};
 }
-rows.sort((a,b)=>a.s-b.s);
-const unique=rows.filter((r,i)=>!i||r.s-rows[i-1].s>1e-8);
-function source(s){
- s=Math.max(0,Math.min(L,s));let lo=0,hi=unique.length-1;
- while(hi-lo>1){const m=(lo+hi)>>1;if(unique[m].s<=s)lo=m;else hi=m;}
- const a=unique[lo],b=unique[hi],q=(s-a.s)/(b.s-a.s),tangent=unit(sub(b.center,a.center)),normal=unit(mix(a.normal,b.normal,q));
- return {center:mix(a.center,b.center,q),tangent,normal,widthAxis:unit(cross(normal,tangent)),materialS:s};
-}
-const mid=source(M);
+const initialReference=preparationReference(0),finalReference=preparationReference(1);
+const {L,M}=initialReference;
 function rotate(v,axis,angle){return add(add(mul(v,Math.cos(angle)),mul(cross(axis,v),Math.sin(angle))),mul(axis,dot(axis,v)*(1-Math.cos(angle))))}
 export function preparationProgress(t){
  // The back crossing is laid before either end returns to the front.
@@ -32,6 +37,8 @@ export function preparationProgress(t){
 }
 export function buildPreparationBelt(t){
  if(t>=8.5)return buildBlenderBelt(t);
+ // Preserve the chest/rear preparation, then seat the returning front layers.
+ const depthScale=smooth(t,5,7),{reference,source,mid,gripStops}=depthScale===0?initialReference:depthScale===1?finalReference:preparationReference(depthScale);
  const laid=preparationProgress(t),lower=smooth(t,.35,2),shift=[0,-.62*(1-lower),.17*(1-lower)],frames={};
  for(const sign of [-1,1]){
   const end=sign<0?0:L,rootS=Math.max(0,Math.min(L,M+sign*laid)),root=source(rootS);

@@ -32,7 +32,9 @@ export function applyVolumeContacts(frame,volume,inputRig){
    // sliding the fingers as the knot feeds material into the free ends.
    binding.fraction=clamp((strip.totalMaterialS-.045-segment.fromS)/(segment.toS-segment.fromS));
   }
-  const materialAt=fraction=>strip.sourceToMaterial?strip.sourceToMaterial(strip.sourceMaterialLength*fraction):strip.totalMaterialS*fraction;
+  // Depth take-up releases spare tail length; an acquired front grip stays
+  // on its original source coordinate until the existing handover.
+  const materialAt=fraction=>strip.sourceToMaterial?strip.sourceToMaterial((strip.gripSourceLength??strip.sourceMaterialLength)*fraction):strip.totalMaterialS*fraction;
   let sample=strip?(binding.semantic==='whole'?strip.sampleMaterialPoint(materialAt(binding.fraction)):contactpointBySemantic(strip,binding.semantic,binding.fraction,{visible:false})):null;
   // Acquire the late opening/support locations continuously on the same strip.
   if(sample&&t>=14.8&&t<15.5){const start=volumeContactBinding(14.8-1e-8,identity),s=materialAt(start.fraction),q=smooth(t,14.8,15.5);sample=strip.sampleMaterialPoint(s+(sample.materialS-s)*q);binding.semantic='whole';binding.fraction=sample.materialS/strip.totalMaterialS;}
@@ -62,7 +64,8 @@ function preparationContacts(frame,volume,inputRig){
  // the front. Between contacts the fingers open; identity never follows x.
  const targets={};
  for(const strip of volume.strips){
-  const approach=.34-.30*smooth(t,2.05,2.6)*(1-smooth(t,4,4.7));
+  // Slide nearer the laying frontier while the shortened front route settles.
+  const approach=.34-.30*smooth(t,2.05,2.6)*(1-smooth(t,4,4.7))-.10*smooth(t,5,5.7)*(1-smooth(t,6.8,7.4));
   // Hold the wider straight span through lowering and the start of wrapping,
   // then slide toward the laying frontier before the retained rear exchange.
   const stop=volume.preparation.gripStops[strip.material],s=Math.min(Math.max(1.06*(1-smooth(t,2.3,3)),volume.preparation.laid+approach),stop);

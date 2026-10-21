@@ -6,7 +6,7 @@ import {foldMaterialStrip} from './belt-material-folds.js';
 import {FINAL_PULL_FOLDS,FINAL_PULL_CENTER_X} from './belt-final-pull.js';
 import {buildWaistAdapter,planStandingLead,fitStandingLead,fitWaistWrap,standingField,waistTakeupProfile} from './belt-waist-settle.js';
 const DISPLAY_WIDTH=.078,DISPLAY_THICKNESS=.006;
-let pullStartReach;
+const pullStartReach=[];
 const mix=(a,b,q)=>a+(b-a)*q, lerp=(a,b,q)=>a.map((v,i)=>mix(v,b[i],q));
 const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -149,7 +149,8 @@ export function assembleBelt(parts){
   }
   return {vertexData,midsurface:positions,normals,materialUV:uv,midTriangles:triangles,length:offset,maxJoin,parts};
 }
-export function buildBlenderBelt(time){
+export function buildBlenderBelt(time,{depthContact=true,depthScale=1,lengthsOnly=false}={}){
+  if(depthContact&&(time>=18.8||depthScale===0))return buildBlenderBelt(time,{depthContact:false,lengthsOnly});
   // Straighten the standing leads with one shared height field. Applying it to
   // every passing layer keeps their relative depth and avoids new collisions.
   const smooth=(a,b)=>{const u=Math.max(0,Math.min(1,(time-a)/(b-a)));return u*u*(3-2*u)};
@@ -168,13 +169,14 @@ export function buildBlenderBelt(time){
   // support hand transfers. Use its existing terminal bend, then straighten
   // it as the receiving hand acquires the end; leave both knot folds intact.
   pose.A.creases[2].angle+=(-.6-.7*smooth(16.5,16.7))*smooth(15.5,16.5)*(1-smooth(17,17.4));
-  const field=standingField(pose,height);
+  const field=standingField(pose,height);field.depthWeight=depthContact?depthScale:0;field.depthTime=time;
   pose.A.creases[0].k-=.16*smooth(10.35,10.65)*(1-smooth(11,11.4));
   pose.A.creases[0].radius-=.0065*smooth(10.65,10.95)*(1-smooth(11.1,11.35));
   // After B has passed through, material can slide between the two free ends.
   // Its small terminal bend travels with the tip, not with the knot's folds.
+  const referenceLengths=field.depthWeight?buildBlenderBelt(time,{depthContact:false,lengthsOnly:true}):null;
   const endOptions=(name,length=pose[name].length)=>({...pose[name],length,pullTension:tighten,
-    creases:pose[name].creases.map((c,i)=>i>=2&&time>18?{...c,s:c.s+length-pose[name].length}:c)});
+    creases:pose[name].creases.map((c,i)=>i>=2&&(time>18||referenceLengths)?{...c,s:c.s+(time>18?length-pose[name].length:Math.max(0,length-referenceLengths[name]))}:c)});
   const centerOffset=FINAL_PULL_CENTER_X*tighten;
   const plans=new Map();
   const plan=(name,length=pose[name].length)=>{
@@ -195,12 +197,27 @@ export function buildBlenderBelt(time){
     const speed=(name,length)=>{const p=foldMaterialStrip(name,{...pose[name],length,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,sampleOnly:true}).sampleMaterialPoint(length),k=field(p.center[0])[1];return Math.hypot(p.tangent[0],p.tangent[1]+k*p.tangent[0],p.tangent[2])};
     releasedA+=shareA*error/speed('A',la);releasedB+=(1-shareA)*error/speed('B',lb);
   }
+  // Before B starts threading, keep A's free tip on its established route.
+  // Depth take-up is temporarily carried by the unthreaded B end, then fed
+  // back to A as the opening turns; otherwise the longer A tip hits the wrap.
+  const transfer=smooth(13.8,14.4)*(1-smooth(14.8,15.5));
+  if(referenceLengths&&transfer){
+    const la=referenceLengths.A+(pose.A.length+releasedA-referenceLengths.A)*(1-transfer),pa=plan('A',la);
+    let lb=pose.B.length+releasedB;
+    for(let i=0;i<5;i++){
+      const pb=plan('B',lb),error=available-(la-pa.saved+lb-pb.saved);if(Math.abs(error)<1e-10)break;
+      const h=1e-4,plus=plan('B',lb+h);lb+=error/(1-(plus.saved-pb.saved)/h);
+    }
+    releasedA=la-pose.A.length;releasedB=lb-pose.B.length;
+  }
   const pull=smooth(18,19.5);
   if(pull){
     const end=(name,length)=>{const p=plan(name,length);return {length:length-p.saved,x:p.sampleSource(length).center[0]}};
     let la=pose.A.length+releasedA,lb=pose.B.length+releasedB;
-    if(pullStartReach===undefined)pullStartReach=buildBlenderBelt(18).strips.reduce((sum,s)=>sum+s.sampleMaterialPoint(s.totalMaterialS).center[0],0);
-    const targetX=pullStartReach*(1-pull);
+    const reachKey=depthContact?1:0;
+    if(pullStartReach[reachKey]===undefined)pullStartReach[reachKey]=buildBlenderBelt(18,{depthContact}).strips.reduce((sum,s)=>sum+s.sampleMaterialPoint(s.totalMaterialS).center[0],0);
+    if(pullStartReach[0]===undefined)pullStartReach[0]=buildBlenderBelt(18,{depthContact:false}).strips.reduce((sum,s)=>sum+s.sampleMaterialPoint(s.totalMaterialS).center[0],0);
+    const targetX=mix(pullStartReach[reachKey],pullStartReach[0],smooth(18,18.8))*(1-pull);
     // Solve measured length and balanced reach together; do not scale the belt
     // or move the accepted knot crossings to make its tips look symmetrical.
     for(let i=0;i<4;i++){
@@ -211,7 +228,9 @@ export function buildBlenderBelt(time){
     }
     releasedA=la-pose.A.length;releasedB=lb-pose.B.length;
   }
+  if(lengthsOnly)return {A:pose.A.length+releasedA,B:pose.B.length+releasedB};
   const a=fitStandingLead(foldPart('A',endOptions('A',pose.A.length+releasedA),true),true,field,centerOffset,tighten,plan('A',pose.A.length+releasedA)),b=fitStandingLead(foldPart('B',endOptions('B',pose.B.length+releasedB)),false,field,centerOffset,tighten,plan('B',pose.B.length+releasedB));
+  for(const part of [a,b])part.strip.gripSourceLength=referenceLengths?.[part.strip.material]??part.strip.sourceMaterialLength;
   const parts=[a,adapterA,left,...standing,right,adapterB,b];
   // Keep the fitted waist at the character's established belt height.
   const verticalOffset=.03-height;

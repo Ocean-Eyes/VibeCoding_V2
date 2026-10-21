@@ -7,6 +7,7 @@ import {lessonMotion} from '../src/belt-volume-motion.js';
 import {buildBlenderBelt} from '../src/belt-blender-motion.js';
 import {BLENDER_BELT} from '../src/belt-blender-data.js';
 import {foldMaterialStrip} from '../src/belt-material-folds.js';
+import {depthSampler} from '../src/belt-depth-contact.js';
 
 const frames=normalizeControls(JSON.parse(gunzipSync(readFileSync(new URL('../assets/belt/controls-ebcf8e7605ad.json.gz',import.meta.url))))).frames;
 const distance=(a,b)=>Math.hypot(...a.map((value,i)=>value-b[i]));
@@ -24,7 +25,7 @@ test('the product uses one finite, fixed-length Blender belt from the first auth
   }
 });
 
-test('display cross section and relative knot geometry survive fitting to a flat waist',()=>{
+test('display cross section and authored front paths survive the waist depth fit',()=>{
   for(const key of BLENDER_BELT.keys){
     const mesh=buildBlenderBelt(key.t);
     assert.equal(mesh.displayWidth,.078);assert.equal(mesh.displayThickness,.006);
@@ -37,7 +38,10 @@ test('display cross section and relative knot geometry survive fitting to a flat
       if(name.startsWith('adapter'))continue; // The user's marked shoulders are explicitly refitted.
       for(let j=0;j<=20;j++){
         const sourceS=Math.min(key[name].length,part.strip.sourceMaterialLength)*j/20,s=part.strip.sourceToMaterial(sourceS),p=part.strip.sampleMaterialPoint(s);
-        const expected=original.sampleMaterialPoint(sourceS).center;
+        // The requested correction changes Z, so compare with the contact-depth
+        // contract applied to the authored pose. Keep every exact X/Z assertion;
+        // independent surface-clearance checks cover the actual requested gap.
+        const expected=depthSampler(original.sampleMaterialPoint,original,Number(key.t<18.8),key.t)(sourceS).center;
         // Preserve authored geometry before the final tension adjustment.
         // A's earlier under-wrap bend has a clearance correction; B's small
         // tip bend travels with its redistributed end after threading.
