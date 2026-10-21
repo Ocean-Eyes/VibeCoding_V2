@@ -5,7 +5,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  try{
   const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
-  await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();
+  await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();await page.locator('[data-lesson="nami"]').click();
   await page.waitForFunction(()=>document.querySelectorAll('.pose-card').length===3);
   assert.deepEqual(await page.locator('.pose-card strong').allTextContents(),['첫 깃 잡기','반대 깃 잡기','교차한 팔 비틀기']);
   assert.ok(!(await page.locator('#pose-description').innerText()).includes('가슴 앞'));

@@ -12,7 +12,7 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
   assert.equal(await page.locator('#practice-screen').isVisible(),false);
   await page.locator('[data-category="basics"]').click();assert.equal(await page.locator('.lesson-enter:disabled').count(),3);
   await page.locator('[data-category="throws"]').click();assert.equal(await page.locator('.coming-panel').isVisible(),true);
-  await page.locator('[data-category="katame"]').click();assert.equal(await page.locator('[data-lesson]').count(),3);
+  await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();assert.equal(await page.locator('[data-lesson]').count(),3);
   for(const [i,id]of ['nami','gyaku','kata'].entries()){
    await page.locator(`[data-lesson="${id}"]`).click();
    assert.equal(await page.locator('#practice-screen').isVisible(),true);
@@ -48,7 +48,7 @@ const base=process.env.SITE_URL||'http://localhost:5173/';
         self.postMessage({type:'result',points,hands:[],time:data.time});
       }
     };`}));
-  await page.reload();await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();await page.locator('#start').click();
+  await page.reload();await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();await page.locator('[data-lesson="nami"]').click();await page.locator('#start').click();
   await page.waitForFunction(()=>!document.querySelector('#play').disabled);
   await page.locator('#opponent-status[data-tap="true"]').waitFor({timeout:22000});await page.screenshot({path:'.test-output/opponent-tap.png',fullPage:true});
   await page.locator('#result-dialog').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#xp').innerText(),'20 XP');

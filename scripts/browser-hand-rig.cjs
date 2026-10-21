@@ -16,7 +16,7 @@ const assert=require('node:assert/strict');
    };
   });
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
-  await page.locator('[data-category="katame"]').click();
+  await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();
   const renders=[];
   for(const [id,faces]of [['nami',['back','back']],['gyaku',['palm','palm']],['kata',['palm','back']]]){
    await page.evaluate(()=>window.handDraws=[]);await page.locator(`[data-lesson="${id}"]`).click();

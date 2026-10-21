@@ -16,7 +16,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   assert.equal(await page.evaluate(()=>window.analyticsLoaded),1);
   await page.locator('#help').click();await englishVisible();await page.locator('#close-help').click();
   for(const id of ['nami','gyaku','kata']){
-   await page.locator('[data-category="katame"]').click();await page.locator(`[data-lesson="${id}"]`).click();
+   await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();await page.locator(`[data-lesson="${id}"]`).click();
    await page.waitForFunction(()=>document.querySelector('#status').textContent==='Demonstration playing');await englishVisible();assert.equal(await page.locator('#practice-roman').textContent(),{nami:'Nami-juji-jime',gyaku:'Gyaku-juji-jime',kata:'Kata-juji-jime'}[id]);
    if(id==='kata')await shot('practice-en');await page.locator('#back-menu').click();
   }
@@ -27,7 +27,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('denied','NotAllowedError')}});
   await page.locator('#belt-camera').click();await page.waitForFunction(()=>document.querySelector('#belt-notice').textContent.startsWith('Camera access was denied'));await englishVisible();
   await page.setViewportSize({width:390,height:844});await shot('belt-en-mobile');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile overflow');
-  await page.locator('#back-menu').click();await shot('home-en-mobile');await englishVisible();await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();await page.waitForFunction(()=>document.querySelector('#status').textContent==='Demonstration playing');await shot('practice-en-mobile');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'practice mobile overflow');await englishVisible();
+  await page.locator('#back-menu').click();await shot('home-en-mobile');await englishVisible();await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();await page.locator('[data-lesson="nami"]').click();await page.waitForFunction(()=>document.querySelector('#status').textContent==='Demonstration playing');await shot('practice-en-mobile');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'practice mobile overflow');await englishVisible();
   await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=async()=>{const c=document.createElement('canvas');c.width=320;c.height=240;const stream=c.captureStream(15);c.getContext('2d').fillRect(0,0,320,240);return stream;};window.Worker=class{postMessage(data){if(data.type==='init')setTimeout(()=>this.onmessage?.({data:{type:'error',code:'model',detail:'simulated model failure',message:'모델 오류'}}),10)}terminate(){}};});
   await page.locator('#start').click();await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Could not load the model.'));await englishVisible();await page.locator('#back-menu').click();
   await page.goto(base);await page.waitForFunction(()=>document.documentElement.lang==='en');

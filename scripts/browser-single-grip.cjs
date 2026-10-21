@@ -27,7 +27,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     }
    };`}));
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
-  await page.locator('[data-category="katame"]').click();
+  await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();
   let cases=0;
   for(const width of [1440,390])for(const [lesson,up]of [['nami',false],['gyaku',true]])for(const side of [0,1])for(const mirrored of [true,false]){
    await page.setViewportSize({width,height:1050});

@@ -49,7 +49,7 @@ const assert=require('node:assert/strict');
     }
    };`}));
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
-  await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();await page.waitForFunction(()=>document.querySelector('#mode-label').textContent.includes('시연'));await page.locator('#play').click();
+  await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();await page.locator('[data-lesson="nami"]').click();await page.waitForFunction(()=>document.querySelector('#mode-label').textContent.includes('시연'));await page.locator('#play').click();
   await page.waitForFunction(()=>document.querySelector('#overlay').dataset.liveHands==='2');
   await page.locator('#play').click(); // Keep the lesson on one step while changing real input.
   const partner=await page.locator('#partner').evaluate(c=>c.toDataURL()),renders=[];

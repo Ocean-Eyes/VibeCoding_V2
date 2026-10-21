@@ -48,7 +48,7 @@ const assert=require('node:assert/strict');
   await page.setViewportSize({width:390,height:844});await page.waitForTimeout(150);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'no mobile horizontal overflow');
   await page.locator('#belt-screen').screenshot({path:'.test-output/belt-mobile.png'});
-  await page.locator('#back-menu').click();await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();
+  await page.locator('#back-menu').click();await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();await page.locator('[data-lesson="nami"]').click();
   await page.waitForFunction(()=>document.querySelector('#pose-list').children.length===3);assert.ok(await page.locator('#practice-screen').isVisible());assert.ok(await page.locator('#belt-screen').isHidden());
   assert.deepEqual(errors,[]);console.log('PASS Belt: seven stages, demo, camera overlay, manual alignment, mirroring, camera cleanup, mobile and return to existing judo practice.');
   // Denied permission is recoverable, and a late camera grant cannot survive leaving.

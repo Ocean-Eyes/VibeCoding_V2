@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const base=process.env.SITE_URL||'http://localhost:5173/';
 async function enterPractice(page){
-  await page.locator('[data-category="katame"]').click();
+  await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();
   await page.locator('[data-lesson="nami"]').click();
   await page.waitForFunction(()=>document.querySelector('#pose-list').children.length===3);
   await page.locator('#start').click();

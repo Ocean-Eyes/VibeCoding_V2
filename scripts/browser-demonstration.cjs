@@ -28,7 +28,7 @@ const base=process.env.SITE_URL||'http://localhost:5173/dist/index.html';
         self.postMessage({type:'result',points:points.map(p=>p?{...p,x:p.x/w,y:p.y/h}:{x:0,y:0,visibility:0}),hands:[],time:data.time});
       }
     };`}));
-  await page.goto(base);await page.locator('[data-category="katame"]').click();await page.locator('[data-lesson="nami"]').click();
+  await page.goto(base);await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();await page.locator('[data-lesson="nami"]').click();
   await page.waitForFunction(()=>document.querySelector('#partner').width>0&&document.querySelector('#mode-label').textContent.includes('시연'));
   assert.equal(await page.evaluate(()=>window.cameraRequests),0);
   const partner=await page.locator('#partner').evaluate(c=>c.toDataURL());

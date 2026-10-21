@@ -3,6 +3,19 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/basics", "destination": "/index.html" },
+    { "source": "/basics/belt", "destination": "/index.html" },
+    { "source": "/katame-waza", "destination": "/index.html" },
+    { "source": "/katame-waza/shime-waza", "destination": "/index.html" },
+    { "source": "/katame-waza/kansetsu-waza", "destination": "/index.html" },
+    { "source": "/katame-waza/osaekomi-waza", "destination": "/index.html" },
+    { "source": "/katame-waza/shime-waza/nami-juji-jime", "destination": "/index.html" },
+    { "source": "/katame-waza/shime-waza/gyaku-juji-jime", "destination": "/index.html" },
+    { "source": "/katame-waza/shime-waza/kata-juji-jime", "destination": "/index.html" },
+    { "source": "/throws", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

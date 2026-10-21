@@ -104,7 +104,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    };`}));
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
   await page.evaluate(({up,kata,startup,left})=>{window.qaPalmUp=up;window.qaKata=kata;window.qaKataLeft=left;if(startup){window.qaGripPhase='uncrossed';window.qaWristVisibility=.1}},{up:gyakuOnly,kata:kataOnly,startup:startupOnly,left:kataLeft});
-  await page.locator('[data-category="katame"]').click();await page.locator(`[data-lesson="${kataOnly?'kata':gyakuOnly?'gyaku':'nami'}"]`).click();
+  await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();await page.locator(`[data-lesson="${kataOnly?'kata':gyakuOnly?'gyaku':'nami'}"]`).click();
   await page.waitForFunction(()=>document.querySelector('#pose-list').children.length===3);
   if(startupOnly)await page.locator('#pose-list .pose-card').nth(2).click();
   await page.locator('#play').click();

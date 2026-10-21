@@ -1,4 +1,4 @@
-﻿const {chromium}=require(process.argv[2]||'playwright');
+const {chromium}=require(process.argv[2]||'playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const base=process.env.SITE_URL||'http://localhost:5173/dist/index.html';
@@ -11,7 +11,7 @@ const base=process.env.SITE_URL||'http://localhost:5173/dist/index.html';
   if(kind==='stale-assets')await page.route('**/src/*.js*',async route=>{if(!new URL(route.request().url()).searchParams.has('v')){staleHits++;await route.fulfill({contentType:'text/javascript',body:'throw new Error("Old cached module was used")'});}else await route.continue()});
   if(kind==='module-failure')await page.route('**/src/app.js*',route=>route.abort());
   if(kind==='leave-during-load')await page.route('**/src/app.js*',async route=>{await new Promise(r=>setTimeout(r,600));await route.continue()});
-  await page.goto(base);await page.locator('[data-category="katame"]').click();
+  await page.goto(base);await page.locator('[data-category="katame"]').click();await page.locator('[data-groundwork="shime-waza"]').click();
   if(kind==='normal'){await page.evaluate(()=>document.fonts.ready);await page.locator('.calligraphy-piece').screenshot({path:'.test-output/enso-rounded.png'});}
   await page.locator('[data-lesson="nami"]').click();assert(await page.locator('#practice-screen').isVisible());assert.equal(await page.locator('dialog[open]').count(),0);
   if(kind==='module-failure'){await page.locator('#reload-practice').waitFor({state:'visible'});await page.locator('#back-menu').click();assert(await page.locator('#home-screen').isVisible());}

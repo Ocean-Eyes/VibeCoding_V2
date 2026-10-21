@@ -1,5 +1,18 @@
 // Korean source phrases are stable keys; numbered slots are template values.
 export const EN = {
+  "띠 가운데를 가슴 앞에 들고, 양끝 길이를 맞춘 뒤 허리 앞으로 내립니다.": "Hold the belt midpoint in front of your chest, even out both ends, then lower it to your waist.",
+  "양손으로 띠를 허리 옆에서 등 뒤로 감고, 뒤에서 양끝을 바꿔 잡습니다.": "Wrap the belt around both sides of your waist and exchange the ends behind your back.",
+  "B를 잡아 지지하고, A 끝을 두 겹 아래에서 위로 통과시킵니다.": "Hold B steady and pass end A upward under both layers.",
+  "조르기": "Chokes",
+  "꺾기": "Joint locks",
+  "누르기": "Holds",
+  "굳히기본 / 꺾기": "Groundwork / Joint locks",
+  "굳히기본 / 누르기": "Groundwork / Holds",
+  "조르기 · 꺾기 · 누르기": "Chokes · Joint locks · Holds",
+  "꺾기 기술을 배우는 레슨을 준비하고 있습니다.": "Joint-lock lessons are being prepared.",
+  "누르기 기술을 배우는 레슨을 준비하고 있습니다.": "Hold-down lessons are being prepared.",
+  "분류 보기 →": "View category →",
+  "굳히기본 분류로 →": "Groundwork categories →",
   "주의 · 전문가 지도 필수": "WARNING · Qualified supervision required",
   "전문 유도 지도자의 직접 지도 없이 다른 사람에게 메치기·조르기 등 유도 기술을 시도하지 마세요. 이 사이트는 혼자 하는 동작 연습용입니다.": "Do not attempt judo techniques, including throws and chokes, on another person without direct supervision from a qualified judo instructor. This site is for solo movement practice.",
   "연습 화면을 준비하고 있습니다…": "Preparing the practice screen…",
