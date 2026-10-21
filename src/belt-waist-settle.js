@@ -1,3 +1,4 @@
+import {contactPullSampler} from './belt-contact-pull.js';
 // Horizontal waist connections. Curvature is in depth around the torso, not
 // a visible vertical fold. Their measured length is balanced by the free ends.
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,k)=>a.map(v=>v*k),mix=(a,b,q)=>a.map((v,i)=>v+(b[i]-v)*q),unit=a=>mul(a,1/(Math.hypot(...a)||1)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -65,6 +66,9 @@ export function planStandingLead(strip,field,centerOffset=0,tension=0){
  const rootPoint=strip.sampleMaterialPoint(0).center,waistHeight=rootPoint[1]+field(rootPoint[0])[0];
  // Material lengths of the validated contact pose before taking up rear slack.
  // Holding this slope fixed keeps extending the ends from moving a crossing.
+ const tautEnd=strip.material==='A'?1.4604853546891405:1.3822023681875153;
+ // Retain the accepted free-span heading as contact take-up feeds more length
+ // into each end. A fixed end height would flatten the longer span into the wrap.
  const referenceJoin=strip.material==='A'?1.3456725433515904:1.3155529429896746;
  const h1=tension?field(strip.sampleMaterialPoint(referenceJoin).center[0])[0]:0;
  const targetH=tension?.25+waistHeight-.03-strip.sampleMaterialPoint(join).center[1]:0;
@@ -79,12 +83,12 @@ export function planStandingLead(strip,field,centerOffset=0,tension=0){
   let correction=0,derivative=0;
   if(join>anchor+.02&&s>anchor){
    const a=Math.min(1,(s-anchor)/.02),weight=tension*a*a*(3-2*a),dv=tension*6*a*(1-a)/.02;
-   const anchorH=h0+slope*(anchor-exit),nextSlope=(targetH-anchorH)/(join-anchor),next=anchorH+nextSlope*(s-anchor);
+   const anchorH=h0+slope*(anchor-exit),nextSlope=(1-tension)*(targetH-anchorH)/(join-anchor)+tension*(.25+waistHeight-.03-strip.sampleMaterialPoint(tautEnd).center[1]-anchorH)/((tautEnd)-anchor),next=anchorH+nextSlope*(s-anchor);
    correction=weight*(next-line);derivative=dv*(next-line)+weight*(nextSlope-slope);
   }
   return [h+w*(line-h)+correction,(1-w)*k,dw*(line-h)+w*slope+derivative];
  };
- const sampleSource=(s,v=0,side=0)=>{
+ const rawSample=(s,v=0,side=0)=>{
   const mid=strip.sampleMaterialPoint(s),slope=fittedField(s,mid.center[0])[1],w=mid.widthAxis,scale=Math.hypot(w[0],w[1]+slope*w[0],w[2]);
   let extra=0,derivative=0;
   if(tension&&strip.material==='A'&&s<entry){
@@ -99,16 +103,19 @@ export function planStandingLead(strip,field,centerOffset=0,tension=0){
   const p=v?strip.sampleMaterialPoint(s,v/scale):mid,[h,k,ds]=fittedField(s,p.center[0]),tangent=unit([p.tangent[0],p.tangent[1]+k*p.tangent[0]+ds+derivative,p.tangent[2]]),widthAxis=unit([p.widthAxis[0],p.widthAxis[1]+k*p.widthAxis[0],p.widthAxis[2]]),normal=ds||derivative?unit(cross(widthAxis,tangent)):unit([p.normal[0]-k*p.normal[1],p.normal[1],p.normal[2]]);
   return {...p,center:add([p.center[0]+centerOffset,p.center[1]+h+extra,p.center[2]],mul(normal,side*strip.thickness/2)),tangent,widthAxis,normal};
  };
+ const sampleSource=contactPullSampler(strip,rawSample,tension);
  // Reparameterize the fitted centreline by measured arc distance. Contacts
  // retain their authored source coordinates through this mapping.
- const n=800,arc=[0];let prior=sampleSource(0).center;
- for(let i=1;i<=n;i++){const p=sampleSource(join*i/n).center;arc.push(arc.at(-1)+Math.hypot(...sub(p,prior)));prior=p;}
- const saved=join-arc.at(-1),toMaterial=s=>{if(s>=join)return s-saved;const x=Math.max(0,s/join*n),i=Math.min(n-1,Math.floor(x));return arc[i]+(arc[i+1]-arc[i])*(x-i)};
- const fromMaterial=s=>{if(s>=arc.at(-1))return s+saved;let lo=0,hi=n;while(hi-lo>1){const m=(lo+hi)>>1;if(arc[m]<=s)lo=m;else hi=m;}return (lo+(s-arc[lo])/(arc[hi]-arc[lo]))*join/n};
+ // A fixed source grid lets the length iterations reuse the expensive contact
+ // samples. Changing the end length does not change those interior contacts.
+ const step=tension?.002:join/800,n=tension?Math.ceil(join/step):800,arc=[0],source=i=>tension?Math.min(join,i*step):join*i/n;let prior=sampleSource(0).center;
+ for(let i=1;i<=n;i++){const p=sampleSource(source(i)).center;arc.push(arc.at(-1)+Math.hypot(...sub(p,prior)));prior=p;}
+ const saved=join-arc.at(-1),toMaterial=s=>{if(s>=join)return s-saved;if(!tension){const x=Math.max(0,s/join*n),i=Math.min(n-1,Math.floor(x));return arc[i]+(arc[i+1]-arc[i])*(x-i)}const i=Math.max(0,Math.min(n-1,Math.floor(s/step)));return arc[i]+(arc[i+1]-arc[i])*(s-source(i))/(source(i+1)-source(i))};
+ const fromMaterial=s=>{if(s>=arc.at(-1))return s+saved;let lo=0,hi=n;while(hi-lo>1){const m=(lo+hi)>>1;if(arc[m]<=s)lo=m;else hi=m;}if(!tension)return (lo+(s-arc[lo])/(arc[hi]-arc[lo]))*join/n;return source(lo)+(s-arc[lo])/(arc[hi]-arc[lo])*(source(hi)-source(lo))};
  return {saved,sampleSource,toMaterial,fromMaterial,root:sampleSource(0)};
 }
-export function fitStandingLead(part,reverse=false,field,centerOffset=0,tension=0){
- const plan=planStandingLead(part.strip,field,centerOffset,tension),length=part.length-plan.saved,positions=[],normals=[],uv=[];
+export function fitStandingLead(part,reverse=false,field,centerOffset=0,tension=0,preparedPlan){
+ const plan=preparedPlan??planStandingLead(part.strip,field,centerOffset,tension),length=part.length-plan.saved,positions=[],normals=[],uv=[];
  for(let i=0;i<part.positions.length;i++){
   const s=reverse?part.length-part.uv[i][0]:part.uv[i][0],v=reverse?-part.uv[i][1]:part.uv[i][1],p=plan.sampleSource(s,v);
   positions.push(p.center);normals.push(p.normal);uv.push([reverse?length-plan.toMaterial(s):plan.toMaterial(s),part.uv[i][1]]);

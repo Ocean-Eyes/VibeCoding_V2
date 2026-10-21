@@ -1,7 +1,9 @@
 // Isometric material-space ribbon: finite cylindrical bends, no centreline miter.
 // Coordinates: u across width, s along material. A crease is s = at + k*u.
-const add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((n,x,i)=>n+x*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=a=>mul(a,1/Math.hypot(...a));
-const I=[[1,0,0],[0,1,0],[0,0,1]],mv=(m,v)=>add(add(mul(m[0],v[0]),mul(m[1],v[1])),mul(m[2],v[2])),mm=(a,b)=>b.map(c=>mv(a,c)),rotate=(v,h,a)=>add(add(mul(v,Math.cos(a)),mul(cross(h,v),Math.sin(a))),mul(h,dot(h,v)*(1-Math.cos(a))));
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],mul=(a,s)=>[a[0]*s,a[1]*s,a[2]*s],dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=a=>mul(a,1/Math.hypot(...a));
+// Explicit three-component arithmetic avoids short-lived arrays in the dense
+// contact mesh while retaining the same operation order and material geometry.
+const I=[[1,0,0],[0,1,0],[0,0,1]],mv=(m,v)=>[m[0][0]*v[0]+m[1][0]*v[1]+m[2][0]*v[2],m[0][1]*v[0]+m[1][1]*v[1]+m[2][1]*v[2],m[0][2]*v[0]+m[1][2]*v[1]+m[2][2]*v[2]],mm=(a,b)=>b.map(c=>mv(a,c)),rotate=(v,h,a)=>{const c=Math.cos(a),s=Math.sin(a),d=dot(h,v)*(1-c);return [v[0]*c+(h[1]*v[2]-h[2]*v[1])*s+h[0]*d,v[1]*c+(h[2]*v[0]-h[0]*v[2])*s+h[1]*d,v[2]*c+(h[0]*v[1]-h[1]*v[0])*s+h[2]*d]};
 export function foldMaterialStrip(material,{length,width=.09,thickness=.008,creases=[],origin=[0,0,0],basis=I,step=.006,across=12,sampleOnly=false,visibleMaterialS=length,longitudinalCuts=[]}={}){
  if(!(length>0&&width>0&&thickness>0&&step>0&&across>=2)||!Number.isInteger(across))throw Error('Positive material dimensions and mesh resolution required');
  if(![length,width,thickness,step,...origin,...basis.flat()].every(Number.isFinite))throw Error('Finite material transform required');

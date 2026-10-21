@@ -1,3 +1,4 @@
+import {CONTACT_SHAPES} from './belt-contact-pull-data.js';
 // Material-space playback of the Blender-authored belt. No image tracing or
 // per-panel painter order: both crossing regions use the actual surface depth.
 import {BLENDER_BELT as data} from './belt-blender-data.js';
@@ -41,8 +42,10 @@ function foldPart(name,options,reverse=false){
     // length sampler; coarse triangles otherwise shortcut the tightened curve.
     for(const [a,b] of ranges)for(let s=a;s<=b+1e-9;s+=.002)if(s>0&&s<options.length)longitudinalCuts.push(s);
   }
+  if(CONTACT_SHAPES[name]&&options.pullTension>0){const d=CONTACT_SHAPES[name];for(let i=0;i<d.rows;i++)longitudinalCuts.push(d.start+(d.end-d.start)*i/(d.rows-1));}
+  if(name==='A'&&options.pullTension>.75&&CONTACT_SHAPES['A-upper']){const d=CONTACT_SHAPES['A-upper'];for(let i=0;i<d.rows;i++)longitudinalCuts.push(d.start+(d.end-d.start)*i/(d.rows-1));}
   longitudinalCuts.sort((a,b)=>a-b);
-  const strip=foldMaterialStrip(name,{...options,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,across:4,step:.02,longitudinalCuts});
+  const strip=foldMaterialStrip(name,{...options,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,across:CONTACT_SHAPES[name]&&options.pullTension>0?8:4,step:.02,longitudinalCuts});
   // Preparation bends the initially straight ends. Keep longitudinal rows in
   // that reference surface so a long triangle cannot shortcut a gravity bend.
   if(options.creases.every(c=>Math.abs(c.angle)<1e-12)){
@@ -100,7 +103,9 @@ function arcPart(name,start,end,drop){
 }
 export function assembleBelt(parts){
   const positions=[],normals=[],uv=[],triangles=[],lookup=new Map();let offset=0,maxJoin=0;
+  const seamCoordinates=new Set();
   for(const part of parts){
+    if(offset)seamCoordinates.add(offset.toFixed(8));
     const ids=part.positions.map((p,i)=>{
       const material=[part.uv[i][0]+offset,part.uv[i][1]],key=material.map(v=>v.toFixed(8)).join(':');
       if(lookup.has(key)){const id=lookup.get(key);maxJoin=Math.max(maxJoin,Math.hypot(...sub(p,positions[id])));return id;}
@@ -108,6 +113,23 @@ export function assembleBelt(parts){
     });
     for(const face of part.triangles)triangles.push(face.map(i=>ids[i]));offset+=part.length;
   }
+  // Match material vertices at joins with different cross-section resolutions.
+  const seams=new Map([...seamCoordinates].map(s=>[s,[]]));
+  for(let id=0;id<uv.length;id++)seams.get(uv[id][0].toFixed(8))?.push(id);
+  const stitched=[];
+  for(const face of triangles){
+   let split=false;
+   for(let edge=0;edge<3&&!split;edge++){
+    const a=face[edge],b=face[(edge+1)%3],c=face[(edge+2)%3],key=uv[a][0].toFixed(8);
+    if(key!==uv[b][0].toFixed(8)||!seams.has(key))continue;
+    const lo=Math.min(uv[a][1],uv[b][1]),hi=Math.max(uv[a][1],uv[b][1]);
+    const inside=seams.get(key).filter(id=>uv[id][1]>lo+1e-9&&uv[id][1]<hi-1e-9).sort((i,j)=>(uv[i][1]-uv[j][1])*Math.sign(uv[b][1]-uv[a][1]));
+    if(!inside.length)continue;
+    const chain=[a,...inside,b];for(let i=1;i<chain.length;i++)stitched.push([chain[i-1],chain[i],c]);split=true;
+   }
+   if(!split)stitched.push(face);
+  }
+  triangles.splice(0,triangles.length,...stitched);
   const boundary=new Map();
   for(const f of triangles)for(let i=0;i<3;i++){
     const a=f[i],b=f[(i+1)%3],key=Math.min(a,b)+':'+Math.max(a,b);
@@ -146,7 +168,12 @@ export function buildBlenderBelt(time){
   const endOptions=(name,length=pose[name].length)=>({...pose[name],length,pullTension:tighten,
     creases:pose[name].creases.map((c,i)=>i>=2&&time>18?{...c,s:c.s+length-pose[name].length}:c)});
   const centerOffset=FINAL_PULL_CENTER_X*tighten;
-  const plan=(name,length=pose[name].length)=>planStandingLead(foldMaterialStrip(name,{...endOptions(name,length),width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,sampleOnly:true}),field,centerOffset,tighten);
+  const plans=new Map();
+  const plan=(name,length=pose[name].length)=>{
+    const key=name+':'+length;
+    if(!plans.has(key))plans.set(key,planStandingLead(foldMaterialStrip(name,{...endOptions(name,length),width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,sampleOnly:true}),field,centerOffset,tighten));
+    return plans.get(key);
+  };
   const leadA=plan('A'),leadB=plan('B'),
     adapterA=buildWaistAdapter(foldPart('adapter-A',pose.adapterA),false,leadA.root,height,leadA.sampleSource,tighten),adapterB=buildWaistAdapter(foldPart('adapter-B',pose.adapterB,true),true,leadB.root,height,leadB.sampleSource,tighten);
   const standing=fixed.map(p=>fitWaistWrap(p,height,tighten,takeupProfile));
@@ -176,7 +203,7 @@ export function buildBlenderBelt(time){
     }
     releasedA=la-pose.A.length;releasedB=lb-pose.B.length;
   }
-  const a=fitStandingLead(foldPart('A',endOptions('A',pose.A.length+releasedA),true),true,field,centerOffset,tighten),b=fitStandingLead(foldPart('B',endOptions('B',pose.B.length+releasedB)),false,field,centerOffset,tighten);
+  const a=fitStandingLead(foldPart('A',endOptions('A',pose.A.length+releasedA),true),true,field,centerOffset,tighten,plan('A',pose.A.length+releasedA)),b=fitStandingLead(foldPart('B',endOptions('B',pose.B.length+releasedB)),false,field,centerOffset,tighten,plan('B',pose.B.length+releasedB));
   const parts=[a,adapterA,left,...standing,right,adapterB,b];
   // Keep the fitted waist at the character's established belt height.
   const verticalOffset=.03-height;
