@@ -400,7 +400,7 @@ export const EN = {
   "1인칭 시점": "First-person view",
   "내려다보는 시점으로도 확인할 수 있습니다.": "You can also look down from the wearer's viewpoint.",
   "내 허리와 손을 내려다보는 시점입니다.": "Looking down at your waist and hands.",
-  "좌클릭 드래그: 이동 · 우클릭 드래그: 회전": "Left drag: move · Right drag: rotate",
+  "좌클릭 드래그: 이동 · 우클릭 드래그: 회전 · 휠 아래: 확대 · 휠 위: 축소": "Left drag: move · Right drag: rotate · Wheel down: zoom in · Wheel up: zoom out",
   "터치 회전": "Touch rotation",
   "시점 초기화": "Reset view",
   "영상 닫기": "Close video",

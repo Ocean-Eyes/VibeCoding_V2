@@ -1,5 +1,5 @@
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-export const DETAIL_CAMERA={yaw:.72,pitch:-.38,panX:0,panY:0};
+export const DETAIL_CAMERA={yaw:.72,pitch:-.38,panX:0,panY:0,zoom:1};
 // Camera is above the waist on the wearer's side, looking down and forward.
 // The wearer's right appears on screen-right, opposite the external front view.
 export const FIRST_PERSON_CAMERA={yaw:Math.PI,pitch:-2,target:[0,.03,.04],distance:1.55};
@@ -29,6 +29,13 @@ export function createDetailCamera(canvas,isEnabled,touchRotates=()=>false){
  });
  for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,e=>{if(drag?.id===e.pointerId)end()});
  canvas.addEventListener('contextmenu',e=>{if(isEnabled())e.preventDefault()});
+ canvas.addEventListener('wheel',e=>{
+  if(!isEnabled())return;
+  e.preventDefault();
+  const unit=e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1;
+  // Requested direction: wheel down enlarges, wheel up reduces.
+  state.zoom=clamp(state.zoom*Math.exp(clamp(e.deltaY*unit*.0015,-4,4)),.25,4);
+ },{passive:false});
  canvas.addEventListener('keydown',e=>{
   if(!isEnabled())return;
   if(e.key==='Home'){e.preventDefault();reset();return}
