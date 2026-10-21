@@ -69,6 +69,8 @@ export function planStandingLead(strip,field,centerOffset=0,tension=0){
  const h1=tension?field(strip.sampleMaterialPoint(referenceJoin).center[0])[0]:0;
  const targetH=tension?.25+waistHeight-.03-strip.sampleMaterialPoint(join).center[1]:0;
  const first=strip.creases[0],entry=first?first.at-first.half*first.n-Math.abs(first.k)*strip.width/2:0;
+ const contactStart=entry-.10,contactEnd=tension?strip.sampleMaterialPoint(entry):null;
+ const contactSlope=contactEnd?(contactEnd.center[1]+field(contactEnd.center[0])[0]-waistHeight)/.10:0;
  const fittedField=(s,x)=>{
   const [h,k]=field(x);
   if(!tension||s<=exit||exit>=join)return [h,k,0];
@@ -86,11 +88,13 @@ export function planStandingLead(strip,field,centerOffset=0,tension=0){
   const mid=strip.sampleMaterialPoint(s),slope=fittedField(s,mid.center[0])[1],w=mid.widthAxis,scale=Math.hypot(w[0],w[1]+slope*w[0],w[2]);
   let extra=0,derivative=0;
   if(tension&&strip.material==='A'&&s<entry){
-   // The standing span settles onto the horizontal waist band. Stop before the
-   // first finite bend so A still passes underneath both waist layers.
-   const q=Math.max(0,Math.min(1,(s-entry+.04)/.04)),weight=tension*(1-q*q*(3-2*q)),dw=-tension*6*q*(1-q)/.04;
-   const [h,k]=field(mid.center[0]),d=waistHeight-mid.center[1]-h;
-   extra=weight*d;derivative=dw*d-weight*(mid.tangent[1]+k*mid.tangent[0]);
+   // Connect the waist contact to the first bend with a straight span. The
+   // former short smoothstep made an S-shaped kink in this exposed panel.
+   // Ease only the initial contact; retain the finite under-waist bend.
+   const q=Math.max(0,Math.min(1,(s-contactStart)/.006)),w=q*q*(3-2*q),dw=6*q*(1-q)/.006;
+   const target=waistHeight+w*contactSlope*(s-contactStart),dy=dw*contactSlope*(s-contactStart)+w*contactSlope;
+   const [h,k]=field(mid.center[0]);
+   extra=tension*(target-mid.center[1]-h);derivative=tension*(dy-mid.tangent[1]-k*mid.tangent[0]);
   }
   const p=v?strip.sampleMaterialPoint(s,v/scale):mid,[h,k,ds]=fittedField(s,p.center[0]),tangent=unit([p.tangent[0],p.tangent[1]+k*p.tangent[0]+ds+derivative,p.tangent[2]]),widthAxis=unit([p.widthAxis[0],p.widthAxis[1]+k*p.widthAxis[0],p.widthAxis[2]]),normal=ds||derivative?unit(cross(widthAxis,tangent)):unit([p.normal[0]-k*p.normal[1],p.normal[1],p.normal[2]]);
   return {...p,center:add([p.center[0]+centerOffset,p.center[1]+h+extra,p.center[2]],mul(normal,side*strip.thickness/2)),tangent,widthAxis,normal};
@@ -117,7 +121,7 @@ export function buildWaistAdapter(part,reverse=false,root,height,rootSample,tigh
  const first=root?{...root,widthAxis:mul(root.widthAxis,-1),tangent:mul(root.tangent,-1)}:part.strip.sampleMaterialPoint(0),last=part.strip.sampleMaterialPoint(part.length),sign=first.center[0]<0?-1:1;
  // Remove the shoulder lead's excess curvature only during the final pull.
  // Its measured length is released into the held ends by the length solver.
- const a=first.center,e=[last.center[0],height,last.center[2]],b=add(a,mul(first.tangent,.04)),c=add(a,[sign*(.23-.15*tighten),0,-.04]),d=add(e,[-sign*.04,0,.06]);
+ const a=first.center,e=[last.center[0],height,last.center[2]],b=add(a,mul(first.tangent,.04)),c=add(a,[sign*(.23-.20*tighten),0,-.04]),d=add(e,[-sign*.04,0,.06]);
  b[1]=Math.max(e[1],Math.min(a[1],b[1]));
  const curve=u=>add(add(add(mul(a,(1-u)**4),mul(b,4*(1-u)**3*u)),add(mul(c,6*(1-u)**2*u*u),mul(d,4*(1-u)*u**3))),mul(e,u**4));
  const derivative=u=>add(add(mul(sub(b,a),4*(1-u)**3),mul(sub(c,b),12*(1-u)**2*u)),add(mul(sub(d,c),12*(1-u)*u*u),mul(sub(e,d),4*u**3)));

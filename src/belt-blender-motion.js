@@ -36,7 +36,7 @@ function foldPart(name,options,reverse=false){
     const extent=c=>Math.abs(c.k)*DISPLAY_WIDTH/2+Math.abs(c.angle)*c.radius/2*Math.hypot(1,c.k);
     const entry=options.creases[0].s-extent(options.creases[0]),exit=options.creases[1].s+extent(options.creases[1]);
     const ranges=[[exit,exit+.04],[exit+.24,exit+.26]];
-    if(name==='A')ranges.push([entry-.04,entry]);
+    if(name==='A')ranges.push([entry-.10,entry]);
     // Resolve the contact bends in the rendered surface as well as the arc
     // length sampler; coarse triangles otherwise shortcut the tightened curve.
     for(const [a,b] of ranges)for(let s=a;s<=b+1e-9;s+=.002)if(s>0&&s<options.length)longitudinalCuts.push(s);

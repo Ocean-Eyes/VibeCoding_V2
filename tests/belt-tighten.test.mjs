@@ -129,3 +129,20 @@ test('both retained grips keep moving outward through the end of tightening',()=
   previous=reach;
  }
 });
+
+test('the exposed central standing panel is straight between its contacts',()=>{
+ const mesh=buildBlenderBelt(19.8),strip=mesh.strips[0],fold=mesh.pose.A.creases[0];
+ const entry=fold.s-Math.abs(fold.k)*.039-Math.abs(fold.angle)*fold.radius/2*Math.hypot(1,fold.k);
+ const sample=(s,v)=>strip.sampleMaterialPoint(strip.sourceToMaterial(s),v).center;
+ // Inspect both material edges as well as the centre, not only its end-to-end
+ // chord. This catches the visible S even when length and crossing tests pass.
+ for(const v of [-.039,0,.039]){
+  const start=entry-.085,end=entry-.002,a=sample(start,v),b=sample(end,v);
+  const d=b.map((x,i)=>x-a[i]),dd=d.reduce((sum,x)=>sum+x*x,0);
+  for(let i=1;i<30;i++){
+   const p=sample(start+(end-start)*i/30,v).map((x,k)=>x-a[k]);
+   const q=p.reduce((sum,x,k)=>sum+x*d[k],0)/dd;
+   assert.ok(Math.hypot(...p.map((x,k)=>x-q*d[k]))<.0001,'central panel still has an S-shaped deviation');
+  }
+ }
+});

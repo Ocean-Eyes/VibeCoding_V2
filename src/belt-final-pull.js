@@ -1,30 +1,29 @@
-// Final tension of the existing Blender material folds, fitted against the
-// reference video's maximum pull. Root frames, fold angles and material
-// order stay authored; the crease positions, axes and bend radii tighten.
+// Final tension of the Blender folds. Root frames, fold angles and material
+// order remain authored; the incoming central span lies straight in contact.
 export const FINAL_PULL_FOLDS={
   "A": [
     {
-      "s": 0.46162093989581154,
-      "k": 0.6339176931862163,
+      "s": 0.481155349617496,
+      "k": 0.5687076030897085,
       "radius": 0.027188106252403553
     },
     {
-      "s": 0.6441633250977848,
-      "k": -0.7612405634724698,
-      "radius": 0.022987993600501914
+      "s": 0.6739765587306891,
+      "k": -0.8812405634709081,
+      "radius": 0.022569604619721562
     }
   ],
   "B": [
     {
-      "s": 0.38985679124527756,
-      "k": -0.6350305336943511,
-      "radius": 0.010542616406589465
+      "s": 0.40009257090681544,
+      "k": -0.7297211887733918,
+      "radius": 0.010644251642609827
     },
     {
-      "s": 0.5495291148568697,
-      "k": 0.7597876052436158,
-      "radius": 0.013957597710486574
+      "s": 0.5667362329028055,
+      "k": 0.6900505394176525,
+      "radius": 0.015083091932230522
     }
   ]
 };
-export const FINAL_PULL_CENTER_X=-.03320293092833054;
+export const FINAL_PULL_CENTER_X=-0.030985656602304693;
