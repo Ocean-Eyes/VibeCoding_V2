@@ -29,13 +29,18 @@ export function createDetailCamera(canvas,isEnabled,touchRotates=()=>false){
  });
  for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,e=>{if(drag?.id===e.pointerId)end()});
  canvas.addEventListener('contextmenu',e=>{if(isEnabled())e.preventDefault()});
- canvas.addEventListener('wheel',e=>{
+ const wheelSurface=canvas.closest('.belt-closeup')??canvas,doc=canvas.ownerDocument;
+ // Capture before page handlers, including panel padding and controls. Hit-test
+ // the pointer too: a browser may retain an earlier scroll gesture's target.
+ doc.addEventListener('wheel',e=>{
   if(!isEnabled())return;
-  e.preventDefault();
+  const hit=doc.elementFromPoint(e.clientX,e.clientY);
+  if(!wheelSurface.contains(hit??e.target))return;
+  e.preventDefault();e.stopPropagation();
   const unit=e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1;
   // Requested direction: wheel down enlarges, wheel up reduces.
   state.zoom=clamp(state.zoom*Math.exp(clamp(e.deltaY*unit*.0015,-4,4)),.25,4);
- },{passive:false});
+ },{passive:false,capture:true});
  canvas.addEventListener('keydown',e=>{
   if(!isEnabled())return;
   if(e.key==='Home'){e.preventDefault();reset();return}
