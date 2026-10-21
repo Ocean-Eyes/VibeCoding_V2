@@ -41,7 +41,8 @@ test('display cross section and relative knot geometry survive fitting to a flat
         // Preserve authored geometry before the final tension adjustment.
         // A's earlier under-wrap bend has a clearance correction; B's small
         // tip bend travels with its redistributed end after threading.
-        const movingTip=name==='B'&&key.t>18&&sourceS>part.strip.sourceMaterialLength-.08;
+        const terminal=mesh.pose.A.creases[2],clearanceTip=name==='A'&&key.t>15.5&&key.t<17.4&&sourceS>=terminal.s-Math.abs(terminal.angle)*terminal.radius/2;
+        const movingTip=clearanceTip||(name==='B'&&key.t>18&&sourceS>part.strip.sourceMaterialLength-.08);
         if(key.t<=18.8&&!movingTip&&(name!=='A'||key.t<=10.35||key.t>=11.4)){assert.ok(Math.abs(p.center[0]-expected[0])<1e-9);assert.ok(Math.abs(p.center[2]-expected[2])<1e-9);if(Math.abs(expected[0])<.04)assert.ok(Math.abs(p.center[1]-(expected[1]+2*mesh.pose.waist.dropM))<1e-9);}
         assert.ok(Math.abs(distance(part.strip.sampleMaterialPoint(s,0,1).center,part.strip.sampleMaterialPoint(s,0,-1).center)-.006)<1e-10);
       }
@@ -50,7 +51,9 @@ test('display cross section and relative knot geometry survive fitting to a flat
       const part=mesh.parts.find(p=>p.name===source.name);
       for(let i=0;i<part.positions.length;i+=5){
         const row=Math.min(i/5*3,source.rows-1),center=source.positions.slice(row*15+6,row*15+9);
-        const pulledRear=key.t>18.8&&source.name.startsWith('rear-smooth');
+        // Standing slack is now taken up during wrapping and the first pull,
+        // independently of the later knot cinch. Its direction/order stays fixed.
+        const pulledRear=mesh.settling.waistTension>0&&source.name.startsWith('rear-smooth');
         if(pulledRear){
           const actual=part.positions[i+2];
           assert.ok(Math.abs(actual[0]*(center[2]+.225)-center[0]*(actual[2]+.225))<1e-10,'rear take-up changed the wrap direction');
@@ -91,6 +94,44 @@ test('stages four through seven keep horizontal waist edges and conserve actual 
 test('connection fitting does not advance or retract the tip while it is threading',()=>{
  for(let t=10;t<=12;t+=.1)assert.ok(Math.abs(buildBlenderBelt(t).strips[0].sourceMaterialLength-BLENDER_BELT.keys[0].A.length)<1e-12);
  for(let t=15.5;t<=18;t+=.1)assert.ok(Math.abs(buildBlenderBelt(t).strips[1].sourceMaterialLength-BLENDER_BELT.keys[0].B.length)<1e-12);
+});
+
+test('waist take-up precedes the final knot pull and feeds the held free ends',()=>{
+ const before=buildBlenderBelt(11),after=buildBlenderBelt(12.5);
+ // Measure the body wraps: the front threading connectors still need room
+ // for the passing end and cannot cinch until after that end clears them.
+ const standing=m=>m.parts.filter(p=>p.name.startsWith('rear-smooth')).reduce((sum,p)=>sum+p.length,0);
+ const released=standing(before)-standing(after);
+ assert.ok(released>.045,'first under-waist pull leaves all standing slack until the final knot');
+ assert.ok(after.parts.find(p=>p.name==='B').length>before.parts.find(p=>p.name==='B').length,'the support end does not receive released material');
+ for(let t=12.5;t<=18;t+=.25)assert.ok(standing(buildBlenderBelt(t))<=standing(after)+.002,'standing wrap becomes loose again during loop formation');
+ const final=buildBlenderBelt(19.8);
+ assert.ok(standing(after)-standing(final)<.006,'too much waist take-up is still deferred to the last pull');
+ assert.equal(before.displayWidth,after.displayWidth);assert.equal(before.displayThickness,after.displayThickness);
+});
+
+test('the longer free A tip clears the incoming B surface during handover',()=>{
+ const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+ const pierces=(start,end,[a,b,c])=>{
+  const d=sub(end,start),e=sub(b,a),f=sub(c,a),h=cross(d,f),det=dot(e,h);
+  if(Math.abs(det)<1e-12)return false;
+  const s=sub(start,a),u=dot(s,h)/det,q=cross(s,e),v=dot(d,q)/det,t=dot(f,q)/det;
+  return u>=0&&v>=0&&u+v<=1&&t>1e-7&&t<1-1e-7;
+ };
+ for(let frame=0;frame<=12;frame++){
+  const time=16.5+frame*.05,m=buildBlenderBelt(time),tail=[],incoming=[],data=m.vertexData;
+  const end=m.strips[0],crease=m.pose.A.creases[2],tailLength=end.totalMaterialS-end.sourceToMaterial(crease.s-Math.abs(crease.angle)*crease.radius/2);
+  for(let i=0;i<data.length;i+=24){
+   const s=[data[i+7],data[i+15],data[i+23]],p=[0,8,16].map(k=>Array.from(data.slice(i+k,i+k+3)));
+   const row={p,lo:[0,1,2].map(k=>Math.min(...p.map(v=>v[k]))),hi:[0,1,2].map(k=>Math.max(...p.map(v=>v[k])))};
+   if(Math.max(...s)<tailLength+1e-6)tail.push(row);
+   if(Math.min(...s)>m.length-m.strips[1].totalMaterialS+1e-6)incoming.push(row);
+  }
+  for(const a of tail)for(const b of incoming){
+   if(a.lo.some((v,k)=>v>b.hi[k]||a.hi[k]<b.lo[k]))continue;
+   for(let i=0;i<3;i++)assert.ok(!pierces(a.p[i],a.p[(i+1)%3],b.p)&&!pierces(b.p[i],b.p[(i+1)%3],a.p),`free tip pierces incoming strip at ${time}`);
+  }
+ }
 });
 
 test('the finished belt has equal lateral end reach without changing its total length',()=>{

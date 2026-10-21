@@ -4,6 +4,9 @@ import {buildBlenderBelt,assembleBelt} from './belt-blender-motion.js';
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,k)=>a.map(v=>v*k),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=a=>mul(a,1/(Math.hypot(...a)||1)),mix=(a,b,q)=>add(mul(a,1-q),mul(b,q));
 const clamp=x=>Math.max(0,Math.min(1,x)),smooth=(t,a,b)=>{const q=clamp((t-a)/(b-a));return q*q*(3-2*q)};
 const reference=buildBlenderBelt(8.5),L=reference.length,M=L/2;
+// The final preparation grips must meet the first threading pose on the same
+// material, including any waist slack already transferred to the free ends.
+const gripStops=Object.fromEntries(reference.strips.map(s=>[s.material,M-s.totalMaterialS+s.sourceToMaterial(s.sourceMaterialLength*(s.material==='A'?.97/1.245626545564495:.70/1.3))]));
 const rows=[];let offset=0;
 for(const part of reference.parts){
  for(let i=0;i<part.uv.length;i++)if(Math.abs(part.uv[i][1])<1e-9)rows.push({s:offset+part.uv[i][0],center:part.positions[i],normal:part.normals[i]});
@@ -84,6 +87,6 @@ export function buildPreparationBelt(t){
   const length=i?L-M:M,sign=i?1:-1,point=s=>{const p=sample(M+sign*s);return {...p,tangent:mul(p.tangent,sign),materialS:s}};
   return {material,totalMaterialS:length,visibleMaterialS:length,samples:Array.from({length:81},(_,j)=>point(length*j/80)),sampleMaterialPoint:point,segments:[{name:'preparation',fromS:0,toS:length}],triangles:[],width:.078,thickness:.006};
  });
- return {...mesh,strips,waist:[],displayWidth:.078,displayThickness:.006,source:'continuous-material-preparation',preparation:{laid,lower,midpoint:add(mid.center,shift)},sampleMaterialPoint:sample,
+ return {...mesh,strips,waist:[],displayWidth:.078,displayThickness:.006,source:'continuous-material-preparation',preparation:{laid,lower,gripStops,midpoint:add(mid.center,shift)},sampleMaterialPoint:sample,
   inference:{geometry:'progressive unrolling of the first Blender material pose; finite-radius hanging ends',hiddenDepth:'authored rear crossing from Blender'}};
 }

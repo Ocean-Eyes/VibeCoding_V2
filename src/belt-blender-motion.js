@@ -154,12 +154,20 @@ export function buildBlenderBelt(time){
   // every passing layer keeps their relative depth and avoids new collisions.
   const smooth=(a,b)=>{const u=Math.max(0,Math.min(1,(time-a)/(b-a)));return u*u*(3-2*u)};
   const pose=blenderPose(time),tighten=smooth(18.8,19.8),height=.03-2*pose.waist.dropM;
+  // The waist is already held snug when wrapping ends. The first under-waist
+  // pull takes up the remaining standing slack; the knot opening stays open
+  // until B has threaded it. Do not defer all waist take-up to the final pull.
+  const waistTension=.50+.45*smooth(11,12.5)+.05*tighten;
   if(time>18){
     const authored=blenderPose(19.5);
     for(const name of ['A','B'])for(let i=0;i<2;i++)for(const key of ['s','k','radius']){
       pose[name].creases[i][key]+=tighten*(FINAL_PULL_FOLDS[name][i][key]-authored[name].creases[i][key]);
     }
   }
+  // The longer, free A tip must stay below B's incoming strip while the
+  // support hand transfers. Use its existing terminal bend, then straighten
+  // it as the receiving hand acquires the end; leave both knot folds intact.
+  pose.A.creases[2].angle+=(-.6-.7*smooth(16.5,16.7))*smooth(15.5,16.5)*(1-smooth(17,17.4));
   const field=standingField(pose,height);
   pose.A.creases[0].k-=.16*smooth(10.35,10.65)*(1-smooth(11,11.4));
   pose.A.creases[0].radius-=.0065*smooth(10.65,10.95)*(1-smooth(11.1,11.35));
@@ -176,7 +184,7 @@ export function buildBlenderBelt(time){
   };
   const leadA=plan('A'),leadB=plan('B'),
     adapterA=buildWaistAdapter(foldPart('adapter-A',pose.adapterA),false,leadA.root,height,leadA.sampleSource,tighten),adapterB=buildWaistAdapter(foldPart('adapter-B',pose.adapterB,true),true,leadB.root,height,leadB.sampleSource,tighten);
-  const standing=fixed.map(p=>fitWaistWrap(p,height,tighten,takeupProfile));
+  const standing=fixed.map(p=>fitWaistWrap(p,height,waistTension,takeupProfile));
   const left=arcPart('outer-left',-pose.thetaA,-1.25,pose.waist.dropM),right=arcPart('outer-right',-2*Math.PI-5,-4*Math.PI+pose.thetaB,pose.waist.dropM);
   const available=data.length-[adapterA,left,...standing,right,adapterB].reduce((sum,p)=>sum+p.length,0);
   const aFeed=smooth(8.5,9)*(1-smooth(12,14)),bFeed=smooth(14,15.5),shareA=.5*(1-aFeed)*(1-bFeed)+bFeed;
@@ -238,6 +246,6 @@ export function buildBlenderBelt(time){
     }
     strip.segments.push({name:'whole',fromS:0,toS:strip.totalMaterialS});
   }
-  return {...mesh,strips:[a.strip,b.strip],waist:[],pose,settling:{releasedA,releasedB},source:'blender-material-sequence-v1',displayWidth:DISPLAY_WIDTH,displayThickness:DISPLAY_THICKNESS,
+  return {...mesh,strips:[a.strip,b.strip],waist:[],pose,settling:{releasedA,releasedB,waistTension},source:'blender-material-sequence-v1',displayWidth:DISPLAY_WIDTH,displayThickness:DISPLAY_THICKNESS,
     inference:{geometry:'Blender material-space folds retargeted to the character belt width; depth tested on the actual mesh',hiddenDepth:'authored',crossings:data.crossings}};
 }

@@ -65,7 +65,7 @@ function preparationContacts(frame,volume,inputRig){
   const approach=.34-.30*smooth(t,2.05,2.6)*(1-smooth(t,4,4.7));
   // Hold the wider straight span through lowering and the start of wrapping,
   // then slide toward the laying frontier before the retained rear exchange.
-  const stop=strip.totalMaterialS-(strip.material==='A'?1.245626545564495-.97:1.3-.70),s=Math.min(Math.max(1.06*(1-smooth(t,2.3,3)),volume.preparation.laid+approach),stop);
+  const stop=volume.preparation.gripStops[strip.material],s=Math.min(Math.max(1.06*(1-smooth(t,2.3,3)),volume.preparation.laid+approach),stop);
   targets[strip.material]={sample:strip.sampleMaterialPoint(s),strip,s};
  }
  for(const identity of ['Left','Right']){
