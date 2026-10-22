@@ -1,11 +1,18 @@
 import {language} from './i18n.js';
 import {BaemilgiCounter,COUNTER_VERSION,measureBaemilgi} from './baemilgi-counter.js';
 import {readRecords,saveRecord,validNickname,leaderboardRequest} from './baemilgi-records.js';
+import {demoMarkup,mountDemo} from './baemilgi-demo.js';
 const t=(ko,en)=>language==='en'?en:ko;
 const $=id=>document.getElementById(id);
 const counter=new BaemilgiCounter();
 let mounted=false,active=false,generation=0,stream,worker,raf,timeout,frameTimeout,ready=false,busy=false,lastVideo=-1,lastSent=0;
 let token=null,runID=null,result=null,board='public',publicEntries=[],publicError='',saving=false,recordSaved=false;
+let demo;
+function showView(view){
+ const demonstrating=view==='demo';if(!demonstrating)demo?.pause();
+ $('bm-demo').hidden=!demonstrating;$('bm-practice').hidden=demonstrating;
+ $('bm-show-demo').setAttribute('aria-pressed',String(demonstrating));$('bm-show-practice').setAttribute('aria-pressed',String(!demonstrating));
+}
 const copy={
  ready:t('옆으로 엎드려 가슴을 낮춰 주세요.','Lie face down, side-on to the camera, and lower your chest.'),
  preparing:t('낮은 자세 확인 중… 잠깐 유지하세요.','Checking the low position… hold briefly.'),
@@ -25,20 +32,25 @@ function mount(){
  $('baemilgi-screen').innerHTML=`
  <section class="heading"><div><div class="eyebrow">FOUNDATIONS / CHALLENGE</div><h1>${t('배밀기 도전','Hindu push-up challenge')}</h1><p>${t('한 번 더 밀어 올려, 나의 최고 기록에 도전하세요.','One more rep. Challenge your personal best.')}</p></div><div class="session-label"><span class="tiny">HIGH SCORE</span><strong>${t('옆모습으로 자동 집계','Side-view rep counter')}</strong><span>${t('완전히 일어서면 종료','Stand fully upright to finish')}</span></div></section>
  <div class="bm-layout"><section class="bm-main">
+ <div class="bm-view-tabs" role="group" aria-label="${t('시연 또는 카메라 도전','Demonstration or camera challenge')}"><button id="bm-show-demo" aria-pressed="true">${t('동작 시연','Demonstration')}</button><button id="bm-show-practice" aria-pressed="false">${t('카메라 도전','Camera challenge')}</button></div>
+ ${demoMarkup(t)}
+ <div id="bm-practice" hidden>
  <div class="bm-stage"><div class="bm-stage-top"><span>HINDU PUSH-UP / <span id="bm-mode">READY</span></span><span id="bm-time">00:00</span></div>
  <div class="bm-camera"><video id="bm-video" muted playsinline hidden></video><canvas id="bm-overlay" aria-hidden="true"></canvas><div id="bm-guide">${guide()}<p>${t('카메라를 켠 뒤 옆으로 엎드리면 준비가 시작됩니다.','Turn on your camera, then lie face down in side view to get ready.')}</p></div></div>
  <div class="bm-readout"><div><span>${t('현재 횟수','REPS')}</span><strong id="bm-count" aria-live="polite" aria-atomic="true">0</strong></div><p id="bm-cue" role="status">${copy.ready}</p></div></div>
+ </div>
  <div class="bm-controls"><button id="bm-start" class="primary">${t('카메라 켜고 도전','Start with camera')}</button><button id="bm-cancel" class="outline" hidden>${t('중단 · 기록 제외','Cancel · discard run')}</button><span>${t('소리 없이도 화면 안내로 진행됩니다.','Follow the on-screen cues; no sound required.')}</span></div>
  <p id="bm-notice" class="bm-notice" role="status">${t('카메라 영상은 이 기기에서만 분석하며 저장하거나 전송하지 않습니다.','Camera video is processed on this device. It is never saved or uploaded.')}</p>
  <ol class="bm-steps"><li><b>01</b><div><strong>${t('옆으로 엎드려 준비','Lie face down in side view')}</strong><p>${t('바닥과 수평으로 카메라를 놓고, 손과 발부터 일어선 머리까지 보일 공간을 확보하세요.','Keep the camera level. Leave room to see your hands, feet and your head when standing.')}</p></div></li><li><b>02</b><div><strong>${t('낮췄다가 밀어 올리면 +1','Lower, then push up: +1')}</strong><p>${t('가슴을 낮춘 뒤 팔을 펴며 상체를 올립니다. 올라온 자세를 유지해도 추가로 세지 않습니다.','Lower your chest, then extend your arms and lift your upper body. Holding the raised pose does not add reps.')}</p></div></li><li><b>03</b><div><strong>${t('완전히 일어서서 종료','Stand fully upright to finish')}</strong><p>${t('다리를 펴고 잠시 서 있으면 자동 종료됩니다. 마지막에 닉네임을 입력해 기록을 남기세요.','Straighten your legs and stand briefly to end automatically. Enter your nickname after the run.')}</p></div></li></ol>
  </section><aside class="bm-board" aria-label="${t('배밀기 리더보드','Hindu push-up leaderboard')}"><div class="eyebrow">HALL OF FAME</div><h2>${t('배밀기 최고 기록','Hindu push-up high scores')}</h2><div class="bm-tabs" role="group" aria-label="${t('순위 범위','Leaderboard scope')}"><button id="bm-public" aria-pressed="true">${t('공용 순위','Global')}</button><button id="bm-local" aria-pressed="false">${t('이 기기 기록','This device')}</button></div><p id="bm-board-note" role="status"></p><ol id="bm-entries"></ol><button id="bm-refresh" class="quiet">${t('순위 새로고침 ↻','Refresh scores ↻')}</button><p class="bm-board-foot">${t('공용 순위는 이 브라우저의 최고 기록 하나를 남깁니다. 닉네임이 같아도 다른 참가자일 수 있습니다. 카메라 자동 집계 기록이며 공식 심사 기록은 아닙니다.','Global scores retain one personal best per browser. Nicknames may be shared by different people. Camera-counted scores are not officially judged.')}</p></aside></div>
  <dialog id="bm-result" class="bm-result" aria-labelledby="bm-result-title"><div class="eyebrow">RUN COMPLETE</div><h2 id="bm-result-title">${t('도전 완료','Run complete')}</h2><div class="bm-final"><strong id="bm-final-count">0</strong><span>${t('회','REPS')}</span></div><p id="bm-result-reason"></p><form id="bm-save-form"><label for="bm-nickname">${t('기록에 남길 닉네임','Enter your nickname')}</label><input id="bm-nickname" name="nickname" minlength="2" maxlength="12" autocomplete="nickname" required placeholder="${t('닉네임 2–12자','Nickname, 2–12 characters')}"/><small>${t('한글·영문 등 문자, 숫자, 공백, - 또는 _','Letters, numbers, spaces, - or _')}</small><p id="bm-save-note" role="status"></p><button id="bm-save" class="primary" type="submit">${t('기록 저장','Save score')}</button></form><button id="bm-dismiss" class="quiet">${t('닫기','Close')}</button></dialog>`;
+ demo=mountDemo(t);$('bm-show-demo').onclick=()=>showView('demo');$('bm-show-practice').onclick=()=>showView('practice');
  $('bm-start').onclick=start;$('bm-cancel').onclick=()=>{stopCamera();counter.reset();paintCounter();notice(t('도전을 중단했습니다. 기록은 등록되지 않았습니다.','Run cancelled. No score was submitted.'));};
  $('bm-save-form').onsubmit=saveResult;$('bm-dismiss').onclick=()=>$('bm-result').close();
  $('bm-nickname').oninput=()=>$('bm-nickname').setCustomValidity('');
  $('bm-result').addEventListener('cancel',event=>{if(saving)event.preventDefault()});
  $('bm-public').onclick=()=>{board='public';renderBoard()};$('bm-local').onclick=()=>{board='local';renderBoard()};$('bm-refresh').onclick=()=>refreshBoard(true);
- document.addEventListener('judo-exit',()=>{active=false;stopCamera();$('bm-result').close();});
+ document.addEventListener('judo-exit',()=>{active=false;demo.pause();stopCamera();$('bm-result').close();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){counter.interrupt();if(ready)$('bm-cue').textContent=copy.visibility;}});
  window.addEventListener('pagehide',stopCamera);
 }
@@ -70,6 +82,7 @@ function stopCamera(){
  $('bm-video').srcObject=null;$('bm-video').hidden=true;$('bm-guide').hidden=false;
  const canvas=$('bm-overlay');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
  $('bm-start').disabled=false;$('bm-cancel').hidden=true;
+ $('bm-show-demo').disabled=false;
 }
 function fail(message){stopCamera();counter.interrupt();$('bm-mode').textContent='PAUSED';notice(message);}
 function paintCounter(){
@@ -101,6 +114,7 @@ async function tick(now){
 }
 async function start(){
  stopCamera();counter.reset();token=null;result=null;runID=crypto.randomUUID();recordSaved=false;saving=false;paintCounter();
+ showView('practice');$('bm-show-demo').disabled=true;
  const current=generation;$('bm-start').disabled=true;$('bm-cancel').hidden=false;
  notice(t('카메라 권한을 허용해 주세요. 처음에는 자세 모델을 다운로드합니다.','Allow camera access. The pose model downloads on first use.'));
  if(!navigator.mediaDevices?.getUserMedia){fail(t('HTTPS 또는 localhost에서 카메라를 사용할 수 있습니다.','Camera access requires HTTPS or localhost.'));return;}
@@ -157,4 +171,4 @@ async function saveResult(event){
   $('bm-save-note').textContent=localSaved?t('이 기기에는 저장했습니다. 공용 등록에 실패했으니 다시 시도해 주세요.','Saved on this device. Global submission failed; please retry.'):t('저장하지 못했습니다. 저장 공간과 연결을 확인하고 다시 시도해 주세요.','Could not save. Check storage permissions and your connection, then retry.');
  }finally{if(savingRun===runID){saving=false;$('bm-save').disabled=recordSaved;$('bm-dismiss').disabled=false;renderBoard();}}
 }
-export function openBaemilgi(){mount();active=true;counter.reset();paintCounter();void refreshBoard();}
+export function openBaemilgi(){mount();active=true;counter.reset();showView('demo');paintCounter();void refreshBoard();}
