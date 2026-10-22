@@ -9,8 +9,8 @@ export function saveRecord(storage,record){
   records.push({...record,nickname:record.nickname.normalize('NFC').trim()});
   records.sort((a,b)=>b.count-a.count||a.date.localeCompare(b.date));storage.setItem(KEY,JSON.stringify(records.slice(0,20)));return records;
 }
-export async function leaderboardRequest(body){
-  const response=await fetch('/api/baemilgi',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)}:{signal:AbortSignal.timeout(10000)});
+export async function leaderboardRequest(body,{fresh=false}={}){
+  const response=await fetch('/api/baemilgi'+(!body&&fresh?'?fresh=1':''),body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)}:{signal:AbortSignal.timeout(10000)});
   let result;try{result=await response.json()}catch{throw new Error('unavailable')}
   if(!response.ok)throw new Error(result.error||'unavailable');return result;
 }

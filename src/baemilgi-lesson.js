@@ -37,7 +37,7 @@ function mount(){
  $('bm-save-form').onsubmit=saveResult;$('bm-dismiss').onclick=()=>$('bm-result').close();
  $('bm-nickname').oninput=()=>$('bm-nickname').setCustomValidity('');
  $('bm-result').addEventListener('cancel',event=>{if(saving)event.preventDefault()});
- $('bm-public').onclick=()=>{board='public';renderBoard()};$('bm-local').onclick=()=>{board='local';renderBoard()};$('bm-refresh').onclick=refreshBoard;
+ $('bm-public').onclick=()=>{board='public';renderBoard()};$('bm-local').onclick=()=>{board='local';renderBoard()};$('bm-refresh').onclick=()=>refreshBoard(true);
  document.addEventListener('judo-exit',()=>{active=false;stopCamera();$('bm-result').close();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){counter.interrupt();if(ready)$('bm-cue').textContent=copy.visibility;}});
  window.addEventListener('pagehide',stopCamera);
@@ -57,9 +57,9 @@ function renderBoard(){
   place.textContent=String(entry.rank??rank).padStart(2,'0');name.textContent=entry.nickname;score.textContent=String(entry.count);li.append(place,name,score);list.append(li);
  }
 }
-async function refreshBoard(){
+async function refreshBoard(fresh=false){
  $('bm-refresh').disabled=true;
- try{const data=await leaderboardRequest();publicEntries=data.entries;publicError='';}
+ try{const data=await leaderboardRequest(undefined,{fresh});publicEntries=data.entries;publicError='';}
  catch{publicError=t('공용 순위에 연결할 수 없습니다. 지금은 이 기기에 기록을 남길 수 있습니다.','Shared scores are unavailable. You can save scores on this device.');}
  finally{$('bm-refresh').disabled=false;renderBoard();}
 }
@@ -148,7 +148,7 @@ async function saveResult(event){
   if(token){
    const saved=await leaderboardRequest({action:'save',token,nickname,count:result.count,reps:result.reps,duration:Math.round(result.finishedAt-result.startedAt),version:COUNTER_VERSION,endedBy:'standing'});
    if(savingRun!==runID)return;
-   $('bm-save-note').textContent=saved.improved?t(`공용 순위 등록 완료 · ${saved.rank}위 · 최고 ${saved.best}회`,`Global score saved · rank ${saved.rank} · best ${saved.best}`):t(`기존 최고 기록 ${saved.best}회를 유지합니다.`,`Your existing personal best of ${saved.best} is retained.`);board='public';void refreshBoard();
+   $('bm-save-note').textContent=saved.improved?t(`공용 순위 등록 완료 · ${saved.rank}위 · 최고 ${saved.best}회`,`Global score saved · rank ${saved.rank} · best ${saved.best}`):t(`기존 최고 기록 ${saved.best}회를 유지합니다.`,`Your existing personal best of ${saved.best} is retained.`);board='public';void refreshBoard(true);
   }else if(localSaved){$('bm-save-note').textContent=t('이 기기에 저장했습니다. 공용 순위에는 등록되지 않았습니다.','Saved on this device. Not submitted to global scores.');board='local';}
   else throw new Error('local');
   recordSaved=true;$('bm-save').textContent=t('저장 완료','Saved');

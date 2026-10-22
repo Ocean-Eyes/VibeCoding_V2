@@ -89,7 +89,9 @@ export default async function handler(req,res){
     const store=redisFromEnv();if(!store)throw new APIError(503,'not_configured');
     const service=createLeaderboard(store);
     if(req.method==='GET'){
-      const entries=await service.list();res.setHeader('Cache-Control','public, max-age=0, s-maxage=60, stale-while-revalidate=120');send(200,{entries});return;
+      const entries=await service.list();
+      if(new URL(req.url||'/', 'http://localhost').searchParams.get('fresh')!=='1')res.setHeader('Cache-Control','public, max-age=0, s-maxage=60, stale-while-revalidate=120');
+      send(200,{entries});return;
     }
     let body=req.body;
     if(body===undefined){let text='';for await(const part of req){text+=part;if(Buffer.byteLength(text)>32768)throw new APIError(413,'size');}body=text;}

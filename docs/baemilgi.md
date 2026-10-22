@@ -13,9 +13,11 @@
 
 ## 과금 없는 공용 저장소 연결
 
-현재 저장소에는 DB 자격 증명이 없다. 연결 전에는 카운터와 **이 기기 기록**을 사용할 수 있으며, 공용 순위에 저장됐다고 표시하지 않는다.
+2026-10-22에 Vercel `auto-nav/vibe-coding-v2`의 Production에 Upstash Redis `justjudo-hindu-pushup`을 연결했다. 실제 저장소 설정은 **Free**, 도쿄 `hnd1`, `autoUpgrade=false`, `prodPack=false`, `eviction=false`다. 카드 등록이나 유료 요금제 전환은 하지 않았다. [저장소 관리](https://vercel.com/auto-nav/~/stores/integration/store_SxTUZY8rxBPJuLJg)에서 확인할 수 있다.
 
-1. Upstash 계정에서 Redis **Free ($0)** 데이터베이스를 만든다. 카드 등록/Pay as You Go/Fixed/Prod Pack을 선택하지 않는다. 3일 뒤 삭제되는 익명 임시 DB를 운영 기록에 사용하지 않는다.
+Production의 `KV_REST_API_URL`, `KV_REST_API_TOKEN`을 서버에서만 사용한다. 자격 증명은 Git에 포함하지 않는다. 저장소를 다시 연결할 때도 아래 무료 설정을 유지한다.
+
+1. Upstash 계정에서 Redis **Free ($0)** 데이터베이스를 만든다. **Auto Upgrade를 끈다.** 카드 등록/Pay as You Go/Fixed/Prod Pack을 선택하지 않는다. 3일 뒤 삭제되는 익명 임시 DB를 운영 기록에 사용하지 않는다.
 2. Vercel의 이 프로젝트 Settings → Environment Variables에 `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`을 서버 환경 변수로 등록한다. 기존 무료 연동의 `KV_REST_API_URL`, `KV_REST_API_TOKEN`도 지원한다. 토큰을 소스, 프런트엔드 공개 변수, 채팅에 붙이지 않는다.
 3. Production에 적용해 재배포한다. `GET /api/baemilgi`가 200과 `{ "entries": [] }`를 반환하면 연결 완료다. 설정이 없으면 503 `not_configured`, 무료 한도나 일시 장애면 503 `storage_unavailable`로 닫히며 유료 서비스로 전환하지 않는다.
 4. 공용 도전을 시작하고 한 회 이상 수행한 뒤 서서 종료한다. 닉네임 저장 후 다른 브라우저에서 순위가 보이는지 확인한다. 한도에 걸리면 이 기기 저장은 계속 가능하다.
@@ -26,7 +28,7 @@
 
 `api/baemilgi.js`는 Vercel Node 함수다. 로컬 `scripts/serve.mjs`도 같은 함수를 호출한다. 실행 환경에 위 변수를 설정하면 로컬에서도 실제 저장소를 사용하므로 테스트는 별도 DB를 써야 한다.
 
-- GET: 상위 50개. 공유 캐시 60초로 반복 조회를 줄인다. 같은 횟수는 공동 순위다.
+- GET: 상위 50개. 첫 조회는 공유 캐시 60초로 반복 조회를 줄인다. 저장 직후와 순위 새로고침은 `?fresh=1` 및 `Cache-Control: no-store`로 최신 목록을 읽는다. 같은 횟수는 공동 순위다.
 - POST `action:start`: 무작위 브라우저 ID에 대해 서버 서명·시작 시각을 포함한 세션을 발급한다. IP별 시간당 30회 제한. 원 IP는 저장하지 않고 HMAC으로 키를 만든다.
 - POST `action:save`: 서명, 세션 수명, 횟수와 반복 시각의 일치, 최소 주기, 종료 시각, 닉네임, 동일 출처를 검사한다. IP별 시간당 60회 제한. 최대 32 KB 요청.
 - 하나의 Lua 트랜잭션으로 세션 중복 제출을 방지하고 브라우저별 최고 기록만 갱신한다. 상위 1,000명 보관. 중복 제출 응답은 7일 보관한다. 닉네임은 계정 ID가 아니므로 같은 이름이어도 합치지 않는다.

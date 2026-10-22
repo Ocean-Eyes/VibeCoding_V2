@@ -57,7 +57,7 @@ const output='.test-output/baemilgi';
   await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:output+'/mobile-en.png',fullPage:true});
   // Exercise the shared-save UI, retry, duplicate-click protection and safe nickname rendering.
   await page.setViewportSize({width:1365,height:1000});let saves=0,entries=[];
-  await page.route('**/api/baemilgi',async route=>{
+  await page.route('**/api/baemilgi*',async route=>{
    const body=route.request().postDataJSON();
    if(!body)return route.fulfill({json:{entries}});
    if(body.action==='start')return route.fulfill({json:{token:'ui-test-session'}});
