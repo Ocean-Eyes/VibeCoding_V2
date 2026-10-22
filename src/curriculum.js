@@ -10,7 +10,7 @@ export const GROUNDWORK_GROUPS=[
  {id:'kansetsu-waza',name:tr('꺾기'),label:'KANSETSU-WAZA',title:tr('굳히기본 / 꺾기'),description:tr('꺾기 기술을 배우는 레슨을 준비하고 있습니다.'),available:false},
  {id:'osaekomi-waza',name:tr('누르기'),label:'OSAEKOMI-WAZA',title:tr('굳히기본 / 누르기'),description:tr('누르기 기술을 배우는 레슨을 준비하고 있습니다.'),available:false},
 ];
-export const FOUNDATIONS=[{id:'belt',name:tr('띠 매는 법'),label:'OBI · GHOST BELT',kanji:'帯',available:true,description:tr('반투명 띠의 움직임을 보고, 카메라 위 가이드에 맞춰 매듭을 따라 만듭니다.')},{id:'ukemi',name:tr('낙법'),label:'UKEMI',kanji:'受身',available:false,description:tr('지도자 시범을 보며 익힐 낙법 기초 레슨')}];
+export const FOUNDATIONS=[{id:'belt',name:tr('띠 매는 법'),label:'OBI · GHOST BELT',kanji:'帯',available:true,description:tr('반투명 띠의 움직임을 보고, 카메라 위 가이드에 맞춰 매듭을 따라 만듭니다.')},{id:'baemilgi',name:tr('배밀기 도전'),label:'HINDU PUSH-UP · HIGH SCORE',kanji:'挑戦',available:true,description:tr('옆모습으로 배밀기 횟수를 자동 집계합니다. 완전히 일어서면 종료하고 닉네임으로 최고 기록을 남기세요.')},{id:'ukemi',name:tr('낙법'),label:'UKEMI',kanji:'受身',available:false,description:tr('지도자 시범을 보며 익힐 낙법 기초 레슨')}];
 export function readProgress(storage){
   try{const raw=JSON.parse(storage.getItem('just-judo-progress-v1')||'{}');return Object.fromEntries(TECHNIQUES.map(t=>[t.id,{quiz:raw?.[t.id]?.quiz===true,practice:raw?.[t.id]?.practice===true}]))}catch{return {}}
 }

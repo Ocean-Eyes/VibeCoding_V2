@@ -1,5 +1,11 @@
 // Korean source phrases are stable keys; numbered slots are template values.
 export const EN = {
+  "횟수 도전 · 리더보드": "Rep challenge · Leaderboard",
+  "배밀기 도전": "Hindu push-up challenge",
+  "배밀기 도전 · Just Judo": "Hindu push-up challenge · Just Judo",
+  "띠 매기 · 배밀기 도전": "Belt tying · Hindu push-up challenge",
+  "옆모습으로 배밀기 횟수를 자동 집계합니다. 완전히 일어서면 종료하고 닉네임으로 최고 기록을 남기세요.": "Count Hindu push-up reps from the side. Stand fully upright to finish, then save your high score with a nickname.",
+  "화면을 불러오지 못했습니다. 메뉴로 돌아가 다시 열어 주세요.": "Could not load the screen. Return to the menu and try again.",
   "띠 가운데를 가슴 앞에 들고, 양끝 길이를 맞춘 뒤 허리 앞으로 내립니다.": "Hold the belt midpoint in front of your chest, even out both ends, then lower it to your waist.",
   "양손으로 띠를 허리 옆에서 등 뒤로 감고, 뒤에서 양끝을 바꿔 잡습니다.": "Wrap the belt around both sides of your waist and exchange the ends behind your back.",
   "B를 잡아 지지하고, A 끝을 두 겹 아래에서 위로 통과시킵니다.": "Hold B steady and pass end A upward under both layers.",

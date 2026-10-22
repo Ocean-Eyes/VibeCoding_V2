@@ -4,6 +4,7 @@ import {TECHNIQUES,FOUNDATIONS,GROUNDWORK_GROUPS} from '../src/curriculum.js';
 test('published lessons use Japanese romanization under their parent category',()=>{
  for(const t of TECHNIQUES){const path=lessonPath(t.id);assert.equal(path,`/katame-waza/shime-waza/${t.roman.toLowerCase()}`);assert.equal(resolveRoute(path).parent,'/katame-waza/shime-waza')}
  assert.equal(lessonPath('belt'),'/basics/belt');assert.equal(categoryPath('katame'),'/katame-waza');
+ assert.equal(lessonPath('baemilgi'),'/basics/hindu-push-up');
  for(const t of FOUNDATIONS.filter(t=>!t.available))assert.equal(lessonPath(t.id),undefined);
  for(const g of GROUNDWORK_GROUPS)assert.equal(resolveRoute('/katame-waza/'+g.id).group,g.id);
 });

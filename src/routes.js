@@ -9,6 +9,7 @@ export const ROUTES=[
  {path:'/katame-waza/kansetsu-waza',screen:'category',category:'katame',group:'kansetsu-waza',parent:'/katame-waza'},
  {path:'/katame-waza/osaekomi-waza',screen:'category',category:'katame',group:'osaekomi-waza',parent:'/katame-waza'},
  {path:'/basics/belt',screen:'lesson',category:'basics',lesson:'belt',parent:'/basics'},
+ {path:'/basics/hindu-push-up',screen:'lesson',category:'basics',lesson:'baemilgi',parent:'/basics'},
  {path:'/katame-waza/shime-waza/nami-juji-jime',screen:'lesson',category:'katame',lesson:'nami',parent:'/katame-waza/shime-waza'},
  {path:'/katame-waza/shime-waza/gyaku-juji-jime',screen:'lesson',category:'katame',lesson:'gyaku',parent:'/katame-waza/shime-waza'},
  {path:'/katame-waza/shime-waza/kata-juji-jime',screen:'lesson',category:'katame',lesson:'kata',parent:'/katame-waza/shime-waza'},

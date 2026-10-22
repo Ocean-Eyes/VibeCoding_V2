@@ -4,7 +4,7 @@ import {resolveRoute,routeURL,categoryPath,lessonPath} from './routes.js';
 initLanguage();
 const $=id=>document.getElementById(id);
 let progress;try{progress=readProgress(localStorage)}catch{progress={}}
-let active=null,category='katame',group=null,lessonRequest=0,practiceModule,beltModule;
+let active=null,category='katame',group=null,lessonRequest=0,practiceModule,beltModule,baemilgiModule;
 const routeBase=new URL('../',import.meta.url).pathname;
 function navigate(path){
   const url=routeURL(path,routeBase,location.search);
@@ -13,7 +13,7 @@ function navigate(path){
 }
 function renderRoute(){
   const route=resolveRoute(location.pathname,routeBase);
-  lessonRequest++;document.dispatchEvent(new Event('judo-exit'));active=null;
+  lessonRequest++;document.dispatchEvent(new Event('judo-exit'));active=null;$('baemilgi-screen').hidden=true;
   document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
   if(route?.screen==='lesson'){
     category=route.category;openLesson([...TECHNIQUES,...FOUNDATIONS].find(t=>t.id===route.lesson));return;
@@ -41,7 +41,7 @@ function showCategory(id,section=null){category=id;group=section;$('course-shelf
 function renderCourses(){
   const section=category==='katame'?GROUNDWORK_GROUPS.find(g=>g.id===group):null;
   $('course-title').textContent=section?.title??{basics:tr('기초를 차근차근'),katame:tr('굳히기본'),throws:tr('메치기본')}[category];
-  $('course-count').textContent=category==='katame'&&!section?tr('조르기 · 꺾기 · 누르기'):section?.available?tr('3개 미션 · 모두 선택 가능'):category==='basics'?tr('띠 매기 시연 · 카메라 가이드'):tr('레슨 준비 중');
+  $('course-count').textContent=category==='katame'&&!section?tr('조르기 · 꺾기 · 누르기'):section?.available?tr('3개 미션 · 모두 선택 가능'):category==='basics'?tr('띠 매기 · 배밀기 도전'):tr('레슨 준비 중');
   $('course-grid').replaceChildren();
   if(category==='katame'&&!section){
     for(const [i,g] of GROUNDWORK_GROUPS.entries()){
@@ -61,6 +61,7 @@ function renderCourses(){
     const card=document.createElement('article');card.className='lesson-card';
     const done=progress[t.id]?.practice,available=category==='katame'||t.available;
     card.innerHTML=`<span class="lesson-index">${['一','二','三'][i]}</span><div class="lesson-title-group"><small>${t.roman||t.label}</small><h3>${t.name}</h3><span class="tag">${category==='katame'?(done?tr('수련 기록 있음'):tr('조르기 · 입문')):available?tr('시연 · 카메라 가이드'):tr('준비 중')}</span></div><span class="lesson-kanji" lang="ja" aria-hidden="true">${t.kanji}</span><p>${t.description}</p>`;
+    if(t.id==='baemilgi')card.querySelector('.tag').textContent=tr('횟수 도전 · 리더보드');
     const button=document.createElement('button');button.className='lesson-enter';button.disabled=!available;button.textContent=available?(done?tr('다시 수련 →'):tr('수련하기 →')):tr('콘텐츠 준비 중');if(available){button.dataset.lesson=t.id;button.onclick=()=>navigate(lessonPath(t.id))}card.append(button);$('course-grid').append(card);
   }
 }
@@ -72,6 +73,7 @@ async function openBelt(t){
   catch(error){beltModule=null;if(request===lessonRequest)$('belt-notice').textContent=tr('시연을 불러오지 못했습니다. 기술 메뉴로 돌아간 뒤 다시 열어 주세요.');console.error(error)}
 }
 function openLesson(t){
+  if(t.id==='baemilgi'){void openBaemilgi(t);return}
   if(t.id==='belt'){void openBelt(t);return}
   active=t;$('belt-screen').hidden=true;
   $('lesson-title').textContent=t.name;$('lesson-roman').textContent=t.roman;$('lesson-description').textContent=t.description;$('grip-note').textContent=t.detail;
@@ -79,6 +81,13 @@ function openLesson(t){
   $('home-screen').hidden=true;$('practice-screen').hidden=false;$('back-menu').hidden=false;
   $('practice-title').textContent=t.name;$('practice-roman').textContent=t.roman;$('practice-grip').textContent=t.grip;
   document.title=`${t.name} · Just Judo`;void launchPractice(t);window.scrollTo(0,0);
+}
+async function openBaemilgi(t){
+  active=t;const request=++lessonRequest;
+  $('home-screen').hidden=true;$('practice-screen').hidden=true;$('belt-screen').hidden=true;$('baemilgi-screen').hidden=false;$('back-menu').hidden=false;
+  document.title=tr('배밀기 도전 · Just Judo');window.scrollTo(0,0);
+  try{baemilgiModule??=import('./baemilgi-lesson.js');const module=await baemilgiModule;if(request===lessonRequest&&!$('baemilgi-screen').hidden)module.openBaemilgi()}
+  catch{baemilgiModule=null;if(request===lessonRequest)$('baemilgi-screen').textContent=tr('화면을 불러오지 못했습니다. 메뉴로 돌아가 다시 열어 주세요.')}
 }
 function showHome(){$('practice-screen').hidden=true;$('belt-screen').hidden=true;$('home-screen').hidden=false;$('back-menu').hidden=true;$('course-shelf').hidden=true;document.querySelectorAll('[data-category]').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-pressed','false')});document.title=tr('Just Judo — 나의 유도 도장');renderProgress();window.scrollTo(0,0)}
 function home(){navigate('/')}
