@@ -10,7 +10,11 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23a52c35'/%3E%3Ctext x='11' y='29' font-size='30' font-family='sans-serif' fill='%23101316'%3EJ%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="./dojo.css" />
   <!-- Vercel Web Analytics: static HTML integration. -->
-  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    if(new URLSearchParams(location.search).get('exclude_visits')==='1'){try{localStorage.setItem('just-judo-visitor-excluded','1')}catch{}}
+    window.va('beforeSend',function(event){if(new URLSearchParams(location.search).get('exclude_visits')==='1')return null;try{if(localStorage.getItem('just-judo-visitor-excluded')==='1')return null}catch{}return event});
+  </script>
   <script defer src="/_vercel/insights/script.js"></script>
   <script type="module" src="./src/academy.js"></script>
 </head>
@@ -30,6 +34,7 @@
   <main>
     <section id="home-screen">
       <section class="ink-hero" aria-label="유도 도장">
+        <aside id="visitor-stats" class="visitor-stats" aria-label="방문자 통계"></aside>
         <div class="margin-note" lang="zh-Hant">柔能制剛</div>
         <div class="calligraphy-piece"><svg class="enso" viewBox="0 0 600 420" aria-hidden="true"><defs><filter id="ink-edge" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".07" numOctaves="3" seed="8" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale="3.5"/></filter></defs><path d="M438 60C353 17 248 22 177 78C110 129 93 215 126 281C162 355 242 390 321 379C411 366 481 304 490 229C496 163 469 109 428 80C418 72 425 71 435 80C438 83 440 86 441 88C485 120 509 178 498 237C487 322 410 387 321 398C222 411 133 365 104 287C74 211 100 120 166 65C244 0 367 9 447 54C455 59 453 66 447 65C443 64 440 62 438 60Z" fill="currentColor" filter="url(#ink-edge)"/></svg><h1 class="brush-title" lang="ja">柔道</h1><span class="ink-seal" lang="ja">修<br>練</span></div>
         <div class="right-note"><figure class="founder-portrait"><img src="./assets/jigoro-kano.jpg" width="378" height="469" alt="가노 지고로 초상 사진" decoding="async"></figure><span>부드러움이 능히<br>강함을 제압한다.</span><button id="featured-start" class="ink-link">조르기 수련으로 <span>→</span></button></div>

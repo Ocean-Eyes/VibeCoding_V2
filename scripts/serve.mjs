@@ -4,12 +4,14 @@ import {fileURLToPath} from 'node:url';
 import {resolve,extname,sep} from 'node:path';
 import {resolveRoute} from '../src/routes.js';
 import baemilgiAPI from '../api/baemilgi.js';
+import visitorsAPI from '../api/visitors.js';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png'};
 const server=createServer(async(req,res)=>{
   try{
     const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
     if(path==='/api/baemilgi'){await baemilgiAPI(req,res);return;}
+    if(path==='/api/visitors'){await visitorsAPI(req,res);return;}
     if(path.startsWith('/api/')){res.writeHead(404);res.end('Not found');return;}
     const base=path==='/dist'||path.startsWith('/dist/')?'/dist/':'/';
     const file=resolve(root,'.'+(resolveRoute(path,base)?base+'index.html':path));

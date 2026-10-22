@@ -1,7 +1,9 @@
 import {tr,initLanguage} from './i18n.js';
 import {TECHNIQUES,FOUNDATIONS,GROUNDWORK_GROUPS,readProgress,progressTotals} from './curriculum.js';
 import {resolveRoute,routeURL,categoryPath,lessonPath} from './routes.js';
+import {initVisitorStats} from './visitor-stats.js';
 initLanguage();
+initVisitorStats();
 const $=id=>document.getElementById(id);
 let progress;try{progress=readProgress(localStorage)}catch{progress={}}
 let active=null,category='katame',group=null,lessonRequest=0,practiceModule,beltModule,baemilgiModule;
