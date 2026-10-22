@@ -36,7 +36,7 @@ const output='.test-output/baemilgi';
   const set=async name=>page.evaluate(name=>window.qaPose=name,name);
   const until=async count=>page.waitForFunction(count=>document.querySelector('#bm-count').textContent===String(count),count);
   await page.locator('#bm-start').click();await page.waitForFunction(()=>document.querySelector('#bm-mode').textContent==='LIVE');
-  assert(await page.locator('#bm-demo').isHidden());assert(await page.locator('#bm-demo-video').evaluate(v=>v.paused));assert(await page.locator('#bm-show-demo').isDisabled());
+  assert(await page.locator('#bm-demo').isHidden());assert(await page.locator('#bm-demo-canvas').evaluate(c=>c.dataset.playing==='false'));assert(await page.locator('#bm-show-demo').isDisabled());
   await set('up');await until(1);await page.waitForTimeout(900);assert.equal(await page.locator('#bm-count').textContent(),'1');
   await set(null);await page.waitForTimeout(200);await set('up');await page.waitForTimeout(600);assert.equal(await page.locator('#bm-count').textContent(),'1');
   await set('low');await page.waitForTimeout(650);await set('up');await until(2);
