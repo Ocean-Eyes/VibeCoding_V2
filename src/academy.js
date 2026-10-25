@@ -91,7 +91,7 @@ async function openBaemilgi(t){
   try{baemilgiModule??=import('./baemilgi-lesson.js');const module=await baemilgiModule;if(request===lessonRequest&&!$('baemilgi-screen').hidden)module.openBaemilgi()}
   catch{baemilgiModule=null;if(request===lessonRequest)$('baemilgi-screen').textContent=tr('화면을 불러오지 못했습니다. 메뉴로 돌아가 다시 열어 주세요.')}
 }
-function showHome(){$('practice-screen').hidden=true;$('belt-screen').hidden=true;$('home-screen').hidden=false;$('back-menu').hidden=true;$('course-shelf').hidden=true;document.querySelectorAll('[data-category]').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-pressed','false')});document.title=tr('Just Judo — 나의 유도 도장');renderProgress();window.scrollTo(0,0)}
+function showHome(){$('practice-screen').hidden=true;$('belt-screen').hidden=true;$('home-screen').hidden=false;$('back-menu').hidden=true;$('course-shelf').hidden=true;document.querySelectorAll('[data-category]').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-pressed','false')});document.title=tr('Just Judo');renderProgress();window.scrollTo(0,0)}
 function home(){navigate('/')}
 document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>selectCategory(b.dataset.category));
 $('featured-start').onclick=()=>navigate('/katame-waza/shime-waza');$('brand-home').onclick=e=>{e.preventDefault();home()};$('back-menu').onclick=()=>navigate(resolveRoute(location.pathname,routeBase)?.parent??'/');

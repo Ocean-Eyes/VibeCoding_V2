@@ -1,44 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import handler,{summarize,visitorCommand,validateVisit} from '../api/visitors.js';
-import {readVisitor,exclusionRequested} from '../src/visitor-stats.js';
-const id='82a00a80-6124-4dac-b62e-79ee5d4d3651';
-test('browser identity persists; broken storage does not invent repeat identities',()=>{
-  const entries=new Map(),storage={getItem:k=>entries.get(k),setItem:(k,v)=>entries.set(k,v)};
-  const first=readVisitor(storage);assert.equal(readVisitor(storage).id,first.id);
-  assert.throws(()=>readVisitor({getItem:()=>null,setItem:()=>{throw Error('blocked')}}));
-  assert.equal(exclusionRequested('?exclude_visits=1'),true);assert.equal(exclusionRequested('?exclude_visits=0'),false);
+import handler,{analyticsURL,parseVisitors} from '../api/visitors.js';
+const config={VERCEL_ANALYTICS_TOKEN:'test-secret',VERCEL_ANALYTICS_PROJECT_ID:'prj_test',VERCEL_ANALYTICS_TEAM_ID:'team_test'};
+test('queries lifetime production count without a reporting window or public filters',()=>{
+ const url=analyticsURL(config);assert.equal(url.origin,'https://api.vercel.com');assert.equal(url.pathname,'/v1/query/web-analytics/visits/count');
+ assert.equal(url.searchParams.get('projectId'),'prj_test');assert.equal(url.searchParams.get('teamId'),'team_test');
+ for(const key of ['since','until','filter','token'])assert(!url.searchParams.has(key));
+ assert(!analyticsURL({...config,VERCEL_ANALYTICS_TEAM_ID:''}).searchParams.has('teamId'));
+ assert.throws(()=>analyticsURL({}));
 });
-test('summary keeps total equal to country sum and omits removed countries',()=>{
-  assert.deepEqual(summarize(['KR','3','US','2','ZZ','1','JP','0']),{total:6,countries:[{country:'KR',count:3},{country:'US',count:2},{country:'ZZ',count:1}]});
-  assert.deepEqual(summarize([]),{total:0,countries:[]});
+test('uses Visitors, never pageviews or a sum of country counts',()=>{
+ assert.equal(parseVisitors({data:{visitors:12,pageviews:9999}}).total,12);
+ assert.equal(parseVisitors({data:{visitors:0,pageviews:22}}).total,0);
+ for(const data of [{pageviews:12},{visitors:null},{visitors:-1},{visitors:1.5},{visitors:'12'}])assert.throws(()=>parseVisitors({data}));
 });
-test('country is server supplied and stored identifiers are keyed hashes',()=>{
-  const args=visitorCommand({id,action:'visit',country:'US'},{'x-vercel-ip-country':'KR','x-forwarded-for':'192.0.2.1'},'test-secret');
-  assert.equal(args.at(-1),'KR');assert(!JSON.stringify(args).includes(id));assert(!JSON.stringify(args).includes('192.0.2.1'));
-  assert.equal(visitorCommand({id,action:'visit'},{'x-vercel-ip-country':'bad'},'test').at(-1),'ZZ');
-  for(const value of [null,{}, {id,action:'erase-all'}, {id:'arbitrary',action:'visit'}])assert.throws(()=>validateVisit(value));
-});
-async function request(method,headers={},body){
-  const res={headers:{},setHeader(k,v){this.headers[k]=v},end(v){this.body=JSON.parse(v)}};
-  await handler({method,headers,body},res);return res;
+async function request(method='GET',url='/api/visitors'){
+ const res={headers:{},setHeader(k,v){this.headers[k]=v},end(v){this.body=JSON.parse(v)}};
+ await handler({method,url},res);return res;
 }
-const headers={origin:'https://justjudo.app',host:'justjudo.app','content-type':'application/json','user-agent':'Browser','x-vercel-ip-country':'KR'};
-test('HTTP rejects foreign origins, bad input, oversized payloads and unsupported verbs',async()=>{
-  assert.equal((await request('POST',{...headers,origin:'https://evil.example'},{id,action:'visit'})).statusCode,403);
-  assert.equal((await request('POST',{...headers,'content-type':'text/plain'},{})).statusCode,415);
-  assert.equal((await request('DELETE')).statusCode,405);
-  assert.equal((await request('POST',headers,'{')).statusCode,400);
-  assert.equal((await request('POST',headers,{id:'bad',action:'visit'})).statusCode,400);
-  assert.equal((await request('POST',headers,'x'.repeat(1025))).statusCode,413);
-});
-test('API caches only public reads, never personal mutations; unavailable storage stays an error',async t=>{
-  const keys=['UPSTASH_REDIS_REST_URL','UPSTASH_REDIS_REST_TOKEN'],old=keys.map(k=>process.env[k]);
-  keys.forEach((k,i)=>process.env[k]=i?'test-secret':'https://redis.example');
-  t.after(()=>keys.forEach((k,i)=>{if(old[i]===undefined)delete process.env[k];else process.env[k]=old[i]}));
-  let calls=0;t.mock.method(globalThis,'fetch',async()=>{calls++;return {ok:true,json:async()=>({result:['KR','1']})}});
-  const get=await request('GET');assert.equal(get.body.total,1);assert.match(get.headers['Cache-Control'],/s-maxage=60/);
-  const post=await request('POST',headers,{id,action:'exclude'});assert.equal(post.statusCode,200);assert.equal(post.headers['Cache-Control'],'no-store');
-  const before=calls;await request('POST',{...headers,'user-agent':'Googlebot'},{id,action:'visit'});assert.equal(calls,before);
-  globalThis.fetch=async()=>{throw Error('offline')};const failure=await request('GET');assert.equal(failure.statusCode,503);assert.equal(failure.body.total,undefined);
+test('API is read-only, keeps token server-side, caches success and fails without invented counts',async t=>{
+ const old=Object.fromEntries(Object.keys(config).map(k=>[k,process.env[k]]));Object.assign(process.env,config);
+ t.after(()=>{for(const k of Object.keys(config)){if(old[k]===undefined)delete process.env[k];else process.env[k]=old[k];}});
+ let called=0;
+ t.mock.method(globalThis,'fetch',async(url,options)=>{called++;assert.equal(new URL(url).searchParams.get('projectId'),'prj_test');assert.equal(options.headers.Authorization,'Bearer test-secret');return {ok:true,json:async()=>({data:{visitors:12,pageviews:999}})}});
+ const result=await request('GET','/api/visitors?projectId=other');assert.equal(result.statusCode,200);assert.equal(result.body.total,12);assert.match(result.headers['Cache-Control'],/s-maxage=300/);assert(!JSON.stringify(result).includes('test-secret'));
+ const before=called;assert.equal((await request('POST')).statusCode,405);assert.equal(called,before);
+ delete process.env.VERCEL_ANALYTICS_TOKEN;assert.equal((await request()).body.error,'analytics_not_configured');assert.equal(called,before);process.env.VERCEL_ANALYTICS_TOKEN='test-secret';
+ globalThis.fetch=async()=>({ok:false,status:403});const denied=await request();assert.equal(denied.body.error,'analytics_access_denied');assert.equal(denied.headers['Cache-Control'],'no-store');
+ globalThis.fetch=async()=>({ok:true,json:async()=>({data:{pageviews:500}})});assert.equal((await request()).statusCode,503);
+ globalThis.fetch=async()=>{throw Error('timeout test-secret')};const failed=await request();assert.equal(failed.statusCode,503);assert.equal(failed.body.total,undefined);assert(!JSON.stringify(failed).includes('test-secret'));
 });

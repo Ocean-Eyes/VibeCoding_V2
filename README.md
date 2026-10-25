@@ -177,3 +177,19 @@ node scripts/browser-collar-grip.cjs <Playwright 패키지 경로>
 
 
 양손으로 깃을 잡은 뒤 팔꿈치를 돌려 손이 반대 손목·팔뚝에 가려질 때, `CollarInteraction`은 손 미검출과 불확실한 손가락 모양을 놓기로 처리하지 않습니다. 손바닥이 반대 손목·팔뚝과 겹치면 놓기와 채점을 보류합니다. 가림 뒤 손을 편 상태로 나타나면 300ms 동안 관측이 이어진 후 기존 200ms 놓기 판정을 적용합니다. 닫힌 손이 정상 위치로 돌아오면 다시 잡을 필요 없이 기존 깃을 이어갑니다. 가림 중에는 완료 시간이 늘어나지 않으며, 800ms를 넘으면 완료 유지 시간만 초기화합니다. 몸이 보이는 동안 양손 모두 미검출되어도 잡기를 보존하므로 손을 보이게 펴거나 연습 초기화 버튼으로 해제할 수 있습니다.
+
+## 방문자 통계 (Vercel Visitors)
+
+왼쪽 숫자는 별도 Redis 브라우저 카운터가 아니라 Vercel Web Analytics의 누적 `data.visitors`를 읽습니다. `/v1/query/web-analytics/visits/count`를 기간 제한 없이 호출하므로 production의 수집 시작부터 누적값입니다. 조회수(`pageviews`)나 국가별 합계를 대신 표시하지 않습니다. 국가별 숫자는 숨깁니다.
+
+Vercel 프로젝트의 **Settings → Environment Variables → Production**에 다음 값을 설정하고 재배포하세요. 토큰은 서버에서만 사용하며 저장소·브라우저·채팅에 넣지 않습니다.
+
+- `VERCEL_ANALYTICS_TOKEN`: 이 프로젝트의 Web Analytics를 읽을 권한이 있는 Vercel access token.
+- `VERCEL_ANALYTICS_PROJECT_ID`: 대상 프로젝트 ID (`prj_...`). 없으면 시스템의 `VERCEL_PROJECT_ID` 사용.
+- `VERCEL_ANALYTICS_TEAM_ID`: 팀 소유 프로젝트의 팀 ID (`team_...`). 개인 프로젝트는 생략.
+
+API 권한/환경변수 설정 전에는 `—`와 연결 안내를 표시합니다. 기존 자체 카운터 5명이나 0명으로 대체하지 않습니다. 성공 응답은 5분 캐시하고 재검증 동안 1분까지 이전 값을 제공할 수 있습니다. Vercel 대시보드도 동일한 누적 기간·production·전체 프로젝트 기준으로 비교해야 합니다. 공식 문서: https://vercel.com/docs/analytics/web-analytics-api
+
+기존 `?exclude_visits=1`은 Vercel `beforeSend`를 통해 해당 브라우저의 **향후 이벤트**를 제외합니다. `?exclude_visits=0`으로 해제합니다. 이미 Vercel에 저장된 방문 기록을 소급 삭제하지 않습니다. Redis의 예전 방문자 자료는 수정/삭제하지 않으며 배밀기 랭킹의 Redis 연결도 그대로 유지합니다.
+
+검증: `npm run test:visitors`, `node scripts/browser-visitors.cjs <Playwright 경로>`. API 테스트는 공식 응답 스키마의 모의 응답을 사용합니다. 실제 Vercel 수치와의 일치는 환경변수 설정 후 확인해야 합니다.
