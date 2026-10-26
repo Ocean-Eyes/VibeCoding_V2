@@ -290,7 +290,6 @@ export const EN = {
   "부드러움이 능히": "Gentleness can",
   "강함을 제압한다.": "overcome strength.",
   "조르기 수련으로": "Explore choke drills",
-  "수련의 길": "Your practice path",
   "과정을 선택하세요": "Choose a course",
   "수련 과정": "Practice courses",
   "시작의 준비": "Get ready",
