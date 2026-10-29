@@ -15,7 +15,10 @@
     { "source": "/katame-waza/shime-waza/nami-juji-jime", "destination": "/index.html" },
     { "source": "/katame-waza/shime-waza/gyaku-juji-jime", "destination": "/index.html" },
     { "source": "/katame-waza/shime-waza/kata-juji-jime", "destination": "/index.html" },
-    { "source": "/throws", "destination": "/index.html" }
+    { "source": "/throws", "destination": "/index.html" },
+    { "source": "/throws/o-soto-gari", "destination": "/index.html" },
+    { "source": "/throws/o-uchi-gari", "destination": "/index.html" },
+    { "source": "/throws/ippon-seoi-nage", "destination": "/index.html" }
   ],
   "headers": [
     {
