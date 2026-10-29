@@ -2,7 +2,7 @@ import {depthSampler} from './belt-depth-contact.js';
 import {contactPullSampler} from './belt-contact-pull.js';
 // Horizontal waist connections. Curvature is in depth around the torso, not
 // a visible vertical fold. Their measured length is balanced by the free ends.
-const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,k)=>a.map(v=>v*k),mix=(a,b,q)=>a.map((v,i)=>v+(b[i]-v)*q),unit=a=>mul(a,1/(Math.hypot(...a)||1)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],mul=(a,k)=>[a[0]*k,a[1]*k,a[2]*k],mix=(a,b,q)=>[a[0]+(b[0]-a[0])*q,a[1]+(b[1]-a[1])*q,a[2]+(b[2]-a[2])*q],unit=a=>mul(a,1/(Math.hypot(...a)||1)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 export function waistTakeupProfile(parts){
  // Both rear passes use the same radial displacement. Their authored order
  // changes around the back, so projecting them onto separate fixed ellipses
@@ -76,6 +76,7 @@ export function planStandingLead(strip,field,centerOffset=0,tension=0){
  const first=strip.creases[0],entry=first?first.at-first.half*first.n-Math.abs(first.k)*strip.width/2:0;
  const contactStart=entry-.10,contactEnd=tension?strip.sampleMaterialPoint(entry):null;
  const contactSlope=contactEnd?(contactEnd.center[1]+field(contactEnd.center[0])[0]-waistHeight)/.10:0;
+ let outgoingSlope;
  const fittedField=(s,x)=>{
   const [h,k]=field(x);
   if(!tension||s<=exit||exit>=join)return [h,k,0];
@@ -84,13 +85,17 @@ export function planStandingLead(strip,field,centerOffset=0,tension=0){
   let correction=0,derivative=0;
   if(join>anchor+.02&&s>anchor){
    const a=Math.min(1,(s-anchor)/.02),weight=tension*a*a*(3-2*a),dv=tension*6*a*(1-a)/.02;
-   const anchorH=h0+slope*(anchor-exit),nextSlope=(1-tension)*(targetH-anchorH)/(join-anchor)+tension*(.25+waistHeight-.03-strip.sampleMaterialPoint(tautEnd).center[1]-anchorH)/((tautEnd)-anchor),next=anchorH+nextSlope*(s-anchor);
+   const anchorH=h0+slope*(anchor-exit);
+   outgoingSlope??=(1-tension)*(targetH-anchorH)/(join-anchor)+tension*(.25+waistHeight-.03-strip.sampleMaterialPoint(tautEnd).center[1]-anchorH)/((tautEnd)-anchor);
+   const nextSlope=outgoingSlope,next=anchorH+nextSlope*(s-anchor);
    correction=weight*(next-line);derivative=dv*(next-line)+weight*(nextSlope-slope);
   }
   return [h+w*(line-h)+correction,(1-w)*k,dw*(line-h)+w*slope+derivative];
  };
+ const midpointCache=new Map();
+ const midpoint=s=>{if(!midpointCache.has(s)){if(midpointCache.size>=128)midpointCache.delete(midpointCache.keys().next().value);midpointCache.set(s,strip.sampleMaterialPoint(s));}return midpointCache.get(s)};
  const rawSample=(s,v=0,side=0)=>{
-  const mid=strip.sampleMaterialPoint(s),slope=fittedField(s,mid.center[0])[1],w=mid.widthAxis,scale=Math.hypot(w[0],w[1]+slope*w[0],w[2]);
+  const mid=midpoint(s),slope=fittedField(s,mid.center[0])[1],w=mid.widthAxis,scale=Math.hypot(w[0],w[1]+slope*w[0],w[2]);
   let extra=0,derivative=0;
   if(tension&&strip.material==='A'&&s<entry){
    // Connect the waist contact to the first bend with a straight span. The
@@ -103,6 +108,23 @@ export function planStandingLead(strip,field,centerOffset=0,tension=0){
   }
   const p=v?strip.sampleMaterialPoint(s,v/scale):mid,[h,k,ds]=fittedField(s,p.center[0]),tangent=unit([p.tangent[0],p.tangent[1]+k*p.tangent[0]+ds+derivative,p.tangent[2]]),widthAxis=unit([p.widthAxis[0],p.widthAxis[1]+k*p.widthAxis[0],p.widthAxis[2]]),normal=ds||derivative?unit(cross(widthAxis,tangent)):unit([p.normal[0]-k*p.normal[1],p.normal[1],p.normal[2]]);
   return {...p,center:add([p.center[0]+centerOffset,p.center[1]+h+extra,p.center[2]],mul(normal,side*strip.thickness/2)),tangent,widthAxis,normal};
+ };
+ // Contact interpolation repeatedly asks for positions or metadata only.
+ // Avoid reconstructing a differential frame that its caller will replace.
+ const sourceWidth=(s,v)=>{
+  if(!v)return 0;
+  const mid=midpoint(s);
+  const slope=fittedField(s,mid.center[0])[1],w=mid.widthAxis,scale=Math.hypot(w[0],w[1]+slope*w[0],w[2]);
+  return v/scale;
+ };
+ rawSample.frameMeta=(s,v=0)=>({materialS:Math.max(0,Math.min(join,s)),u:sourceWidth(s,v)});
+ rawSample.centerAt=(s,v=0)=>{
+  const center=strip.sampleCenter(s,sourceWidth(s,v)),h=fittedField(s,center[0])[0];let extra=0;
+  if(tension&&strip.material==='A'&&s<entry){
+   const mid=v?strip.sampleCenter(s):center,q=Math.max(0,Math.min(1,(s-contactStart)/.006)),w=q*q*(3-2*q);
+   extra=tension*(waistHeight+w*contactSlope*(s-contactStart)-mid[1]-field(mid[0])[0]);
+  }
+  return [center[0]+centerOffset,center[1]+h+extra,center[2]];
  };
  const sampleSource=depthSampler(contactPullSampler(strip,rawSample,tension),strip,field.depthWeight??0,field.depthTime);
  // Reparameterize the fitted centreline by measured arc distance. Contacts

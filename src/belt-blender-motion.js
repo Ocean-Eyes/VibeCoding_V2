@@ -45,7 +45,7 @@ function foldPart(name,options,reverse=false){
   if(CONTACT_SHAPES[name]&&options.pullTension>0){const d=CONTACT_SHAPES[name];for(let i=0;i<d.rows;i++)longitudinalCuts.push(d.start+(d.end-d.start)*i/(d.rows-1));}
   if(name==='A'&&options.pullTension>.75&&CONTACT_SHAPES['A-upper']){const d=CONTACT_SHAPES['A-upper'];for(let i=0;i<d.rows;i++)longitudinalCuts.push(d.start+(d.end-d.start)*i/(d.rows-1));}
   longitudinalCuts.sort((a,b)=>a-b);
-  const strip=foldMaterialStrip(name,{...options,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,across:CONTACT_SHAPES[name]&&options.pullTension>0?8:4,step:.02,longitudinalCuts});
+  const strip=foldMaterialStrip(name,{...options,width:DISPLAY_WIDTH,thickness:DISPLAY_THICKNESS,across:CONTACT_SHAPES[name]&&options.pullTension>0?8:4,step:.02,longitudinalCuts,surfaceOnly:true});
   // Preparation bends the initially straight ends. Keep longitudinal rows in
   // that reference surface so a long triangle cannot shortcut a gravity bend.
   if(options.creases.every(c=>Math.abs(c.angle)<1e-12)){
@@ -57,13 +57,13 @@ function foldPart(name,options,reverse=false){
     if(reverse)part.uv=part.uv.map(([s,v])=>[options.length-s,-v]);
     return {...part,strip};
   }
-  const n=strip.vertices3D.length/2,positions=[],normals=[],uv=[];
+  const n=strip.surfacePositions.length,positions=[],normals=[],uv=[];
   for(let i=0;i<n;i++){
-    positions.push(lerp(strip.vertices3D[i],strip.vertices3D[i+n],.5));
-    normals.push(unit(sub(strip.vertices3D[i+n],strip.vertices3D[i])));
-    const v=strip.vertexMaterial[i];uv.push([reverse?strip.totalMaterialS-v.materialS:v.materialS,reverse?-v.v:v.v]);
+    positions.push(strip.surfacePositions[i]);
+    normals.push(strip.surfaceNormals[i]);
+    const [s,v]=strip.surfaceUV[i];uv.push([reverse?strip.totalMaterialS-s:s,reverse?-v:v]);
   }
-  const triangles=strip.triangles.filter(t=>t.every(i=>i>=n)).map(t=>t.map(i=>i-n));
+  const triangles=strip.surfaceTriangles;
   return {name,length:options.length,positions,normals,uv,triangles,strip};
 }
 function gridPart(name,length,rows,positions,normals){
@@ -107,23 +107,25 @@ export function assembleBelt(parts){
   for(const part of parts){
     if(offset)seamCoordinates.add(offset.toFixed(8));
     const ids=part.positions.map((p,i)=>{
-      const material=[part.uv[i][0]+offset,part.uv[i][1]],key=material.map(v=>v.toFixed(8)).join(':');
-      if(lookup.has(key)){const id=lookup.get(key);maxJoin=Math.max(maxJoin,Math.hypot(...sub(p,positions[id])));return id;}
-      const id=positions.length;lookup.set(key,id);positions.push(p);normals.push(part.normals[i]);uv.push(material);return id;
+      const material=[part.uv[i][0]+offset,part.uv[i][1]],s=Math.round(material[0]*1e8),v=Math.round(material[1]*1e8);
+      let row=lookup.get(s);if(!row){row=new Map();lookup.set(s,row);}
+      if(row.has(v)){const id=row.get(v);maxJoin=Math.max(maxJoin,Math.hypot(...sub(p,positions[id])));return id;}
+      const id=positions.length;row.set(v,id);positions.push(p);normals.push(part.normals[i]);uv.push(material);return id;
     });
     for(const face of part.triangles)triangles.push(face.map(i=>ids[i]));offset+=part.length;
   }
   // Match material vertices at joins with different cross-section resolutions.
   const seams=new Map([...seamCoordinates].map(s=>[s,[]]));
-  for(let id=0;id<uv.length;id++)seams.get(uv[id][0].toFixed(8))?.push(id);
+  const seamRows=uv.map(([s])=>seams.get(s.toFixed(8)));
+  for(let id=0;id<uv.length;id++)seamRows[id]?.push(id);
   const stitched=[];
   for(const face of triangles){
    let split=false;
    for(let edge=0;edge<3&&!split;edge++){
-    const a=face[edge],b=face[(edge+1)%3],c=face[(edge+2)%3],key=uv[a][0].toFixed(8);
-    if(key!==uv[b][0].toFixed(8)||!seams.has(key))continue;
+    const a=face[edge],b=face[(edge+1)%3],c=face[(edge+2)%3],row=seamRows[a];
+    if(!row||row!==seamRows[b])continue;
     const lo=Math.min(uv[a][1],uv[b][1]),hi=Math.max(uv[a][1],uv[b][1]);
-    const inside=seams.get(key).filter(id=>uv[id][1]>lo+1e-9&&uv[id][1]<hi-1e-9).sort((i,j)=>(uv[i][1]-uv[j][1])*Math.sign(uv[b][1]-uv[a][1]));
+    const inside=row.filter(id=>uv[id][1]>lo+1e-9&&uv[id][1]<hi-1e-9).sort((i,j)=>(uv[i][1]-uv[j][1])*Math.sign(uv[b][1]-uv[a][1]));
     if(!inside.length)continue;
     const chain=[a,...inside,b];for(let i=1;i<chain.length;i++)stitched.push([chain[i-1],chain[i],c]);split=true;
    }
@@ -132,7 +134,7 @@ export function assembleBelt(parts){
   triangles.splice(0,triangles.length,...stitched);
   const boundary=new Map();
   for(const f of triangles)for(let i=0;i<3;i++){
-    const a=f[i],b=f[(i+1)%3],key=Math.min(a,b)+':'+Math.max(a,b);
+    const a=f[i],b=f[(i+1)%3],key=Math.min(a,b)*positions.length+Math.max(a,b);
     if(boundary.has(key))boundary.delete(key);else boundary.set(key,[a,b]);
   }
   const vertexData=new Float32Array((triangles.length*2+boundary.size*2)*24);let cursor=0;

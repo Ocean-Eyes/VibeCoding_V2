@@ -9,7 +9,7 @@ export function lessonMotion(frame){
   const legacy=paperMotion(frame),t=frame.originalPTS;
   const volume=t<8.5?buildPreparationBelt(t):buildBlenderBelt(t);
   const attached=applyVolumeContacts(frame,volume,legacy.rig);
-  const strips=volume.strips.map(strip=>({...strip,freeEndVisible:true,panels:strip.triangles}));
+  const strips=volume.strips.map(strip=>({...strip,freeEndVisible:true,panels:strip.surfaceTriangles??strip.triangles}));
   return {...legacy,volume,strips,rig:attached.rig,contacts:attached.contacts,
     guideEnds:Object.fromEntries(strips.map(strip=>{
       const point=strip.samples.at(-1).center;

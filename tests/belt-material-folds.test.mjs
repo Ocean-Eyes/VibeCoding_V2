@@ -2,6 +2,31 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {foldMaterialStrip,planMaterialStrip} from '../src/belt-material-folds.js';
 const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((n,v,i)=>n+v*b[i],0),norm=a=>Math.hypot(...a);
+
+test('surface-only assembly retains the full mesh topology and exact material positions without a second thick buffer',()=>{
+ const options={length:1,width:.078,thickness:.006,creases:[{s:.3,k:.6,angle:2.4},{s:.7,k:-.4,angle:-2.8}],longitudinalCuts:[.1,.25,.3,.35,.65,.7,.75,.9]};
+ const full=foldMaterialStrip('A',options),surface=foldMaterialStrip('A',{...options,surfaceOnly:true}),n=full.vertices3D.length/2;
+ assert.equal(surface.vertexData,undefined);assert.equal(surface.vertices3D,undefined);
+ assert.equal(surface.surfacePositions.length,n);
+ assert.deepEqual(surface.surfaceTriangles,full.triangles.filter(f=>f.every(i=>i>=n)).map(f=>f.map(i=>i-n)));
+ for(let i=0;i<n;i++){
+  const [s,u]=surface.surfaceUV[i],p=full.sampleMaterialPoint(s,u);
+  assert.deepEqual(surface.surfacePositions[i],p.center);assert.deepEqual(surface.surfaceNormals[i],p.normal);
+ }
+ for(const s of [-.1,0,.28,.3,.32,.68,.7,.72,1,1.1])for(const u of[-.039,0,.039])assert.deepEqual(surface.sampleCenter(s,u),full.sampleMaterialPoint(s,u).center);
+});
+
+test('contact arc-length sampling matches the full surface while skipping differential frames',async()=>{
+ const {contactPullSampler}=await import('../src/belt-contact-pull.js');
+ for(const name of ['A','B'])for(const tension of [.2,.6,.9,1]){
+  const strip=foldMaterialStrip(name,{length:1.5,width:.078,thickness:.006,creases:[{s:.4,k:.3,angle:2},{s:.6,k:-.3,angle:-2}],sampleOnly:true});
+  let frames=0;const raw=(...args)=>{frames++;return strip.sampleMaterialPoint(...args)};raw.centerAt=strip.sampleCenter;
+  const sample=contactPullSampler(strip,raw,tension);frames=0;
+  const points=[.35,.45,.55,.69,.75,.8].map(s=>[s,sample.centerAt(s)]);
+  assert.equal(frames,0,'positions must not evaluate discarded normals');
+  for(const [s,center] of points)assert(norm(sub(center,sample(s).center))<1e-12);
+ }
+});
 test('finite radius creases preserve intrinsic width, length, orthogonality, thickness and boundary continuity',()=>{
  for(const k of[-1,-.5,0,.5,1])for(const angle of[-Math.PI,-1,1,Math.PI]){
   const strip=foldMaterialStrip('A',{length:.8,creases:[{s:.4,k,angle}]});

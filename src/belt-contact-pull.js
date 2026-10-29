@@ -1,10 +1,13 @@
 import {CONTACT_SHAPES} from './belt-contact-pull-data.js';
 
-const add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,k)=>a.map(x=>x*k);
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],mul=(a,k)=>[a[0]*k,a[1]*k,a[2]*k];
 const unit=a=>mul(a,1/(Math.hypot(...a)||1));
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const cubic=(a,b,c,d,t)=>b.map((v,k)=>.5*(2*v+(-a[k]+c[k])*t+(2*a[k]-5*v+4*c[k]-d[k])*t*t+(-a[k]+3*v-3*c[k]+d[k])*t*t*t));
-const smoothCubic=(a,b,c,d,t)=>a.map((v,k)=>(v*(1-t)**3+b[k]*(3*t**3-6*t*t+4)+c[k]*(-3*t**3+3*t*t+3*t+1)+d[k]*t**3)/6);
+const smoothCubic=(a,b,c,d,t)=>{
+ const w0=(1-t)**3,w1=3*t**3-6*t*t+4,w2=-3*t**3+3*t*t+3*t+1,w3=t**3;
+ return [(a[0]*w0+b[0]*w1+c[0]*w2+d[0]*w3)/6,(a[1]*w0+b[1]*w1+c[1]*w2+d[1]*w3)/6,(a[2]*w0+b[2]*w1+c[2]*w2+d[2]*w3)/6];
+};
 const gridCaches=new Map();
 const sampleCaches=new Map();
 
@@ -27,14 +30,31 @@ export function contactPullSampler(strip,rawSample,tension){
   const q=Math.max(0,Math.min(1,(tension-.94)/.06)),w=q*q*(3-2*q);
   offsets=shape.offsets.map((p,i)=>add(add(shape.approachOffsets[i],mul(sub(shape.priorOffsets[i],shape.approachOffsets[i]),blend)),mul(sub(p,shape.priorOffsets[i]),w)));
  }
- const cacheKey=JSON.stringify([tension,strip.width,strip.thickness,strip.creases,rawSample(start).center,rawSample(end).center]);
- if(sampleCaches.get(strip.material)?.key!==cacheKey)sampleCaches.set(strip.material,{key:cacheKey,values:new Map()});
- const cache=sampleCaches.get(strip.material).values;
- const memoized=sample=>(s,v=0,side=0)=>{
-  if(s<=start||s>=end)return rawSample(s,v,side);
-  const key=s+':'+v+':'+side;
-  if(!cache.has(key))cache.set(key,sample(s,v,side));
-  return cache.get(key);
+ // Length balancing moves only the terminal crease, beyond this contact patch.
+ // It cannot affect points before its bend starts; including it in the key
+ // discarded identical contact grids and samples on every solver iteration.
+ const contactCreases=strip.creases.filter(c=>c.at-c.half*c.n-Math.abs(c.k)*strip.width/2<=end);
+ const cacheKey=JSON.stringify([tension,strip.width,strip.thickness,contactCreases,rawSample(start).center,rawSample(end).center]);
+ if(sampleCaches.get(strip.material)?.key!==cacheKey)sampleCaches.set(strip.material,{key:cacheKey,values:new Map(),centers:new Map()});
+ const {values:cache,centers}=sampleCaches.get(strip.material);
+ const rawCenter=(s,v=0)=>rawSample.centerAt?rawSample.centerAt(s,v):rawSample(s,v).center;
+ // Arc-length solving needs positions, not the finite-difference surface frame.
+ // Keep the exact same position function, including nested A-upper contact.
+ const memoized=(sample,center)=>{
+  const result=(s,v=0,side=0)=>{
+   if(s<=start||s>=end)return rawSample(s,v,side);
+   const key=s+':'+v+':'+side;
+   if(!cache.has(key))cache.set(key,sample(s,v,side));
+   return cache.get(key);
+  };
+  result.centerAt=(s,v=0)=>{
+   if(s<=start||s>=end)return rawCenter(s,v);
+   const key=s+':'+v;
+   if(!centers.has(key))centers.set(key,center(s,v));
+   return centers.get(key);
+  };
+  result.frameMeta=rawSample.frameMeta;
+  return result;
  };
  const offsetAt=(s,v)=>{
   // Follow the authored crease as material feeds through it. A displacement
@@ -50,6 +70,7 @@ export function contactPullSampler(strip,rawSample,tension){
   const phase=Math.max(0,Math.min(1,(tension-.65)/.15)),w=phase*phase*(3-2*phase);
   return interpolate(s+(mapped-s)*w,v);
  };
+ const columnCaches=new Map();
  const interpolate=(s,v,values=offsets)=>{
 
   const row=Math.max(0,Math.min(rows-1,(s-start)/(end-start)*(rows-1))),column=(v/strip.width+.5)*(columns-1);
@@ -63,7 +84,11 @@ export function contactPullSampler(strip,rawSample,tension){
    return values[a*columns+b];
   };
   const curve=values===offsets?cubic:smoothCubic;
-  const columnAt=a=>curve(at(a,j-1),at(a,j),at(a,j+1),at(a,j+2),c);
+  // Mesh rows and normal differences revisit the same transverse spline.
+  // Reuse its evaluated rows without changing the interpolation arithmetic.
+  let byWidth=columnCaches.get(values);if(!byWidth){byWidth=new Map();columnCaches.set(values,byWidth);}
+  let columnRows=byWidth.get(v);if(!columnRows){if(byWidth.size>=32)byWidth.delete(byWidth.keys().next().value);columnRows=new Map();byWidth.set(v,columnRows);}
+  const columnAt=a=>{if(!columnRows.has(a))columnRows.set(a,curve(at(a,j-1),at(a,j),at(a,j+1),at(a,j+2),c));return columnRows.get(a)};
   return curve(columnAt(i-1),columnAt(i),columnAt(i+1),columnAt(i+2),r);
  };
  if((strip.material==='B'&&tension>.4)||strip.material==='A-upper'){
@@ -72,7 +97,7 @@ export function contactPullSampler(strip,rawSample,tension){
   // back on itself between grid rows during the pull, despite a clear endpoint.
   if(cacheKey!==gridCaches.get(strip.material)?.key){
    let points=offsets.map((offset,i)=>{
-    const s=start+(end-start)*Math.floor(i/columns)/(rows-1),v=strip.width*((i%columns)/(columns-1)-.5),p=add(rawSample(s,v).center,mul(offsetAt(s,v),tension));
+    const s=start+(end-start)*Math.floor(i/columns)/(rows-1),v=strip.width*((i%columns)/(columns-1)-.5),p=add(rawCenter(s,v),mul(offsetAt(s,v),tension));
     if(strip.material==='B'){
      // Keep the standing edge above A and the outgoing edge below A while
      // contact slides. These depth clearances vanish at the held endpoint.
@@ -94,21 +119,21 @@ export function contactPullSampler(strip,rawSample,tension){
   const position=(s,v)=>{
    const smoothed=interpolate(s,v,points);
    if(weight===1)return smoothed;
-   const direct=add(rawSample(s,v).center,mul(offsetAt(s,v),tension));
+   const direct=add(rawCenter(s,v),mul(offsetAt(s,v),tension));
    return add(direct,mul(sub(smoothed,direct),weight));
   };
   return finish(memoized((s,v=0,side=0)=>{
    if(s<=start||s>=end)return rawSample(s,v,side);
-   const p=rawSample(s,v),e=.00001,center=position(s,v);
+   const p=rawSample.frameMeta?rawSample.frameMeta(s,v):rawSample(s,v),e=.00001,center=position(s,v);
    const tangent=unit(sub(position(s+e,v),position(s-e,v))),widthAxis=unit(sub(position(s,v+e),position(s,v-e))),normal=unit(cross(widthAxis,tangent));
    return {...p,center:add(center,mul(normal,side*strip.thickness/2)),tangent,widthAxis,normal};
-  }));
+  },position));
  }
  const displacement=offsetAt;
  return finish(memoized((s,v=0,side=0)=>{
   if(s<=start||s>=end)return rawSample(s,v,side);
   const p=rawSample(s,v),e=.00001;
-  const ds=sub(rawSample(s+e,v).center,rawSample(s-e,v).center),dv=sub(rawSample(s,v+e).center,rawSample(s,v-e).center);
+  const ds=sub(rawCenter(s+e,v),rawCenter(s-e,v)),dv=sub(rawCenter(s,v+e),rawCenter(s,v-e));
   const tangent=unit(add(ds,mul(sub(displacement(s+e,v),displacement(s-e,v)),tension)));
   const widthAxis=unit(add(dv,mul(sub(displacement(s,v+e),displacement(s,v-e)),tension)));
   // Apply only the change of surface normal, preserving the authored frame at
@@ -117,5 +142,5 @@ export function contactPullSampler(strip,rawSample,tension){
   const normal=unit(add(p.normal,sub(surfaceNormal,unit(cross(unit(dv),unit(ds))))));
   const center=add(p.center,mul(displacement(s,v),tension));
   return {...p,center:add(center,mul(normal,side*strip.thickness/2)),tangent,widthAxis,normal};
- }));
+ },(s,v)=>add(rawCenter(s,v),mul(displacement(s,v),tension))));
 }
