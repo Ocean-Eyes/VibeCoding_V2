@@ -1,4 +1,5 @@
-import {add,sub,mul,unit,cross} from './throw-motion.js';
+import {add,sub,mul,unit,cross,dot} from './throw-motion.js';
+import {BODY_SIZE,JACKET_ROWS} from './throw-body.js';
 
 const WHITE=[.88,.91,.91],BLUE=[.23,.48,.62],SKIN=[.78,.61,.46],BELT=[.075,.09,.10],GOLD=[.91,.68,.32];
 const circle=Array.from({length:16},(_,i)=>[Math.cos(i*Math.PI/8),Math.sin(i*Math.PI/8)]);
@@ -22,37 +23,62 @@ function ellipsoid(out,center,radii,basis,color){
  }
  for(let i=1;i<=rows;i++)for(let j=0;j<sides;j++){const k=(j+1)%sides;triangle(out,points[i-1][j],points[i][j],points[i][k],color,[normals[i-1][j],normals[i][j],normals[i][k]]);triangle(out,points[i-1][j],points[i][k],points[i-1][k],color,[normals[i-1][j],normals[i][k],normals[i-1][k]]);}
 }
+function ribbon(out,points,width,normal,color){
+ for(let i=1;i<points.length;i++){const side=mul(unit(cross(sub(points[i],points[i-1]),normal)),width/2),a=sub(points[i-1],side),b=add(points[i-1],side),c=add(points[i],side),d=sub(points[i],side);triangle(out,a,b,c,color,[normal,normal,normal]);triangle(out,a,c,d,color,[normal,normal,normal]);tube(out,a,d,.003,.003,color.map(v=>v*.84),6);tube(out,b,c,.003,.003,color.map(v=>v*.84),6);}
+}
 function jacket(out,rig,color){
- const rows=[[-.12,.22,.15],[.05,.18,.135],[.32,.23,.15],[.49,.22,.135]],rings=rows.map(([y,rx,rz])=>circle.map(([c,s])=>rig.at(rx*c,y,rz*s)));
- for(let i=1;i<rows.length;i++)for(let j=0;j<16;j++){const k=(j+1)%16;triangle(out,rings[i-1][j],rings[i][j],rings[i][k],color);triangle(out,rings[i-1][j],rings[i][k],rings[i-1][k],color);}
+ const rows=JACKET_ROWS,rings=rows.map(([y,rx,rz])=>circle.map(([c,s])=>rig.at(rx*c,y,rz*s))),normals=rows.map(([,rx,rz])=>circle.map(([c,s])=>unit(add(mul(rig.right,c/rx),mul(rig.forward,s/rz)))));
+ for(let i=1;i<rows.length;i++)for(let j=0;j<16;j++){const k=(j+1)%16;triangle(out,rings[i-1][j],rings[i][j],rings[i][k],color,[normals[i-1][j],normals[i][j],normals[i][k]]);triangle(out,rings[i-1][j],rings[i][k],rings[i-1][k],color,[normals[i-1][j],normals[i][k],normals[i-1][k]]);}
  for(let j=0;j<16;j++){const k=(j+1)%16;triangle(out,rig.at(0,.49),rings[3][j],rings[3][k],color);}
  // Lapels follow the same rigid torso frame rather than floating in screen space.
- for(const [a,b] of [[[-.11,.51,.14],[.08,.13,.15]],[[.11,.51,.14],[-.06,.20,.16]]])tube(out,rig.at(...a),rig.at(...b),.024,.020,color.map(v=>Math.min(1,v+.08)),6);
+ for(const path of [[[-.10,.55,.09],[-.10,.40,.153],[.02,.22,.153],[.12,.08,.148]],[[.10,.55,.09],[.08,.40,.157],[-.02,.22,.16],[-.12,.08,.15]]])ribbon(out,path.map(p=>rig.at(...p)),.052,rig.forward,color.map(v=>Math.min(1,v+.075)));
+ // Connected overlap, hem and seams make the judogi readable as clothing.
+ ribbon(out,[[.12,.08,.148],[.13,-.10,.15]].map(p=>rig.at(...p)),.012,rig.forward,color.map(v=>v*.86));
+ for(let j=0;j<16;j++)tube(out,rings[0][j],rings[0][(j+1)%16],.003,.003,color.map(v=>v*.82),6);
  const waist=circle.map(([c,s])=>rig.at(.19*c,.055,.145*s));
  for(let j=0;j<16;j++){const k=(j+1)%16;const p=waist[j],q=waist[k],up=mul(rig.up,.045);triangle(out,p,q,add(q,up),BELT);triangle(out,p,add(q,up),add(p,up),BELT);}
  ellipsoid(out,rig.at(0,.075,.16),[.042,.038,.025],[rig.right,rig.up,rig.forward],BELT);
  tube(out,rig.at(0,.06,.16),rig.at(-.09,-.11,.17),.019,.018,BELT,6);tube(out,rig.at(0,.06,.16),rig.at(.10,-.10,.17),.019,.018,BELT,6);
 }
-function person(out,rig,color){
+function hand(out,arm,rig,grasp,side){
+ const forearm=unit(sub(arm.end,arm.joint));
+ // Orient the palm towards the held material, independently of the character's
+ // torso and the camera. The same grasp survives a crossed arm or shoulder roll.
+ const freeNormal=unit(sub(rig.forward,mul(forearm,dot(rig.forward,forearm))));
+ const gripWeight=grasp?(grasp.orientationWeight??grasp.held):0;
+ const normal=unit(add(mul(freeNormal,1-gripWeight),mul(grasp?.normal??freeNormal,-gripWeight)));
+ let along=unit(sub(forearm,mul(normal,dot(forearm,normal))));
+ if(Math.hypot(...along)<.5)along=unit(cross(rig.right,normal));
+ const across=unit(cross(along,normal)),basis=[across,along,normal];
+ const at=(x,y,z)=>add(arm.end,add(mul(across,x),add(mul(along,y),mul(normal,z))));
+ ellipsoid(out,arm.end,[.029,.031,.020],basis,SKIN);
+ // Four curled fingers and an opposing thumb surround the grasp, within the
+ // conservative .052 m hand envelope used by contact QA.
+ for(let i=0;i<4;i++){const x=(i-1.5)*.013,a=at(x,.012,-.006),b=at(x,.030,.008),c=at(x,.024,.030),d=at(x,.006,.041);tube(out,a,b,.008,.0075,SKIN,8);tube(out,b,c,.0075,.007,SKIN,8);tube(out,c,d,.007,.006,SKIN,8);ellipsoid(out,b,[.008,.008,.008],basis,SKIN);}
+ const thumb=side==='right'?-1:1;
+ tube(out,at(thumb*.026,-.010,0),at(thumb*.033,-.009,.023),.010,.009,SKIN,8);tube(out,at(thumb*.033,-.009,.023),at(thumb*.012,-.008,.040),.009,.007,SKIN,8);
+}
+function person(out,rig,color,performer=false,grasps=null){
  const basis=[rig.right,rig.up,rig.forward];
  for(const [side,leg] of Object.entries(rig.legs)){
-  tube(out,leg.root,leg.joint,.105,.085,color);tube(out,leg.joint,leg.end,.084,.053,color);
+  tube(out,leg.root,leg.joint,...BODY_SIZE.thigh,color);tube(out,leg.joint,leg.end,...BODY_SIZE.shin,color);ellipsoid(out,leg.joint,[.085,.085,.085],basis,color);
   const flatForward=[Math.sin(rig.yaw),0,Math.cos(rig.yaw)];
   const foot=add(leg.end,add(mul(flatForward,.065),[0,-.027,0]));
-  ellipsoid(out,foot,[.055,.038,.115],[rig.right,[0,1,0],flatForward],SKIN);
+  ellipsoid(out,foot,BODY_SIZE.foot,[rig.right,[0,1,0],flatForward],SKIN);
  }
  jacket(out,rig,color);
  tube(out,rig.at(0,.48),rig.neck,.065,.06,SKIN);
- ellipsoid(out,rig.head,[.105,.137,.10],basis,SKIN);
+ ellipsoid(out,rig.head,BODY_SIZE.head,basis,SKIN);
  ellipsoid(out,add(rig.head,mul(rig.up,.072)),[.108,.075,.103],basis,[.13,.15,.15]);
  const nose=add(rig.head,add(mul(rig.forward,.102),mul(rig.up,-.01)));
  ellipsoid(out,nose,[.022,.026,.025],basis,SKIN);
  for(const side of [-1,1])ellipsoid(out,add(rig.head,add(mul(rig.right,side*.041),add(mul(rig.up,.025),mul(rig.forward,.091)))),[.009,.008,.007],basis,BELT);
- for(const arm of Object.values(rig.arms)){
-  tube(out,arm.root,arm.joint,.082,.068,color);
-  const cuff=add(arm.joint,mul(sub(arm.end,arm.joint),.82));tube(out,arm.joint,cuff,.067,.047,color);
-  tube(out,cuff,arm.end,.038,.034,SKIN);
-  ellipsoid(out,arm.end,[.044,.050,.039],basis,SKIN);
+ for(const [side,arm] of Object.entries(rig.arms)){
+  tube(out,arm.root,arm.joint,...BODY_SIZE.upperArm,color);ellipsoid(out,arm.root,[.081,.081,.081],basis,color);ellipsoid(out,arm.joint,[.067,.067,.067],basis,color);
+  const cuff=add(arm.joint,mul(sub(arm.end,arm.joint),.82));tube(out,arm.joint,cuff,...BODY_SIZE.sleeve,color);
+  tube(out,cuff,arm.end,...BODY_SIZE.wrist,SKIN);
+  if(performer)tube(out,add(cuff,mul(unit(sub(arm.joint,cuff)),.012)),cuff,.049,.048,side==='right'?GOLD:[.42,.73,.83]);
+  hand(out,arm,rig,grasps?.[side],side);
  }
 }
 function disk(out,center,rx,rz,color){for(let i=0;i<16;i++){const j=(i+1)%16;triangle(out,center,add(center,[circle[i][0]*rx,0,circle[i][1]*rz]),add(center,[circle[j][0]*rx,0,circle[j][1]*rz]),color);}}
@@ -63,7 +89,12 @@ function scene(pose,solo){
  for(const who of solo?['tori']:['tori','uke']){const rig=pose[who];disk(out,[rig.pelvis[0],.001,rig.pelvis[2]],.30,.38,[.20,.27,.27]);}
  // A gold sole ring distinguishes the working right foot from the supporting left.
  const r=pose.tori.legs.right.end;disk(out,[r[0],.004,r[2]],.09,.15,GOLD);
- person(out,pose.tori,WHITE);if(!solo)person(out,pose.uke,BLUE);
+ person(out,pose.tori,WHITE,true,pose.grips);if(!solo){person(out,pose.uke,BLUE);
+  const grasp=pose.grips?.left;if(grasp){
+   const base=add(grasp.centre,mul(grasp.normal,.0585)),half=mul(grasp.axis,.032);
+   ribbon(out,[sub(base,half),grasp.surface,add(base,half)],.027,grasp.normal,BLUE.map(v=>v*1.12));
+  }
+ }
  return new Float32Array(out);
 }
 function shader(gl,type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
