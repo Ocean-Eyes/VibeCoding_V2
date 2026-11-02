@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sampleThrow,THROW_KEYS,BONE_LENGTHS,sub,dot} from '../src/throw-motion.js';
-import {THROW_LESSONS,THROW_PHASES} from '../src/throw-lessons.js';
+import {sampleThrow,THROW_KEYS,BONE_LENGTHS,sub,dot,cross,PHASE_SECONDS} from '../src/throw-motion.js';
+import {projectThrowFoot} from '../src/throw-render.js';
+import {THROW_LESSONS} from '../src/throw-lessons.js';
 import {lessonPath,resolveRoute} from '../src/routes.js';
 const distance=(a,b)=>Math.hypot(...sub(a,b));
-test('the three requested throws expose ordered phases and romanized, refreshable lesson routes',()=>{
+test('the three requested throws provide continuous demonstrations and romanized, refreshable lesson routes',()=>{
  assert.deepEqual(THROW_LESSONS.map(t=>t.name),['밭다리 후리기','안다리 후리기','한팔 업어치기']);
- assert.deepEqual(THROW_PHASES.map(p=>p.id),['kuzushi','tsukuri','kake']);
- for(const t of THROW_LESSONS){assert.equal(lessonPath(t.id),'/throws/'+t.roman.toLowerCase());assert.equal(resolveRoute(lessonPath(t.id)).parent,'/throws');assert.equal(t.phases.length,3);assert.equal(t.available,true);for(const p of t.phases)assert.ok(p.title&&p.cue&&p.focus&&p.check);}
+ for(const t of THROW_LESSONS){assert.equal(lessonPath(t.id),'/throws/'+t.roman.toLowerCase());assert.equal(resolveRoute(lessonPath(t.id)).parent,'/throws');assert.equal(t.available,true);assert.ok(t.description&&t.source);assert.equal(t.phases,undefined);}
 });
 test('dense trajectories keep fixed limb lengths, reachable contacts and joints above the mat',()=>{
  for(const id of Object.keys(THROW_KEYS))for(let i=0;i<=300;i++){
@@ -30,12 +30,33 @@ test('authored key poses and phase boundaries are continuous when seeking in eit
 });
 test('outer and inner reaps use different partner legs and working-leg paths',()=>{
  const outer=sampleThrow('o-soto-gari',2),inner=sampleThrow('o-uchi-gari',2);
- assert(outer.tori.legs.left.end[0]<outer.uke.legs.right.end[0]-.20,'outer support is outside partner right foot');
- assert(inner.tori.legs.right.end[0]>inner.uke.legs.right.end[0]&&inner.tori.legs.right.end[0]<inner.uke.legs.left.end[0],'inner entry is between partner feet');
+ assert(dot(sub(outer.tori.legs.left.end,outer.uke.legs.right.end),outer.tori.right)<-.20,'outer support is outside partner right foot');
+ const alongRight=p=>dot(p,inner.tori.right),feet=Object.values(inner.uke.legs).map(leg=>alongRight(leg.end));
+ assert(alongRight(inner.tori.legs.right.end)>Math.min(...feet)&&alongRight(inner.tori.legs.right.end)<Math.max(...feet),'inner entry is between partner feet');
  const a=sampleThrow('o-soto-gari',3),b=sampleThrow('o-uchi-gari',3);
  assert(a.tori.legs.right.end[2]<outer.tori.legs.right.end[2]-.8,'outer reap swings backward');
- assert(b.tori.legs.right.end[0]>inner.tori.legs.right.end[0]+.4,'inner reap travels to performer right');
+ assert(dot(sub(b.tori.legs.right.end,inner.tori.legs.right.end),inner.tori.right)>.4,'inner reap travels to performer right');
  assert.deepEqual(a.tori.legs.left.end,outer.tori.legs.left.end,'outer support foot stays planted');
+});
+
+test('front-facing anatomical right appears viewer-left, and turns preserve that anatomy',()=>{
+ assert.deepEqual(PHASE_SECONDS,[3.2,4.2,4]);
+ for(const id of Object.keys(THROW_KEYS)){
+  const ready=sampleThrow(id,0).tori;
+  assert(ready.forward[2]>.99,'face points towards the front camera');
+  assert(ready.shoulders.right[0]<ready.shoulders.left[0],'right shoulder is viewer-left');
+  assert(ready.arms.right.end[0]<ready.arms.left.end[0],'right lapel hand is viewer-left');
+  assert(ready.legs.right.end[0]<ready.legs.left.end[0],'right foot is viewer-left');
+  assert(projectThrowFoot(ready.legs.right.end)[0]>projectThrowFoot(ready.legs.left.end)[0],'top-down map puts anatomical right on the right');
+  for(let i=0;i<=300;i++)for(const who of ['tori','uke']){
+   const rig=sampleThrow(id,i/100)[who];
+   assert(dot(cross(rig.forward,rig.up),rig.right)>.999999,'right = forward cross up');
+  }
+ }
+ const turned=sampleThrow('ippon-seoi-nage',2).tori;
+ assert(turned.forward[2]<0&&turned.shoulders.right[0]>turned.shoulders.left[0],'right projects viewer-right after turning away');
+ const entering=sampleThrow('ippon-seoi-nage',1.4).tori;
+ assert(entering.forward[0]>0,'right-handed shoulder throw pivots to anatomical left (+X from preparation)');
 });
 test('shoulder throw turns left, bends the knees, then extends without crossing planted feet',()=>{
  const ready=sampleThrow('ippon-seoi-nage',1),entry=sampleThrow('ippon-seoi-nage',2),lift=sampleThrow('ippon-seoi-nage',2.32);

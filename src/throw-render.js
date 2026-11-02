@@ -1,5 +1,5 @@
 import {add,sub,mul,unit,cross,dot} from './throw-motion.js';
-import {BODY_SIZE,JACKET_ROWS} from './throw-body.js';
+import {BODY_SIZE,JACKET_ROWS,horizontalForward} from './throw-body.js';
 
 const WHITE=[.88,.91,.91],BLUE=[.23,.48,.62],SKIN=[.78,.61,.46],BELT=[.075,.09,.10],GOLD=[.91,.68,.32];
 const circle=Array.from({length:16},(_,i)=>[Math.cos(i*Math.PI/8),Math.sin(i*Math.PI/8)]);
@@ -62,7 +62,7 @@ function person(out,rig,color,performer=false,grasps=null){
  const basis=[rig.right,rig.up,rig.forward];
  for(const [side,leg] of Object.entries(rig.legs)){
   tube(out,leg.root,leg.joint,...BODY_SIZE.thigh,color);tube(out,leg.joint,leg.end,...BODY_SIZE.shin,color);ellipsoid(out,leg.joint,[.085,.085,.085],basis,color);
-  const flatForward=[Math.sin(rig.yaw),0,Math.cos(rig.yaw)];
+  const flatForward=horizontalForward(rig.yaw);
   const foot=add(leg.end,add(mul(flatForward,.065),[0,-.027,0]));
   ellipsoid(out,foot,BODY_SIZE.foot,[rig.right,[0,1,0],flatForward],SKIN);
  }
@@ -128,9 +128,11 @@ export function createThrowRenderer(canvas){
  };
 }
 
+// Looking down from +Y with forward (+Z) at the top makes -X screen-right.
+export const projectThrowFoot=p=>[150-p[0]*92,145-p[2]*70];
 export function drawFootMap(canvas,pose,labels){
  const ctx=canvas.getContext('2d');canvas.width=300;canvas.height=230;ctx.fillStyle='#ecebe1';ctx.fillRect(0,0,300,230);
- const point=p=>[150+p[0]*92,145-p[2]*70];
+ const point=projectThrowFoot;
  ctx.strokeStyle='#b8bdb1';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(150,12);ctx.lineTo(150,218);ctx.stroke();ctx.setLineDash([]);
  for(const [who,color] of [['uke','#4c839e'],['tori','#383f3e']])for(const [side,leg] of Object.entries(pose[who].legs)){
   const [x,y]=point(leg.end);ctx.save();ctx.translate(x,y);ctx.rotate(pose[who].yaw);ctx.fillStyle=who==='tori'&&side==='right'?'#ad7429':color;

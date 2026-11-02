@@ -2,7 +2,7 @@
 // Conservative envelopes resolve approach paths; the displayed meshes make the
 // final contact check. Keep this script reproducible instead of hand-editing data.
 import {body,limb,add,sub,mul,dot,unit,closeThrowGrasps} from '../src/throw-motion.js';
-import {bodyIntersections} from '../src/throw-body.js';
+import {bodyIntersections,horizontalForward} from '../src/throw-body.js';
 import {releaseRightGrip} from '../src/throw-grips.js';
 const mix=(a,b,t)=>add(mul(a,1-t),mul(b,t)),len=a=>Math.hypot(...a),clamp=x=>Math.max(0,Math.min(1,x));
 function closest(a,b,c,d){
@@ -26,7 +26,7 @@ function caps(s){
  for(const x of [-.075,0,.075])out.push(capsule(s.at(x,.01),s.at(x,.36),.16,s,[s.root,s.root]));
  out.push(capsule(s.at(-.17,.43),s.at(.17,.43),.085,s,[s.root,s.root]));
  out.push(capsule(s.at(0,.70),s.at(0,.70),.14,s,[s.root,s.root]));
- for(const [name,l] of Object.entries(s.parts)){const leg=name.startsWith('legs');out.push(capsule(l.root.p,l.joint.p,leg?.105:.082,s,[l.root,l.joint]));out.push(capsule(l.joint.p,leg?l.end.p:mix(l.joint.p,l.end.p,.76),leg?.084:.064,s,[l.joint,l.end]));if(!leg)out.push(capsule(mix(l.joint.p,l.end.p,.82),l.end.p,.045,s,[l.joint,l.end]));if(leg)out.push(capsule(add(l.end.p,[0,-.027,0]),add(l.end.p,mul([Math.sin(s.r.yaw),0,Math.cos(s.r.yaw)],.13)),.055,s,[l.end,l.end]));}
+ for(const [name,l] of Object.entries(s.parts)){const leg=name.startsWith('legs');out.push(capsule(l.root.p,l.joint.p,leg?.105:.082,s,[l.root,l.joint]));out.push(capsule(l.joint.p,leg?l.end.p:mix(l.joint.p,l.end.p,.76),leg?.084:.064,s,[l.joint,l.end]));if(!leg)out.push(capsule(mix(l.joint.p,l.end.p,.82),l.end.p,.045,s,[l.joint,l.end]));if(leg)out.push(capsule(add(l.end.p,[0,-.027,0]),add(l.end.p,mul(horizontalForward(s.r.yaw),.13)),.055,s,[l.end,l.end]));}
  return out;
 }
 function distribute(c,t,n,amount){const weights=[1-t,t];for(let i=0;i<2;i++){let p=c.ends[i];if(p.w===0&&p!==c.owner.root&&p===c.ends[0]&&p!==c.ends[1])p=c.owner.root;p.p=add(p.p,mul(n,amount*weights[i]*p.w));}}

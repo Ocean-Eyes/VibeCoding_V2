@@ -45,7 +45,7 @@ function renderCourses(){
   const section=category==='katame'?GROUNDWORK_GROUPS.find(g=>g.id===group):null;
   $('course-title').textContent=section?.title??{basics:tr('기초를 차근차근'),katame:tr('굳히기본'),throws:tr('메치기본')}[category];
   $('course-count').textContent=category==='katame'&&!section?tr('조르기 · 꺾기 · 누르기'):section?.available?tr('3개 미션 · 모두 선택 가능'):category==='basics'?tr('띠 매기 · 배밀기 도전'):tr('레슨 준비 중');
-  if(category==='throws')$('course-count').textContent=throwText('3개 기술 · 기울이기 → 지읏기 → 걸기','3 techniques · Kuzushi → Tsukuri → Kake');
+  if(category==='throws')$('course-count').textContent=throwText('3개 기술 · 연속 동작 시연','3 techniques · Continuous demonstrations');
   $('course-grid').replaceChildren();
   if(category==='katame'&&!section){
     for(const [i,g] of GROUNDWORK_GROUPS.entries()){
