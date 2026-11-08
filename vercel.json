@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "trailingSlash": false,
   "rewrites": [
+    { "source": "/phone-camera", "destination": "/phone-camera.html" },
     { "source": "/basics", "destination": "/index.html" },
     { "source": "/basics/belt", "destination": "/index.html" },
     { "source": "/basics/hindu-push-up", "destination": "/index.html" },

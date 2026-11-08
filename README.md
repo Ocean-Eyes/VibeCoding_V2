@@ -61,6 +61,7 @@
 영상을 서버로 전송하거나 저장하지 않습니다. 최초 카메라 연결 시 jsDelivr의 고정 버전 `@mediapipe/tasks-vision@0.10.22-rc.20250304`와 Google Storage의 모델 파일을 다운로드합니다. 글꼴은 Google Fonts를 사용하며 실패하면 시스템 글꼴로 표시됩니다. 웹캠에는 HTTPS 또는 localhost가 필요합니다.
 
 모바일 카메라 연결 경로와 자동 검증 범위는 [모바일 카메라 점검](docs/mobile-camera.md)에 정리했습니다.
+PC 화면에서 스마트폰을 무선 카메라로 사용하는 QR 연결은 [스마트폰 카메라 연결](docs/phone-camera.md)을 참고하세요. 이 모드에서는 폰 영상을 PC로 실시간 전송하고 PC에서 분석하며, 영상을 서버에 저장하지 않습니다.
 
 ## 기술 참고
 

@@ -1,7 +1,7 @@
 import {readFile,writeFile,readdir,mkdir,cp} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const root=new URL('../',import.meta.url);
-const files=['index.html','dojo.css',...(await readdir(new URL('src/',root))).filter(n=>n.endsWith('.js')).sort().map(n=>`src/${n}`)];
+const files=['index.html','phone-camera.html','dojo.css',...(await readdir(new URL('src/',root))).filter(n=>n.endsWith('.js')).sort().map(n=>`src/${n}`)];
 const sources=await Promise.all(files.map(n=>readFile(new URL(n,root),'utf8')));
 const hash=createHash('sha256').update(sources.join('\n'));
 async function hashAssets(directory){

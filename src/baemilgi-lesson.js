@@ -5,6 +5,7 @@ import {demoMarkup,mountDemo} from './baemilgi-demo.js';
 import {cameraConstraints,listCameras,preferredWideCamera,minimizeCameraZoom} from './baemilgi-camera.js';
 import {createPoseTracker} from './baemilgi-tracking.js';
 import {createCameraPlayback} from './camera-playback.js';
+import {connectPhoneCamera,cancelPhoneCamera,releaseCamera,onCameraEnded} from './phone-camera-host.js';
 const t=(ko,en)=>language==='en'?en:ko;
 const $=id=>document.getElementById(id);
 const counter=new BaemilgiCounter();
@@ -12,6 +13,7 @@ let mounted=false,active=false,generation=0,stream,worker,raf,timeout,frameTimeo
 let token=null,runID=null,result=null,board='public',publicEntries=[],publicError='',saving=false,recordSaved=false;
 let demo;
 let cameraPlayback,trackerGeneration=0;
+let inputSource='local';
 function showView(view){
  const demonstrating=view==='demo';if(!demonstrating)demo?.pause();
  $('bm-demo').hidden=!demonstrating;$('bm-practice').hidden=demonstrating;
@@ -45,7 +47,7 @@ function mount(){
  </div>
  <div class="bm-controls"><label class="bm-camera-choice" for="bm-camera-select">${t('카메라','Camera')}<select id="bm-camera-select"><option value="auto">${t('광각 우선 (자동)','Prefer wide angle (auto)')}</option><option value="user">${t('전면 카메라','Front camera')}</option></select></label><button id="bm-start" class="primary">${t('카메라 켜고 도전','Start with camera')}</button><button id="bm-cancel" class="outline" hidden>${t('중단 · 기록 제외','Cancel · discard run')}</button><span>${t('광각 미지원 시 기본 카메라를 사용합니다. 소리 없이도 화면 안내로 진행됩니다.','Uses the default camera if wide angle is unavailable. Follow the on-screen cues; no sound required.')}</span></div>
  <p id="bm-notice" class="bm-notice" role="status">${t('카메라 영상은 이 기기에서만 분석하며 저장하거나 전송하지 않습니다.','Camera video is processed on this device. It is never saved or uploaded.')}</p>
- <div class="bm-recovery"><button id="bm-resume-video" class="outline" hidden>${t('카메라 영상 시작','Start camera video')}</button><button id="bm-retry-tracking" class="outline" hidden>${t('자세 인식 다시 연결','Reconnect pose tracking')}</button></div>
+ <div class="bm-recovery"><button id="bm-phone" class="outline">${t('스마트폰 카메라 연결','Connect phone camera')}</button><button id="bm-resume-video" class="outline" hidden>${t('카메라 영상 시작','Start camera video')}</button><button id="bm-retry-tracking" class="outline" hidden>${t('자세 인식 다시 연결','Reconnect pose tracking')}</button></div>
  <ol class="bm-steps"><li><b>01</b><div><strong>${t('옆으로 엎드려 준비','Lie face down in side view')}</strong><p>${t('바닥과 수평으로 카메라를 놓고, 손과 발부터 일어선 머리까지 보일 공간을 확보하세요.','Keep the camera level. Leave room to see your hands, feet and your head when standing.')}</p></div></li><li><b>02</b><div><strong>${t('낮췄다가 밀어 올리면 +1','Lower, then push up: +1')}</strong><p>${t('가슴을 낮춘 뒤 팔을 펴며 상체를 올립니다. 올라온 자세를 유지해도 추가로 세지 않습니다.','Lower your chest, then extend your arms and lift your upper body. Holding the raised pose does not add reps.')}</p></div></li><li><b>03</b><div><strong>${t('완전히 일어서서 종료','Stand fully upright to finish')}</strong><p>${t('다리를 펴고 잠시 서 있으면 자동 종료됩니다. 마지막에 닉네임을 입력해 기록을 남기세요.','Straighten your legs and stand briefly to end automatically. Enter your nickname after the run.')}</p></div></li></ol>
  </section><aside class="bm-board" aria-label="${t('배밀기 리더보드','Hindu push-up leaderboard')}"><div class="eyebrow">HALL OF FAME</div><h2>${t('배밀기 최고 기록','Hindu push-up high scores')}</h2><div class="bm-tabs" role="group" aria-label="${t('순위 범위','Leaderboard scope')}"><button id="bm-public" aria-pressed="true">${t('공용 순위','Global')}</button><button id="bm-local" aria-pressed="false">${t('이 기기 기록','This device')}</button></div><p id="bm-board-note" role="status"></p><ol id="bm-entries"></ol><button id="bm-refresh" class="quiet">${t('순위 새로고침 ↻','Refresh scores ↻')}</button><p class="bm-board-foot">${t('공용 순위는 이 브라우저의 최고 기록 하나를 남깁니다. 닉네임이 같아도 다른 참가자일 수 있습니다. 카메라 자동 집계 기록이며 공식 심사 기록은 아닙니다.','Global scores retain one personal best per browser. Nicknames may be shared by different people. Camera-counted scores are not officially judged.')}</p></aside></div>
  <dialog id="bm-result" class="bm-result" aria-labelledby="bm-result-title"><div class="eyebrow">RUN COMPLETE</div><h2 id="bm-result-title">${t('도전 완료','Run complete')}</h2><div class="bm-final"><strong id="bm-final-count">0</strong><span>${t('회','REPS')}</span></div><p id="bm-result-reason"></p><form id="bm-save-form"><label for="bm-nickname">${t('기록에 남길 닉네임','Enter your nickname')}</label><input id="bm-nickname" name="nickname" minlength="2" maxlength="12" autocomplete="nickname" required placeholder="${t('닉네임 2–12자','Nickname, 2–12 characters')}"/><small>${t('한글·영문 등 문자, 숫자, 공백, - 또는 _','Letters, numbers, spaces, - or _')}</small><p id="bm-save-note" role="status"></p><button id="bm-save" class="primary" type="submit">${t('기록 저장','Save score')}</button></form><button id="bm-dismiss" class="quiet">${t('닫기','Close')}</button></dialog>`;
@@ -54,7 +56,7 @@ function mount(){
   onBlocked:()=>notice(t('카메라는 연결됐지만 영상 재생이 대기 중입니다. 카메라 영상 시작을 눌러 주세요.','Camera connected. Select Start camera video to allow playback.')),
   onRetryFailed:()=>notice(t('영상 재생이 차단됐습니다. 브라우저의 미디어 재생 설정을 확인하고 다시 눌러 주세요.','Video playback was blocked. Check browser media settings and tap again.')),
  });
- $('bm-start').onclick=start;$('bm-cancel').onclick=()=>{stopCamera();counter.reset();paintCounter();notice(t('도전을 중단했습니다. 기록은 등록되지 않았습니다.','Run cancelled. No score was submitted.'));};
+ $('bm-start').onclick=()=>start();$('bm-phone').onclick=()=>start('phone');$('bm-cancel').onclick=()=>{stopCamera();counter.reset();paintCounter();notice(t('도전을 중단했습니다. 기록은 등록되지 않았습니다.','Run cancelled. No score was submitted.'));};
  $('bm-retry-tracking').onclick=()=>{if(stream)connectTracker();};
  $('bm-save-form').onsubmit=saveResult;$('bm-dismiss').onclick=()=>$('bm-result').close();
  $('bm-nickname').oninput=()=>$('bm-nickname').setCustomValidity('');
@@ -94,13 +96,14 @@ async function refreshBoard(fresh=false){
  finally{$('bm-refresh').disabled=false;renderBoard();}
 }
 function stopCamera(){
- generation++;trackerGeneration++;cameraPlayback?.cancel();clearTimeout(timeout);clearTimeout(frameTimeout);cancelAnimationFrame(raf);worker?.terminate();worker=null;
- stream?.getTracks().forEach(track=>track.stop());stream=null;ready=busy=false;lastVideo=-1;
+ generation++;trackerGeneration++;cancelPhoneCamera();cameraPlayback?.cancel();clearTimeout(timeout);clearTimeout(frameTimeout);cancelAnimationFrame(raf);worker?.terminate();worker=null;
+ releaseCamera(stream);stream=null;ready=busy=false;lastVideo=-1;
  if(!mounted)return;
  $('bm-video').srcObject=null;$('bm-video').hidden=true;$('bm-guide').hidden=false;
  const canvas=$('bm-overlay');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
  $('bm-start').disabled=false;$('bm-cancel').hidden=true;
  $('bm-camera-select').disabled=false;
+ $('bm-phone').disabled=false;
  $('bm-resume-video').hidden=true;$('bm-resume-video').onclick=null;$('bm-retry-tracking').hidden=true;
  $('bm-show-demo').disabled=false;
 }
@@ -120,7 +123,7 @@ function connectTracker(){
   worker.onerror=()=>{if(current===generation&&attempt===trackerGeneration)trackingFailed(t('자세 인식을 시작하지 못했습니다. 인터넷 연결을 확인해 주세요.','Could not start pose tracking. Check your internet connection.'));};
   worker.onmessage=({data})=>{
    if(current!==generation||attempt!==trackerGeneration)return;
-   if(data.type==='ready'){clearTimeout(timeout);ready=true;notice(token?t('공용 도전 준비 완료 · 영상은 전송되지 않습니다.','Global challenge ready · video stays on your device.'):t('이 기기 기록 모드 · 공용 순위 연결이 없어도 횟수는 셀 수 있습니다.','Device records mode · you can count reps without shared storage.'));raf=requestAnimationFrame(tick);}
+   if(data.type==='ready'){clearTimeout(timeout);ready=true;notice(inputSource==='phone'?t('스마트폰 영상 연결됨 · 자세 분석은 이 PC에서 실행됩니다.','Phone camera connected · pose analysis runs on this PC.'):token?t('공용 도전 준비 완료 · 영상은 전송되지 않습니다.','Global challenge ready · video stays on your device.'):t('이 기기 기록 모드 · 공용 순위 연결이 없어도 횟수는 셀 수 있습니다.','Device records mode · you can count reps without shared storage.'));raf=requestAnimationFrame(tick);}
    if(data.type==='error')trackingFailed(t('자세 인식을 실행하지 못했습니다. 인터넷 연결을 확인해 주세요.','Could not run pose tracking. Check your internet connection.'));
    if(data.type==='result'){
     clearTimeout(frameTimeout);busy=false;if(document.hidden){counter.interrupt();return;}
@@ -157,19 +160,22 @@ async function tick(now){
   frameTimeout=setTimeout(()=>{if(current===generation&&attempt===trackerGeneration)trackingFailed(t('자세 인식이 응답하지 않습니다.','Pose tracking stopped responding.'));},8000);
  }catch{if(current===generation&&attempt===trackerGeneration)trackingFailed(t('영상을 분석하지 못했습니다.','Could not analyze the camera video.'));}
 }
-async function start(){
+async function start(source='local'){
  stopCamera();counter.reset();token=null;result=null;runID=crypto.randomUUID();recordSaved=false;saving=false;paintCounter();
  showView('practice');$('bm-show-demo').disabled=true;
- const current=generation,camera=$('bm-camera-select').value;$('bm-start').disabled=true;$('bm-cancel').hidden=false;$('bm-camera-select').disabled=true;
+ inputSource=source;const current=generation,camera=$('bm-camera-select').value;$('bm-start').disabled=true;$('bm-cancel').hidden=false;$('bm-camera-select').disabled=true;$('bm-phone').disabled=true;
  notice(t('카메라 권한을 허용해 주세요. 처음에는 자세 모델을 다운로드합니다.','Allow camera access. The pose model downloads on first use.'));
- if(!navigator.mediaDevices?.getUserMedia){fail(t('HTTPS 또는 localhost에서 카메라를 사용할 수 있습니다.','Camera access requires HTTPS or localhost.'));return;}
- timeout=setTimeout(()=>{if(current===generation)fail(t('연결 시간이 초과되었습니다. 다시 시도해 주세요.','Connection timed out. Please try again.'));},90000);
+ if(source!=='phone'&&!navigator.mediaDevices?.getUserMedia){fail(t('HTTPS 또는 localhost에서 카메라를 사용할 수 있습니다.','Camera access requires HTTPS or localhost.'));return;}
+ if(source!=='phone')timeout=setTimeout(()=>{if(current===generation)fail(t('연결 시간이 초과되었습니다. 다시 시도해 주세요.','Connection timed out. Please try again.'));},90000);
  try{
   const acquire=async selection=>{
    const acquired=await navigator.mediaDevices.getUserMedia(cameraConstraints(selection));
    if(current!==generation){acquired.getTracks().forEach(track=>track.stop());return false;}
    stream=acquired;return true;
   };
+  if(source==='phone'){
+   const acquired=await connectPhoneCamera({isCurrent:()=>current===generation});if(current!==generation){releaseCamera(acquired);return;}if(!acquired){stopCamera();return;}stream=acquired;
+  }else{
   if(!await acquire(camera))return;
   // Permission reveals device labels. Release the initial lens before switching
   // because mobile browsers may only allow one camera at a time.
@@ -185,7 +191,8 @@ async function start(){
    }
   }
   await minimizeCameraZoom(stream.getVideoTracks()[0]);if(current!==generation)return;
-  stream.getVideoTracks()[0].addEventListener('ended',()=>{if(current===generation)fail(t('카메라 연결이 끊겼습니다. 다시 연결해 주세요.','Camera disconnected. Please reconnect.'));});
+  }
+  onCameraEnded(stream,()=>{if(current===generation)fail(t('카메라 연결이 끊겼습니다. 다시 연결해 주세요.','Camera disconnected. Please reconnect.'));});
   clearTimeout(timeout);const video=$('bm-video');video.srcObject=stream;$('bm-guide').hidden=true;if(!await cameraPlayback.start(()=>current===generation))return;
   notice(t('카메라 연결됨 · 도전을 준비하고 있습니다.','Camera connected · preparing your challenge.'));
   let player;try{player=localStorage.getItem('just-judo-baemilgi-player');if(!/^[a-f\d-]{36}$/i.test(player??'')){player=crypto.randomUUID();localStorage.setItem('just-judo-baemilgi-player',player);}}catch{player=crypto.randomUUID();}
@@ -193,7 +200,7 @@ async function start(){
   try{const session=await leaderboardRequest({action:'start',player});if(current!==generation)return;token=session.token;}catch{}
   if(current!==generation)return;
   connectTracker();
- }catch(error){if(current!==generation)return;fail(error.name==='NotAllowedError'?t('카메라 권한이 거부되었습니다. 브라우저 사이트 권한과 휴대폰 설정에서 카메라를 허용해 주세요.','Camera access denied. Allow camera access in browser site permissions and device settings.'):t('카메라를 연결하지 못했습니다. 다른 앱에서 사용 중인지 확인해 주세요.','Could not connect the camera. Check whether another app is using it.'));}
+ }catch(error){if(current!==generation)return;fail(error.name==='PhoneCameraError'?error.message:error.name==='NotAllowedError'?t('카메라 권한이 거부되었습니다. 브라우저 사이트 권한과 휴대폰 설정에서 카메라를 허용해 주세요.','Camera access denied. Allow camera access in browser site permissions and device settings.'):t('카메라를 연결하지 못했습니다. 다른 앱에서 사용 중인지 확인해 주세요.','Could not connect the camera. Check whether another app is using it.'));}
 }
 function finish(){
  result=counter.snapshot();stopCamera();paintCounter();$('bm-final-count').textContent=String(result.count);

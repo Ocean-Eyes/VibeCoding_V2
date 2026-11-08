@@ -19,7 +19,7 @@ test('routes resolve exact paths, trailing slashes and local build prefixes',()=
 test('every published subpage has an exact production rewrite and valid parent',()=>{
  const config=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url)));
  assert.deepEqual(config.rewrites.map(r=>r.source).sort(),ROUTES.filter(r=>r.path!=='/').map(r=>r.path).sort());
- for(const r of config.rewrites)assert.equal(r.destination,'/index.html');
+ for(const r of config.rewrites)assert.equal(r.destination,'/'+(resolveRoute(r.source).document||'index.html'));
  for(const r of ROUTES.filter(r=>r.parent))assert.ok(resolveRoute(r.parent));
  assert.equal(new Set(ROUTES.map(r=>r.path)).size,ROUTES.length);
 });

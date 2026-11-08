@@ -1,5 +1,6 @@
 import {tr} from './i18n.js';
 import {createCameraPlayback} from './camera-playback.js';
+import {connectPhoneCamera,cancelPhoneCamera,releaseCamera,onCameraEnded} from './phone-camera-host.js';
 import {BELT_STEPS,BELT_SOURCE,BELT_REFERENCE_2,sourcePTS,trackedPlacement} from './belt-sequence.js';
 import {beltAnchor} from './belt-geometry.js';
 import {loadBeltSource} from './belt-source.js';
@@ -63,6 +64,7 @@ function update(){
  $('belt-play').textContent=playing?tr('일시 정지 Ⅱ'):tr('이 단계 시연 ▶');$('belt-prev').disabled=step===0;$('belt-next').disabled=step===BELT_STEPS.length-1;
  document.querySelectorAll('[data-belt-step]').forEach((b,i)=>{b.classList.toggle('selected',i===step);b.setAttribute('aria-current',i===step?'step':'false')});
  $('belt-camera').textContent=cameraPending?tr('카메라 연결 중…'):stream?tr('카메라 끄기'):tr('카메라로 따라 하기');$('belt-camera').disabled=cameraPending||sourceState!=='ready';
+ $('belt-phone').disabled=cameraPending||sourceState!=='ready';
  $('belt-alignment').hidden=!stream;$('belt-view-label').textContent=mode==='real'?tr('REAL BELT · 색 표시 추적'):stream?'CAMERA · GHOST BELT':'DEMONSTRATION · GHOST BELT';
  $('belt-mode-virtual').setAttribute('aria-pressed',String(mode==='virtual'));$('belt-mode-real').setAttribute('aria-pressed',String(mode==='real'));
  $('belt-tracking').hidden=mode!=='real';$('belt-real-empty').hidden=mode!=='real'||!!stream;
@@ -76,21 +78,21 @@ function update(){
  document.querySelectorAll('[data-belt-step]').forEach(b=>b.disabled=unavailable);
  $('belt-retry').hidden=sourceState!=='error';
 }
-function stopCamera(){generation++;cameraPlayback.cancel();cameraPending=false;stream?.getTracks().forEach(t=>t.stop());stream=null;picking=null;resetTracks();$('belt-video').srcObject=null;$('belt-video').hidden=true;update()}
-async function toggleCamera(){
- if(stream||cameraPending){stopCamera();return}
+function stopCamera(){generation++;cancelPhoneCamera();cameraPlayback.cancel();cameraPending=false;releaseCamera(stream);stream=null;picking=null;resetTracks();$('belt-video').srcObject=null;$('belt-video').hidden=true;update()}
+async function toggleCamera(source='local'){
+ if(stream||cameraPending){stopCamera();if(source!=='phone')return;}
  const token=++generation;cameraPending=true;update();$('belt-notice').textContent=tr('카메라 권한을 허용해 주세요.');
  try{
-  if(!navigator.mediaDevices?.getUserMedia)throw new Error('unavailable');
-  const acquired=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
-  if(token!==generation||!open){acquired.getTracks().forEach(t=>t.stop());return}
+  if(source!=='phone'&&!navigator.mediaDevices?.getUserMedia)throw new Error('unavailable');
+  const acquired=source==='phone'?await connectPhoneCamera({isCurrent:()=>token===generation&&open}):await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
+  if(token!==generation||!open){releaseCamera(acquired);return;}if(!acquired){stopCamera();return;}
   stream=acquired;cameraPending=false;update();const video=$('belt-video');video.srcObject=stream;
-  stream.getVideoTracks()[0].addEventListener('ended',()=>{if(token===generation){stopCamera();$('belt-notice').textContent=tr('카메라 연결이 끝났습니다. 시연은 계속 볼 수 있습니다.')}});
+  onCameraEnded(stream,()=>{if(token===generation){stopCamera();$('belt-notice').textContent=tr('카메라 연결이 끝났습니다. 시연은 계속 볼 수 있습니다.')}});
   if(!await cameraPlayback.start(()=>token===generation&&open))return;
   if(token!==generation||!open)return;
   cameraPending=false;
   $('belt-notice').textContent=mode==='real'?tr('A 색 등록과 B 색 등록을 눌러 실제 띠 끝의 색 표시를 선택하세요.'):tr('가이드가 배꼽 높이에 오도록 높이와 크기를 맞추세요. 단계는 직접 넘길 수 있습니다.');update();
- }catch(error){if(token!==generation)return;stopCamera();$('belt-notice').textContent=error.name==='NotAllowedError'?tr('카메라 권한이 거부됐습니다. 시연을 보거나 권한 허용 후 다시 연결하세요.'):tr('카메라를 연결하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도하세요.')}
+ }catch(error){if(token!==generation)return;stopCamera();$('belt-notice').textContent=error.name==='PhoneCameraError'?error.message:error.name==='NotAllowedError'?tr('카메라 권한이 거부됐습니다. 시연을 보거나 권한 허용 후 다시 연결하세요.'):tr('카메라를 연결하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도하세요.')}
 }
 function cameraFrame(){
  const video=$('belt-video');if(!stream||video.readyState<2||!video.videoWidth)return null;
@@ -178,7 +180,7 @@ async function ensureSource(){
 }
 BELT_STEPS.forEach((item,i)=>{const b=document.createElement('button');b.type='button';b.dataset.beltStep=String(i);b.innerHTML=`<span>${String(i+1).padStart(2,'0')}</span>${item.title}`;b.onclick=()=>select(i);$('belt-steps').append(b)});
 $('belt-play').onclick=()=>{if(playing)pause();else if(progress>=1)select(step,true);else{playing=true;animation.timeline.play();update()}};
-$('belt-prev').onclick=()=>select(step-1);$('belt-next').onclick=()=>select(step+1);$('belt-restart').onclick=()=>select(0,mode==='virtual'&&!reduced.matches);$('belt-camera').onclick=()=>void toggleCamera();
+$('belt-prev').onclick=()=>select(step-1);$('belt-next').onclick=()=>select(step+1);$('belt-restart').onclick=()=>select(0,mode==='virtual'&&!reduced.matches);$('belt-camera').onclick=()=>void toggleCamera();$('belt-phone').onclick=()=>void toggleCamera('phone');
 $('belt-align-reset').onclick=()=>{$('belt-height').value='36';$('belt-width').value='14'};
 $('belt-scrub').oninput=()=>{if(!animation)return;pause();animation.timeline.seek(animation.timeline.duration*Number($('belt-scrub').value)/100,true);progress=animation.head.value;inspecting=false;};
 $('belt-retry').onclick=()=>void ensureSource();

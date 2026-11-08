@@ -2,6 +2,7 @@
 // have routes; unavailable lessons stay on their category's existing cards.
 export const ROUTES=[
  {path:'/',screen:'home'},
+ {path:'/phone-camera',screen:'camera',document:'phone-camera.html'},
  {path:'/basics',screen:'category',category:'basics',parent:'/'},
  {path:'/katame-waza',screen:'category',category:'katame',parent:'/'},
  {path:'/throws',screen:'category',category:'throws',parent:'/'},

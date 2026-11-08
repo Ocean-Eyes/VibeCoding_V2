@@ -5,6 +5,8 @@ import {resolve,extname,sep} from 'node:path';
 import {resolveRoute} from '../src/routes.js';
 import baemilgiAPI from '../api/baemilgi.js';
 import visitorsAPI from '../api/visitors.js';
+import phoneCameraAPI,{createPairingHandler,memoryPairingStore} from '../api/phone-camera.js';
+const phoneAPI=process.env.PHONE_CAMERA_MEMORY==='1'?createPairingHandler((()=>{const store=memoryPairingStore();return ()=>store;})()):phoneCameraAPI;
 const root=fileURLToPath(new URL('../',import.meta.url));
 const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png'};
 const server=createServer(async(req,res)=>{
@@ -12,9 +14,10 @@ const server=createServer(async(req,res)=>{
     const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
     if(path==='/api/baemilgi'){await baemilgiAPI(req,res);return;}
     if(path==='/api/visitors'){await visitorsAPI(req,res);return;}
+    if(path==='/api/phone-camera'){await phoneAPI(req,res);return;}
     if(path.startsWith('/api/')){res.writeHead(404);res.end('Not found');return;}
     const base=path==='/dist'||path.startsWith('/dist/')?'/dist/':'/';
-    const file=resolve(root,'.'+(resolveRoute(path,base)?base+'index.html':path));
+    const route=resolveRoute(path,base),file=resolve(root,'.'+(route?base+(route.document||'index.html'):path));
     if(!file.startsWith(root.endsWith(sep)?root:root+sep)||path.split('/').some(p=>p.startsWith('.'))){res.writeHead(403);res.end('Forbidden');return}
     let data=await readFile(file);
     if(extname(file)==='.html'&&base==='/dist/')data=data.toString('utf8').replace('<base href="/" />','<base href="/dist/" />');
