@@ -21,6 +21,12 @@ test('either hand may arrive first; no opening or grab transition required',()=>
  const model=new HandPlacement(),h=hands();assert.equal(model.update([null,h[1]],0,{active:true}).count,1);
  assert.equal(hold(model,h,{},50).tapped,true);
 });
+for(const directions of [['↓','↓'],['↑','↑'],['↑','↓']])for(const mirrored of [true,false])test(`relaxed fist and former 88-point position now pass: ${directions} mirror=${mirrored}`,()=>{
+ const h=hands(directions,mirrored,.5).map(hand=>hand.map(p=>({...p,y:p.y+.27})));
+ assert(h.every((v,i)=>evaluatePlacement(v,i,{directions,mirrored}).matched));
+ const result=hold(new HandPlacement(),h,{directions,mirrored});
+ assert.equal(result.tapped,true);assert.equal(result.score,100);
+});
 test('loss, wrong shape and pause reset continuous hold; stale arms cannot fill missing hands',()=>{
  for(const broken of [[null,null],hands(['↓','↓'],true,0)]){
  const m=new HandPlacement(),h=hands();for(let t=0;t<=600;t+=50)m.update(h,t,{active:true});

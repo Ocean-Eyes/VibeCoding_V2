@@ -3,7 +3,7 @@ import {GRIP_STEPS} from './demonstration.js';
 
 export const PLACEMENT_HOLD_SECONDS=1.2;
 export const PLACEMENT_PASS_SCORE=100;
-export const PLACEMENT_RADIUS=.16;
+export const PLACEMENT_RADIUS=.32;
 export function placementTarget(index,mirrored=true){
  const p=GRIP_STEPS[2][index];return {x:p.x*(mirrored?-1:1),y:p.y};
 }
@@ -13,7 +13,8 @@ export function evaluatePlacement(hand,index,{mirrored=true,directions=['â†“','â
  const center=graspCenter(hand),distance=Math.hypot(center.x-target.x,center.y-target.y);
  const side=(index?-1:1)*(mirrored?1:-1);
  const orientation=gripPosture(hand,index,side,mirrored,directions[index]);
- const closed=curledFingers(hand).length>=3&&fingerExtension(hand)<.82;
+ // Allow a relaxed fist and one or two noisy finger estimates from the webcam.
+ const closed=curledFingers(hand).length>=2&&fingerExtension(hand)<.92;
  const located=distance<=PLACEMENT_RADIUS;
  const matched=closed&&located&&!orientation;
  return {target,center,distance,closed,located,orientation,matched,

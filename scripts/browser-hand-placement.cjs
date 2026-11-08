@@ -19,9 +19,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
       const f={origin:{x:w*.5,y:h*.32},scale:w*.18,x:{x:1,y:0},y:{x:0,y:1}},pose=targetPose(f,POSES[0]);
       pose[13].visibility=pose[14].visibility=0;
       const hands=[0,1].map(i=>{
-       const target=placementTarget(i,true);if(data.phase==='outside')target.x+=i?-.5:.5;
+       const target=placementTarget(i,true);if(data.phase==='outside')target.x+=i?-.5:.5;if(data.phase==='relaxed')target.y+=.27;
        const up=${JSON.stringify(lesson)}==='gyaku'||(${JSON.stringify(lesson)}==='kata'&&i===0);
-       const hand=handAt(target,data.phase==='open'?0:1,i===0,data.phase==='wrong'?!up:up);
+       const hand=handAt(target,data.phase==='open'?0:data.phase==='relaxed'?.5:1,i===0,data.phase==='wrong'?!up:up);
        const mapped=hand.map(p=>({x:f.origin.x-p.x*f.scale,y:f.origin.y+p.y*f.scale,z:p.z*f.scale,visibility:1}));
        pose[15+i]=mapped[0];return mapped.map(p=>({...p,x:p.x/w,y:p.y/h,z:p.z/w}));
       });
@@ -43,7 +43,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     assert.equal(await page.locator('#opponent-status').getAttribute('data-tap'),'false',`${lesson}: ${phase} must not complete`);
    }
    await page.locator('#viewport').screenshot({path:`.test-output/placement-${lesson}-guide.png`});
-   await page.evaluate(()=>window.qaPhase='closed');
+   await page.evaluate(()=>window.qaPhase='relaxed');
    await page.waitForFunction(()=>document.querySelector('#opponent-status').dataset.tap==='true',{},{timeout:10000});
    await page.locator('#viewport').screenshot({path:`.test-output/placement-${lesson}-success.png`});
    await page.locator('#result-dialog').waitFor({state:'visible',timeout:5000});
