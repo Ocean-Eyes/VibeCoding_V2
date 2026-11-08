@@ -1,3 +1,4 @@
+import {openOsotoLesson} from './osoto-lesson.js';
 import {throwText as t} from './throw-lessons.js';
 import {sampleThrow} from './throw-motion.js';
 import {THROW_DURATION,throwTimeAtElapsed} from './throw-playback.js';
@@ -7,7 +8,7 @@ import {connectPhoneCamera,cancelPhoneCamera,releaseCamera,onCameraEnded} from '
 
 let cleanup=()=>{};
 export function openThrowLesson(lesson){
- cleanup();const root=document.getElementById('throw-screen');
+ cleanup();if(lesson.id==='o-soto-gari'){cleanup=openOsotoLesson(lesson);return;}const root=document.getElementById('throw-screen');
  root.innerHTML=`
   <header class="throw-heading"><div><div class="eyebrow">NAGE-WAZA / ${lesson.roman.toUpperCase()}</div><h1>${lesson.name}</h1><p>${lesson.description}</p></div><span class="throw-kanji" lang="ja" aria-hidden="true">${lesson.kanji}</span></header>
   <div class="throw-layout">
