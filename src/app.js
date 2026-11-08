@@ -158,7 +158,7 @@ function draw(now){
     }
   }else drawGripGuides(ctx,scene,GRIP_STEPS[2],activeTechnique.directions,mirrored,GRIP_STEPS[2]);
   const directionHint=activeTechnique.id==='nami'?tr('내 눈에 양손 손등이 보이도록 주먹을 쥐세요.'):activeTechnique.id==='gyaku'?tr('내 눈에 양손 손바닥 쪽이 보이도록 쥐세요.'):tr('내 눈에 왼손 손바닥, 오른손 손등이 보이도록 쥐세요.');
-  const feedback=!state?directionHint:state.tapped?tr('잘했어요! 손 모양과 위치를 맞췄습니다.'):state.issue==='tracking'?tr('양손 전체가 카메라에 보이도록 해 주세요.'):state.issue==='open'?tr('양손을 주먹 모양으로 쥐세요.'):state.issue==='palm'?directionHint:state.issue==='position'?tr('쥔 손을 흰색 가이드 위치로 옮겨 주세요.'):tr('잘했어요! 그대로 잠깐 유지하세요.');
+  const feedback=!state?directionHint:state.tapped?tr('Perfect 손 모양과 위치를 맞췄습니다.'):state.issue==='tracking'?tr('양손 전체가 카메라에 보이도록 해 주세요.'):state.issue==='open'?tr('양손을 주먹 모양으로 쥐세요.'):state.issue==='palm'?directionHint:state.issue==='position'?tr('쥔 손을 흰색 가이드 위치로 옮겨 주세요.'):tr('Perfect 그대로 잠깐 유지하세요.');
   $('tracking-label').textContent=state?tr`${state.visible}개 손 인식 · ${state.count}개 위치 일치`:tr('손 위치 가이드');
   $('feedback').textContent=feedback;$('live-feedback').textContent=feedback;
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':state?.aligned?'good':score>=25?'near':'adjust';
@@ -169,7 +169,7 @@ function draw(now){
   }
   $('save-trace').disabled=practiceTrace.frames.length===0;
   $('opponent-status').dataset.tap=String(!!tapUntil||!!state?.tapped);
-  $('opponent-status').textContent=tapUntil||state?.tapped?tr('잘했어요!'):state?.aligned?tr('잘했어요! 그대로 유지'):tr('흰색 가이드에 양손 맞추기');
+  $('opponent-status').textContent=tapUntil||state?.tapped?tr('Perfect'):state?.aligned?tr('Perfect 그대로 유지'):tr('흰색 가이드에 양손 맞추기');
 }
 
 function tick(now){
@@ -181,12 +181,12 @@ function tick(now){
   else if(running){
     elapsed+=dt;
     if(gripState.tapped&&!tapUntil){
-      completed=new Set([0,1,2]);running=false;tapUntil=now+1500;controls();updatePose();notify(tr('잘했어요! 손 모양과 위치 미션을 완료했습니다.'));
+      completed=new Set([0,1,2]);running=false;tapUntil=now+1500;controls();updatePose();notify(tr('Perfect 손 모양과 위치 미션을 완료했습니다.'));
     }
   }
   if(tapUntil&&now>=tapUntil){tapUntil=0;hold=0;document.dispatchEvent(new CustomEvent('judo-complete',{detail:{demo:false}}));}
   $('score').textContent=score??'—';$('arm-score').textContent=armScore===null?'—':`${armScore}%`;$('hand-score').textContent=mode==='live'?`${gripState.count} / 2`:'—';
-  $('score-verdict').textContent=score===null?tr('측정 가능한 자세를 기다려요'):gripState.aligned?tr('잘했어요! 그대로 유지'):tr('손 모양과 위치를 맞춰 주세요');
+  $('score-verdict').textContent=score===null?tr('측정 가능한 자세를 기다려요'):gripState.aligned?tr('Perfect 그대로 유지'):tr('손 모양과 위치를 맞춰 주세요');
   $('hold-text').textContent=tr`${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`;$('hold-progress').style.width=`${hold/GRIP_HOLD_SECONDS*100}%`;
   $('timer').textContent=`${String(Math.floor(elapsed/60)).padStart(2,'0')}:${String(Math.floor(elapsed%60)).padStart(2,'0')}`;$('fps').textContent=mode==='live'?`${Math.round(fps)} FPS · RGB CAMERA / 2D`:'RGB CAMERA / 2D';
   $('stage-hint').textContent=demonstrating?tr('흰색 손: 고정 목표'):countdown?tr('잠시 후 시작합니다'):mode==='live'?tr('흰색 가이드: 목표 · 움직이는 장갑: 내 손'):tr('내 동작 연습을 누르세요');requestAnimationFrame(tick);
