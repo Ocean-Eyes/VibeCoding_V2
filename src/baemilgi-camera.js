@@ -1,6 +1,7 @@
-export function cameraConstraints(camera='auto'){
+export function cameraConstraints(camera='auto',orientation='landscape'){
  const source=camera==='auto'?{facingMode:{ideal:'environment'}}:camera==='user'?{facingMode:{ideal:'user'}}:{deviceId:{exact:camera}};
- return {video:{...source,width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30},resizeMode:{ideal:'none'}},audio:false};
+ const portrait=orientation==='portrait';
+ return {video:{...source,width:{ideal:portrait?720:1280},height:{ideal:portrait?1280:720},frameRate:{ideal:30,max:30},resizeMode:{ideal:'none'}},audio:false};
 }
 export async function listCameras(mediaDevices=navigator.mediaDevices){
  try{return (await mediaDevices.enumerateDevices()).filter(device=>device.kind==='videoinput'&&device.deviceId);}catch{return [];}

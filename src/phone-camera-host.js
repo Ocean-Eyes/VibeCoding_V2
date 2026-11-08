@@ -11,7 +11,7 @@ function drawQR(canvas,text){
  canvas.width=canvas.height=size;const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,size,size);ctx.fillStyle='#14252d';
  for(let y=0;y<qr.size;y++)for(let x=0;x<qr.size;x++)if(qr.getModule(x,y))ctx.fillRect((x+4)*scale,(y+4)*scale,scale,scale);
 }
-export async function connectPhoneCamera({isCurrent=()=>true}={}){
+export async function connectPhoneCamera({isCurrent=()=>true,orientation='landscape'}={}){
  cancelPhoneCamera();
  if(!window.isSecureContext||typeof RTCPeerConnection==='undefined')throw Object.assign(new Error(t('이 브라우저에서는 스마트폰 카메라 연결을 시작할 수 없습니다.','This browser cannot connect a phone camera.')),{name:'PhoneCameraError'});
  let dialog=document.getElementById('phone-camera-dialog');
@@ -25,7 +25,7 @@ export async function connectPhoneCamera({isCurrent=()=>true}={}){
  try{
   session=await cameraSignal({action:'create'});
   if(settled||!isCurrent()){attempt.cancel();return result;}
-  const url=new URL('../phone-camera',import.meta.url);url.searchParams.set('lang',language);url.hash=new URLSearchParams({room:session.room,key:session.phoneToken}).toString();
+  const url=new URL('../phone-camera',import.meta.url);url.searchParams.set('lang',language);url.searchParams.set('orientation',orientation==='portrait'?'portrait':'landscape');url.hash=new URLSearchParams({room:session.room,key:session.phoneToken}).toString();
   peer=createCameraPeer({role:'host',session,onStream:stream=>{
    if(settled||!isCurrent()){peer.close();return;}
    paired=settled=true;owner={peer,onEnd:null};owners.set(stream,owner);pending=null;dialog.close();link.removeAttribute('href');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);resolveResult(stream);
@@ -39,6 +39,7 @@ export async function connectPhoneCamera({isCurrent=()=>true}={}){
   await peer.start();if(settled||!isCurrent()){attempt.cancel();return result;}
   drawQR(canvas,url.href);canvas.hidden=false;link.href=url.href;link.hidden=false;
   status.textContent=t('QR 스캔 후 폰에서 카메라 켜고 연결을 누르세요. QR은 5분 동안 유효합니다.','After scanning, tap Start camera & connect on your phone. This QR code expires in 5 minutes.');
+  if(orientation==='portrait')status.textContent+=' '+t('폰을 세로로 두고 전신을 촬영하세요.','Hold your phone upright to capture your whole body.');
  }catch(error){if(!settled){settled=true;if(pending===attempt)pending=null;peer?.close();if(dialog.open)dialog.close();rejectResult(Object.assign(new Error(error.code==='not_configured'?t('스마트폰 연결 서버가 준비되지 않았습니다. PC 카메라는 계속 사용할 수 있습니다.','Phone pairing is not configured. You can still use the PC camera.'):t('스마트폰 연결을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.','Could not prepare phone pairing. Please try again shortly.')),{name:'PhoneCameraError'}));}}
  return result;
 }

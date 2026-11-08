@@ -1,24 +1,23 @@
 // Camera tracks can carry rotation metadata that the receiving browser applies
-// differently. Send upright pixels on a fixed landscape canvas instead.
-export function landscapeRotation(width,height,angle=0){
- if(width>=height)return 0;
- const orientation=((angle%360)+360)%360;
- return orientation===90?270:90;
+// differently. Send upright pixels with the selected frame orientation instead.
+export function cameraFrameRotation(width,height,angle=0,orientation='landscape'){
+ if(orientation==='portrait'?height>=width:width>=height)return 0;
+ const screenAngle=((angle%360)+360)%360;
+ return screenAngle===90?270:90;
 }
 export function cameraScreenAngle(){
  const angle=globalThis.screen?.orientation?.angle;
  return Number.isFinite(angle)?angle:Number.isFinite(globalThis.orientation)?globalThis.orientation:0;
 }
-export function createLandscapeCamera(video,canvas,{getAngle=cameraScreenAngle,frameRate=30}={}){
+export function createOrientedCamera(video,canvas,{orientation='landscape',getAngle=cameraScreenAngle,frameRate=30}={}){
  if(!canvas.captureStream)throw new DOMException('Canvas camera capture is unavailable','NotSupportedError');
- canvas.width=1280;canvas.height=720;
  const ctx=canvas.getContext('2d',{alpha:false});
  let stopped=false,frame,previousTime=-Infinity,manual=null,lastAngle=getAngle(),rotation=0;
  function draw(){
   const angle=getAngle();if(angle!==lastAngle){manual=null;lastAngle=angle;}
   ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#203039';ctx.fillRect(0,0,canvas.width,canvas.height);
   const width=video.videoWidth,height=video.videoHeight;if(video.readyState<2||!width||!height)return;
-  rotation=manual??landscapeRotation(width,height,angle);
+  rotation=manual??cameraFrameRotation(width,height,angle,orientation);
   const sideways=rotation%180!==0;
   const scale=Math.min(canvas.width/(sideways?height:width),canvas.height/(sideways?width:height));
   ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(rotation*Math.PI/180);ctx.scale(scale,scale);
@@ -29,10 +28,14 @@ export function createLandscapeCamera(video,canvas,{getAngle=cameraScreenAngle,f
   if(time-previousTime>=1000/frameRate){draw();previousTime=time;}
   frame=requestAnimationFrame(tick);
  }
- draw();
+ function setOrientation(value){
+  orientation=value==='portrait'?'portrait':'landscape';manual=null;
+  canvas.width=orientation==='portrait'?720:1280;canvas.height=orientation==='portrait'?1280:720;draw();
+ }
+ setOrientation(orientation);
  const stream=canvas.captureStream(frameRate);
  frame=requestAnimationFrame(tick);
- return {stream,
+ return {stream,setOrientation,
   rotate(){if(stopped)return;manual=(rotation+90)%360;draw();},
   reset(){if(stopped)return;manual=null;draw();},
   stop(){if(stopped)return;stopped=true;cancelAnimationFrame(frame);stream.getTracks().forEach(track=>track.stop());},

@@ -2,6 +2,8 @@ import {throwText as t} from './throw-lessons.js';
 import {sampleThrow} from './throw-motion.js';
 import {THROW_DURATION,throwTimeAtElapsed} from './throw-playback.js';
 import {createThrowRenderer,drawFootMap} from './throw-render.js';
+import {createCameraPlayback} from './camera-playback.js';
+import {connectPhoneCamera,cancelPhoneCamera,releaseCamera,onCameraEnded} from './phone-camera-host.js';
 
 let cleanup=()=>{};
 export function openThrowLesson(lesson){
@@ -19,6 +21,7 @@ export function openThrowLesson(lesson){
     <p class="throw-help">${t('전체 동작을 연속으로 재생합니다. 일시정지하거나 재생 막대로 원하는 순간을 살펴보세요.','Watch the continuous demonstration. Pause or use the timeline to inspect any moment.')}</p>
    </section>
    <aside class="throw-coach">
+    <section class="throw-camera-panel"><div class="eyebrow">PORTRAIT CAMERA</div><h2>${t('내 동작 · 세로 촬영','Your movement · portrait camera')}</h2><div id="throw-camera-preview" class="throw-camera-preview" hidden><video id="throw-video" autoplay muted playsinline hidden></video></div><p id="throw-camera-status" role="status">${t('폰을 세로로 두고 머리부터 발끝까지 보여 주세요. 시연과 내 동작을 나란히 볼 수 있습니다.','Hold your phone upright and show your whole body. View your movement alongside the demonstration.')}</p><div class="throw-camera-actions"><button id="throw-phone" class="outline">${t('스마트폰 카메라 연결','Connect phone camera')}</button><button id="throw-camera-stop" class="outline" hidden>${t('카메라 끄기','Stop camera')}</button><button id="throw-camera-resume" class="outline" hidden>${t('카메라 영상 시작','Start camera video')}</button></div></section>
     <section class="throw-foot-panel"><div class="eyebrow">FOOTWORK</div><h2>${t('위에서 본 발 위치','Foot positions from above')}</h2><canvas id="throw-feet" width="300" height="230" role="img" aria-label="${t('거는 사람과 받는 사람의 좌우 발 위치','Left and right foot positions of both partners')}"></canvas><p>${t('금색은 내가 움직이는 오른발입니다.','Gold marks your working right foot.')}</p></section>
     <p class="throw-solo-note">${t('혼자 할 때는 발 이동과 몸 돌리기만 천천히 따라 하세요. 상대를 메치는 연습은 매트 위에서 지도자와 진행하세요.','Practise the footwork and turns slowly on your own. Practise throwing a partner on mats with an instructor.')}</p>
     <a class="throw-source" href="${lesson.source}" target="_blank" rel="noopener noreferrer">${t('동작 참고 · 강도관 / IJF ↗','Reference · Kodokan / IJF ↗')}</a>
@@ -29,6 +32,34 @@ export function openThrowLesson(lesson){
  let elapsed=0,playing=false,speed=1,repeat=false,solo=false,yaw=1.05,pitch=.22,raf=0,last=0,disposed=false;
  let currentPose=null,poseTime=-1;
  const abort=new AbortController(),on=(target,name,fn)=>target.addEventListener(name,fn,{signal:abort.signal});
+ let cameraStream=null,cameraPending=false,cameraGeneration=0;
+ const cameraPlayback=createCameraPlayback($('throw-video'),$('throw-camera-resume'),{
+  onBlocked:()=>{$('throw-camera-status').textContent=t('카메라 영상 시작을 눌러 주세요.','Tap Start camera video.');},
+  onRetryFailed:()=>{$('throw-camera-status').textContent=t('카메라 영상 시작을 다시 눌러 주세요.','Please tap Start camera video again.');},
+ });
+ function stopCamera(message){
+  cameraGeneration++;if(cameraPending)cancelPhoneCamera();cameraPending=false;cameraPlayback.cancel();releaseCamera(cameraStream);cameraStream=null;
+  $('throw-video').srcObject=null;$('throw-video').hidden=true;$('throw-camera-preview').hidden=true;$('throw-camera-stop').hidden=true;$('throw-phone').disabled=false;
+  if(message)$('throw-camera-status').textContent=message;
+ }
+ async function connectCamera(){
+  if(cameraPending||cameraStream||disposed)return;
+  const current=++cameraGeneration;cameraPending=true;$('throw-phone').disabled=true;$('throw-camera-stop').hidden=false;
+  $('throw-camera-status').textContent=t('스마트폰 연결을 준비하고 있습니다…','Preparing phone camera…');
+  try{
+   const acquired=await connectPhoneCamera({orientation:'portrait',isCurrent:()=>current===cameraGeneration&&!disposed});
+   if(current!==cameraGeneration||disposed){releaseCamera(acquired);return;}
+   if(!acquired){stopCamera(t('연결을 취소했습니다.','Connection cancelled.'));return;}
+   cameraStream=acquired;$('throw-video').srcObject=acquired;$('throw-camera-preview').hidden=false;
+   onCameraEnded(acquired,()=>{if(current===cameraGeneration)stopCamera(t('스마트폰 연결이 끝났습니다.','Phone camera disconnected.'));});
+   if(!await cameraPlayback.start(()=>current===cameraGeneration&&!disposed))return;
+   $('throw-camera-status').textContent=t('스마트폰 영상 연결됨 · 시연을 보며 천천히 동작을 확인하세요.','Phone camera connected · follow the demonstration slowly and check your movement.');
+  }catch(error){if(current===cameraGeneration)stopCamera(error.name==='PhoneCameraError'?error.message:t('카메라 영상을 재생하지 못했습니다. 다시 연결해 주세요.','Could not play camera video. Please reconnect.'));}
+  finally{if(current===cameraGeneration)cameraPending=false;}
+ }
+ on($('throw-phone'),'click',()=>void connectCamera());
+ on($('throw-camera-stop'),'click',()=>stopCamera(t('카메라를 껐습니다.','Camera stopped.')));
+ on($('throw-video'),'resize',()=>{const video=$('throw-video');if(video.videoWidth&&video.videoHeight)$('throw-camera-preview').style.aspectRatio=`${video.videoWidth} / ${video.videoHeight}`;});
  function render(){
   if(disposed)return;
   const time=throwTimeAtElapsed(elapsed);if(time!==poseTime){currentPose=sampleThrow(lesson.id,time);poseTime=time;}
@@ -57,6 +88,7 @@ export function openThrowLesson(lesson){
  on($('throw-seek'),'input',e=>{playing=false;cancelAnimationFrame(raf);last=0;elapsed=Number(e.target.value)/1000*THROW_DURATION;render();});
  root.querySelectorAll('[data-throw-view]').forEach(b=>on(b,'click',()=>{yaw={front:0,side:Math.PI/2,oblique:1.05}[b.dataset.throwView];pitch=.22;root.querySelectorAll('[data-throw-view]').forEach(v=>v.setAttribute('aria-pressed',String(v===b)));render();}));
  on(document,'visibilitychange',()=>{if(document.hidden)pause();});on(window,'pagehide',pause);on(window,'resize',render);
- cleanup=()=>{if(disposed)return;disposed=true;playing=false;cancelAnimationFrame(raf);abort.abort();renderer.dispose();};
+ on(window,'pagehide',()=>stopCamera());
+ cleanup=()=>{if(disposed)return;disposed=true;playing=false;cancelAnimationFrame(raf);stopCamera();abort.abort();renderer.dispose();};
  on(document,'judo-exit',cleanup);render();
 }
