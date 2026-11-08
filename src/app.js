@@ -73,7 +73,7 @@ function connectTracker(){
     worker.onerror=e=>{if(session===generation&&attempt===trackerGeneration)trackingFailed(tr`추적 모듈 오류: ${e.message||tr('Worker 실행 실패')}`)};
     worker.onmessage=({data})=>{
       if(session!==generation||attempt!==trackerGeneration)return;
-      if(data.type==='ready'){clearTimeout(initTimer);ready=true;mode='live';if(autoStart){autoStart=false;running=true;countdown=3;$('countdown').hidden=false;}controls();notify(tr('주먹을 쥐고 흰색 가이드에 양손을 맞추세요. 손목을 비틀 필요는 없습니다.'));}
+      if(data.type==='ready'){clearTimeout(initTimer);ready=true;mode='live';if(autoStart){autoStart=false;running=true;countdown=3;$('countdown').hidden=false;}controls();notify(tr('주먹을 쥐고 금색 가이드에 양손을 맞추세요. 손목을 비틀 필요는 없습니다.'));}
       if(data.type==='error')trackingFailed(data.code==='model'?tr`모델을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 연결해 주세요. (${data.detail})`:data.code==='tracking'?tr`자세 추적이 중단되었습니다. 다시 연결해 주세요. (${data.detail})`:data.message);
       if(data.type==='result'){
         clearTimeout(frameTimer);busy=false;const now=performance.now();fps=lastResult?1000/(now-lastResult):0;lastResult=now;
@@ -144,21 +144,21 @@ function draw(now){
   if(demonstrating){
     drawGripGuides(ctx,scene,GRIP_STEPS[2],activeTechnique.directions,mirrored,GRIP_STEPS[2]);
   }else if(state){
-    ctx.save();ctx.globalAlpha=.45;drawGripGuides(ctx,scene,GRIP_STEPS[2],activeTechnique.directions,mirrored,GRIP_STEPS[2]);ctx.restore();
+    drawGripGuides(ctx,scene,GRIP_STEPS[2],activeTechnique.directions,mirrored,GRIP_STEPS[2]);
     const live=displayHands.map((h,i)=>{
       if(!h)return null;
       const hand=h.map(p=>({...p,x:scene.origin.x+p.x*scene.scale,y:scene.origin.y+p.y*scene.scale}));
       const e=gloveElbow(h,arms[i]),elbow=e?{x:scene.origin.x+e.x*scene.scale,y:scene.origin.y+e.y*scene.scale}:null;
       return {hand,elbow,index:i,thumbInside:hideCollarThumb(h,!!state.grips[i]&&activeTechnique.directions[i]==='↓'),depth:shown?.[15+i]?.z??0};
     }).filter(Boolean).sort((a,b)=>b.depth-a.depth);
-    for(const h of live)drawLiveGlove(ctx,h.hand,palmFacing(h.hand,h.index===0,mirrored),h.elbow,h.thumbInside,.78*(gloves[h.index].source==='wrist'?state.wristOpacity[h.index]:handStreams[h.index].opacityAt(now)));
+    for(const h of live)drawLiveGlove(ctx,h.hand,palmFacing(h.hand,h.index===0,mirrored),h.elbow,h.thumbInside,1);
     if($('show-skeleton').checked&&frame&&shown){
       const projected=shown.map(p=>p?projectHand([p],frame,scene,mirrored)[0]:null);skeleton(ctx,projected,cyan,1.5);
       for(const h of live)for(const [a,b]of HAND_BONES)line(ctx,h.hand[a],h.hand[b],cyan,1);
     }
   }else drawGripGuides(ctx,scene,GRIP_STEPS[2],activeTechnique.directions,mirrored,GRIP_STEPS[2]);
   const directionHint=activeTechnique.id==='nami'?tr('내 눈에 양손 손등이 보이도록 주먹을 쥐세요.'):activeTechnique.id==='gyaku'?tr('내 눈에 양손 손바닥 쪽이 보이도록 쥐세요.'):tr('내 눈에 왼손 손바닥, 오른손 손등이 보이도록 쥐세요.');
-  const feedback=!state?directionHint:state.tapped?tr('Perfect 손 모양과 위치를 맞췄습니다.'):state.issue==='tracking'?tr('양손 전체가 카메라에 보이도록 해 주세요.'):state.issue==='open'?tr('양손을 주먹 모양으로 쥐세요.'):state.issue==='palm'?directionHint:state.issue==='position'?tr('쥔 손을 흰색 가이드 위치로 옮겨 주세요.'):tr('Perfect 그대로 잠깐 유지하세요.');
+  const feedback=!state?directionHint:state.tapped?tr('Perfect 손 모양과 위치를 맞췄습니다.'):state.issue==='tracking'?tr('양손 전체가 카메라에 보이도록 해 주세요.'):state.issue==='open'?tr('양손을 주먹 모양으로 쥐세요.'):state.issue==='palm'?directionHint:state.issue==='position'?tr('쥔 손을 금색 가이드 위치로 옮겨 주세요.'):tr('Perfect 그대로 잠깐 유지하세요.');
   $('tracking-label').textContent=state?tr`${state.visible}개 손 인식 · ${state.count}개 위치 일치`:tr('손 위치 가이드');
   $('feedback').textContent=feedback;$('live-feedback').textContent=feedback;
   $('live-score-value').textContent=score??'—';$('live-score').dataset.level=score===null?'waiting':state?.aligned?'good':score>=25?'near':'adjust';
@@ -169,7 +169,7 @@ function draw(now){
   }
   $('save-trace').disabled=practiceTrace.frames.length===0;
   $('opponent-status').dataset.tap=String(!!tapUntil||!!state?.tapped);
-  $('opponent-status').textContent=tapUntil||state?.tapped?tr('Perfect'):state?.aligned?tr('Perfect 그대로 유지'):tr('흰색 가이드에 양손 맞추기');
+  $('opponent-status').textContent=tapUntil||state?.tapped?tr('Perfect'):state?.aligned?tr('Perfect 그대로 유지'):tr('금색 가이드에 양손 맞추기');
 }
 
 function tick(now){
@@ -189,10 +189,10 @@ function tick(now){
   $('score-verdict').textContent=score===null?tr('측정 가능한 자세를 기다려요'):gripState.aligned?tr('Perfect 그대로 유지'):tr('손 모양과 위치를 맞춰 주세요');
   $('hold-text').textContent=tr`${hold.toFixed(1)} / ${GRIP_HOLD_SECONDS}초`;$('hold-progress').style.width=`${hold/GRIP_HOLD_SECONDS*100}%`;
   $('timer').textContent=`${String(Math.floor(elapsed/60)).padStart(2,'0')}:${String(Math.floor(elapsed%60)).padStart(2,'0')}`;$('fps').textContent=mode==='live'?`${Math.round(fps)} FPS · RGB CAMERA / 2D`:'RGB CAMERA / 2D';
-  $('stage-hint').textContent=demonstrating?tr('흰색 손: 고정 목표'):countdown?tr('잠시 후 시작합니다'):mode==='live'?tr('흰색 가이드: 목표 · 움직이는 장갑: 내 손'):tr('내 동작 연습을 누르세요');requestAnimationFrame(tick);
+  $('stage-hint').textContent=demonstrating?tr('금색 손: 고정 목표'):countdown?tr('잠시 후 시작합니다'):mode==='live'?tr('금색 가이드: 목표 · 파란색 손: 내 손'):tr('내 동작 연습을 누르세요');requestAnimationFrame(tick);
 }
 $('start').onclick=()=>start();$('connect-phone').onclick=()=>start('phone');
-$('demo').onclick=()=>{stop();demonstrating=true;controls();notify(tr('흰색 손의 모양과 위치를 그대로 따라하세요.'))};
+$('demo').onclick=()=>{stop();demonstrating=true;controls();notify(tr('금색 손의 모양과 위치를 그대로 따라하세요.'))};
 $('retry-tracking').onclick=()=>{if(stream)connectTracker()};
 $('save-trace').onclick=()=>{
  const version=new URL(import.meta.url).searchParams.get('v')??'local';
@@ -211,4 +211,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){collar.res
 window.addEventListener('pagehide',stop);updatePose();controls();requestAnimationFrame(tick);
 
 document.addEventListener('judo-exit',stop);
-document.addEventListener('judo-lesson',({detail})=>{practiceTrace.clear();activeTechnique=detail;const gripCanvas=$('grip-preview'),gripContext=gripCanvas.getContext('2d');drawGripStudy(gripContext,gripCanvas.width,gripCanvas.height,detail.directions);gripCanvas.setAttribute('aria-label',`${detail.name}: ${detail.detail}`);stop();completed.clear();selected=0;demonstrating=true;updatePose();controls();notify(tr('흰색 손 모양을 확인한 뒤 내 동작 연습을 눌러 주세요.'));});
+document.addEventListener('judo-lesson',({detail})=>{practiceTrace.clear();activeTechnique=detail;const gripCanvas=$('grip-preview'),gripContext=gripCanvas.getContext('2d');drawGripStudy(gripContext,gripCanvas.width,gripCanvas.height,detail.directions);gripCanvas.setAttribute('aria-label',`${detail.name}: ${detail.detail}`);stop();completed.clear();selected=0;demonstrating=true;updatePose();controls();notify(tr('금색 손 모양을 확인한 뒤 내 동작 연습을 눌러 주세요.'));});

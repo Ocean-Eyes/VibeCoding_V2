@@ -187,7 +187,7 @@ export function drawOpponent(ctx, frame,interaction=null,{belt=true,arms=true}={
 }
 
 const guideLayers=new WeakMap();
-// White translucent instructor hands belong to the demonstration, not to the partner.
+// Opaque gold instructor hands are distinct from the blue tracked hands.
 export function drawGripGuides(ctx,frame,hands,directions,mirrored=true,targets=null,{actions=[],finish=0}={}){
   const sign=mirrored?-1:1;
   ctx.save();ctx.translate(frame.origin.x,frame.origin.y);ctx.scale(frame.scale,frame.scale);
@@ -208,7 +208,10 @@ export function drawGripGuides(ctx,frame,hands,directions,mirrored=true,targets=
     drawAnatomicalArm(ink,wrist,angle,i===0,directions[i]==='↑',true,!mirrored,contact>.8,elbow,shoulder);
     if(directions[i]==='↑')drawCollarFront(ink,wrist,angle,i===0,true,!mirrored,contact);
   }
-  ctx.save();ctx.resetTransform();ctx.globalAlpha=.7;ctx.drawImage(layer,0,0);ctx.restore();
+  // Tint the existing anatomical shading without changing the hand silhouette.
+  ink.save();ink.resetTransform();ink.globalCompositeOperation='source-atop';
+  ink.globalAlpha=.72;ink.fillStyle='#ce8a35';ink.fillRect(0,0,layer.width,layer.height);ink.restore();
+  ctx.save();ctx.resetTransform();ctx.globalAlpha=1;ctx.drawImage(layer,0,0);ctx.restore();
   ctx.restore();
 }
 export function drawTrackedHands(ctx,frame,hands,mirrored=true){

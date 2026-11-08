@@ -51,9 +51,9 @@ function paintGlove(ctx,hand,palm,elbow=null,thumbInside=false){
  const arm=new Path2D();tube(arm,[end,wrist,mix(wrist,hand[9],.25)],[size*.34,size*.23,size*.27]);
  ctx.save();
  const g=ctx.createLinearGradient(wrist.x-nx*size*.65,wrist.y-ny*size*.65,wrist.x+nx*size*.65,wrist.y+ny*size*.65);
- g.addColorStop(0,'#a9bac5');g.addColorStop(.32,palm?'#e1e8ea':'#eef5fa');g.addColorStop(.62,'#ffffff');g.addColorStop(1,'#aebfc9');
+ g.addColorStop(0,'#245b9c');g.addColorStop(.32,palm?'#508ed0':'#68a4e8');g.addColorStop(.62,'#99caff');g.addColorStop(1,'#326baa');
  const fade=ctx.createLinearGradient(end.x,end.y,wrist.x,wrist.y);
- fade.addColorStop(0,'#c7d7e000');fade.addColorStop(.45,'#dce8efcc');fade.addColorStop(1,'#e6eff5');
+ fade.addColorStop(0,'#245b9c');fade.addColorStop(.45,'#508ed0');fade.addColorStop(1,'#68a4e8');
  ctx.fillStyle=fade;ctx.fill(arm);
  ctx.fillStyle=g;ctx.shadowColor='#344d6250';ctx.shadowBlur=Math.max(1,size*.06);ctx.fill(path);ctx.shadowBlur=0;
  ctx.clip(path);
@@ -69,7 +69,7 @@ function paintGlove(ctx,hand,palm,elbow=null,thumbInside=false){
 
 let surface;
 // Composite the complete glove once so overlapping fingers never become brighter blobs.
-export function drawLiveGlove(ctx,hand,palm,elbow=null,thumbInside=false,opacity=.78){
+export function drawLiveGlove(ctx,hand,palm,elbow=null,thumbInside=false,opacity=1){
  if(!hand)return;
  surface??=Object.assign(document.createElement('canvas'),{width:512,height:512});
  const all=elbow?[...hand,elbow]:hand,pad=Math.max(12,distance(hand[0],hand[9])*.5);

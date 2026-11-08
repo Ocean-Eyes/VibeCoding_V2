@@ -241,7 +241,8 @@ footer { color: #303e2e; }
 .stage-bottom { bottom:10px; }
 .stage-bottom > span { max-width:60%; line-height:1.5; }
 .legend { font-size:9px; }
-.target-dot { background:#eef6fb; box-shadow:0 0 0 1px #8097a6; }
+.target-dot { background:#ce8a35; box-shadow:0 0 0 1px #f3cc83; }
+#practice-screen .user-dot { background:#68a4e8; }
 .demo-button { margin:0; padding:9px 12px; font-size:11px; }
 .demo-button[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); }
 @media(max-width:760px) {

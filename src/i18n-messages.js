@@ -1,5 +1,21 @@
 // Korean source phrases are stable keys; numbered slots are template values.
 export const EN = {
+  "금색 목표 손": "Gold target hands",
+  "파란색 내 손": "Blue tracked hands",
+  "금색 손 가이드에 내 손의 모양과 위치를 맞춰 보세요.": "Match your hand shapes and positions to the gold guides.",
+  "손을 쥐고 금색 가이드 위치에 갖다 대세요. 비틀거나 당기지 않아도 됩니다. 양손의 모양과 방향이 보여야 판정할 수 있습니다.": "Close your hands and place them at the gold guides. No twisting or pulling is needed. Both hand shapes and directions must be visible.",
+  "손을 쥐고 금색 가이드의 위치와 방향을 맞추세요. 십자조르기는 내 눈에 양손 손등이 보이도록 합니다. 두 손을 1.2초 유지하면 완료됩니다. 비트는 동작이나 잡는 순서는 필요 없습니다.": "Close your hands and match the gold guides. For Nami-juji-jime, face both hand backs toward yourself. Hold both hands for 1.2 seconds to complete. No twisting or grip sequence is required.",
+  "쥔 손을 금색 가이드 위치로 옮겨 주세요.": "Move your closed hands to the gold guides.",
+  "금색 가이드에 양손 맞추기": "Match both hands to the gold guides",
+  "주먹을 쥐고 금색 가이드에 양손을 맞추세요. 손목을 비틀 필요는 없습니다.": "Close both hands and match the gold guides. No wrist twisting is needed.",
+  "금색 손의 모양과 위치를 그대로 따라하세요.": "Copy the shapes and positions of the gold hands.",
+  "금색 손: 고정 목표": "Gold hands: fixed targets",
+  "금색 가이드: 목표 · 파란색 손: 내 손": "Gold guides: targets · blue hands: your hands",
+  "금색 손 모양을 확인한 뒤 내 동작 연습을 눌러 주세요.": "Check the gold hand shapes, then select Practice my movement.",
+  "금색 가이드처럼 왼손을 쥐고 표시된 위치로 옮기세요.": "Close your left hand like the guide and move it to the marked position.",
+  "금색 손의 이동을 따라하세요.": "Follow the gold hands.",
+  "금색 손의 시연을 먼저 확인하세요.": "Watch the gold-hand demonstration first.",
+
   "손 위치 가이드 ↻": "Hand placement guide ↻",
   "손을 쥐고, 가이드에 맞춰 보세요": "Close your hands and match the guides",
   "흰색 손 가이드에 내 손의 모양과 위치를 맞춰 보세요.": "Match your hand shapes and positions to the white guides.",
