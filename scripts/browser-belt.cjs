@@ -9,7 +9,7 @@ const assert=require('node:assert/strict');
   await page.goto(process.env.SITE_URL||'http://localhost:5173/dist/index.html');
   await page.locator('[data-category="basics"]').click();
   assert.equal(await page.getByText('도복 입는 법',{exact:true}).count(),0);
-  assert.equal(await page.locator('.lesson-card').count(),3); // Belt, Hindu push-up, and planned breakfalls.
+  assert.equal(await page.locator('.lesson-card').count(),4); // Belt, Hindu push-up, planned breakfalls and taping.
   await page.locator('[data-lesson="belt"]').click();
   await page.waitForFunction(()=>document.querySelectorAll('[data-belt-step]').length===7&&document.querySelector('#belt-canvas').dataset.sourceState==='ready');
   assert.equal(await page.evaluate(()=>window.qaStreams.length),0,'opening lesson does not request camera');
