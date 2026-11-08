@@ -1,4 +1,6 @@
 import {tr} from './i18n.js';
+import {createCameraPlayback} from './camera-playback.js';
+import {createPracticeTracker} from './practice-tracking.js';
 import {PracticeTrace,motionDiagnostic} from './practice-trace.js';
 import {CollarInteraction,GRIP_PASS_SCORE,GRIP_HOLD_SECONDS} from './collar-interaction.js';
 import {LandmarkStream,HandStream,HandIdentityTracker,GripProjection,projectHand,palmFacing,poseConfirmsHand} from './live-hands.js';
@@ -26,6 +28,10 @@ let selected=0,running=false,countdown=0,elapsed=0,hold=0,completed=new Set(),sc
 let armScore=null,fps=0,viewWidth=0,viewHeight=0,initTimer=null,frameTimer=null;
 let trackerGeneration=0,activeTechnique=TECHNIQUES[0],autoStart=false,tapUntil=0;
 const notify=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error)};
+const cameraPlayback=createCameraPlayback(video,$('resume-video'),{
+ onBlocked:()=>notify(tr('카메라는 연결됐지만 영상 재생이 대기 중입니다. 카메라 영상 시작을 눌러 주세요.')),
+ onRetryFailed:()=>notify(tr('영상 재생이 차단됐습니다. 브라우저의 미디어 재생 설정을 확인하고 다시 눌러 주세요.')),
+});
 function line(context,a,b,color,width=3,dash=[]){if(!a||!b)return;context.beginPath();context.strokeStyle=color;context.lineWidth=width;context.lineCap='round';context.setLineDash(dash);context.moveTo(a.x,a.y);context.lineTo(b.x,b.y);context.stroke();context.setLineDash([])}
 function circle(context,p,r,color,fill=true){if(!p)return;context.beginPath();context.arc(p.x,p.y,r,0,Math.PI*2);context.fillStyle=color;context.strokeStyle=color;context.lineWidth=2;fill?context.fill():context.stroke()}
 function skeleton(context,p,color,width=3){for(const[a,b]of BONES){if(p[a]&&p[b]&&(p[a].visibility??1)>=.65&&(p[b].visibility??1)>=.65)line(context,p[a],p[b],color,width)}for(const i of[11,12,13,14,15,16,23,24])if(p[i]&&(p[i].visibility??1)>=.65)circle(context,p[i],width*1.25,color)}
@@ -46,7 +52,7 @@ function stop(){
   resetTrackingDisplay();
   clearScore();
   tapUntil=0;autoStart=false;
-  generation++;trackerGeneration++;clearTimeout(initTimer);clearTimeout(frameTimer);worker?.terminate();worker=null;stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;video.hidden=true;ready=busy=running=false;mode='idle';lastResult=0;lastVideo=-1;elapsed=hold=countdown=0;score=armScore=null;$('countdown').hidden=true;$('retry-tracking').hidden=true;ctx.clearRect(0,0,canvas.width,canvas.height);controls();updatePose();
+  generation++;trackerGeneration++;cameraPlayback.cancel();clearTimeout(initTimer);clearTimeout(frameTimer);worker?.terminate();worker=null;stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;video.hidden=true;ready=busy=running=false;mode='idle';lastResult=0;lastVideo=-1;elapsed=hold=countdown=0;score=armScore=null;$('countdown').hidden=true;$('retry-tracking').hidden=true;ctx.clearRect(0,0,canvas.width,canvas.height);controls();updatePose();
 }
 function fail(message){stop();notify(message,true)}
 function trackingFailed(message){resetTrackingDisplay();clearScore();autoStart=false;tapUntil=0;
@@ -62,7 +68,7 @@ function connectTracker(){
   mode='loading';$('retry-tracking').hidden=true;controls();notify(tr('카메라가 연결되었습니다. 자세 추적 모델을 준비하고 있습니다.'));
   initTimer=setTimeout(()=>{if(session===generation&&attempt===trackerGeneration)trackingFailed(tr('추적 모델 연결 시간이 초과되었습니다.'))},90000);
   try{
-    worker=new Worker(new URL('./tracker.js',import.meta.url));
+    worker=createPracticeTracker();
     worker.onerror=e=>{if(session===generation&&attempt===trackerGeneration)trackingFailed(tr`추적 모듈 오류: ${e.message||tr('Worker 실행 실패')}`)};
     worker.onmessage=({data})=>{
       if(session!==generation||attempt!==trackerGeneration)return;
@@ -85,7 +91,7 @@ async function start(){
   try{
     const acquired=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user',frameRate:{ideal:30,max:30}},audio:false});
     if(session!==generation){acquired.getTracks().forEach(t=>t.stop());return}
-    stream=acquired;stream.getVideoTracks()[0].addEventListener('ended',()=>{if(session===generation)fail(tr('카메라 연결이 끊겼습니다. 카메라를 확인하고 다시 연결해 주세요.'))});video.srcObject=stream;await video.play();if(session!==generation)return;video.hidden=false;
+    stream=acquired;stream.getVideoTracks()[0].addEventListener('ended',()=>{if(session===generation)fail(tr('카메라 연결이 끊겼습니다. 카메라를 확인하고 다시 연결해 주세요.'))});clearTimeout(initTimer);video.srcObject=stream;if(!await cameraPlayback.start(()=>session===generation))return;
     connectTracker();
   }catch(e){if(session!==generation)return;const message={NotAllowedError:tr('카메라 권한이 거부되었습니다. 브라우저 주소창의 사이트 권한에서 카메라를 허용해 주세요.'),NotFoundError:tr('연결된 웹캠이 없습니다. 웹캠을 연결한 뒤 다시 시도해 주세요.'),NotReadableError:tr('카메라를 사용할 수 없습니다. 다른 앱의 카메라 사용을 종료하고 다시 시도해 주세요.')}[e.name]??tr`카메라 연결에 실패했습니다: ${e.message}`;fail(message)}
 }

@@ -1,5 +1,8 @@
 // Korean source phrases are stable keys; numbered slots are template values.
 export const EN = {
+  "카메라 영상 시작": "Start camera video",
+  "카메라는 연결됐지만 영상 재생이 대기 중입니다. 카메라 영상 시작을 눌러 주세요.": "Camera connected. Select Start camera video to allow playback.",
+  "영상 재생이 차단됐습니다. 브라우저의 미디어 재생 설정을 확인하고 다시 눌러 주세요.": "Video playback was blocked. Check browser media settings and tap again.",
   "횟수 도전 · 리더보드": "Rep challenge · Leaderboard",
   "배밀기 도전": "Hindu push-up challenge",
   "배밀기 도전 · Just Judo": "Hindu push-up challenge · Just Judo",

@@ -1,4 +1,5 @@
 import {tr} from './i18n.js';
+import {createCameraPlayback} from './camera-playback.js';
 import {BELT_STEPS,BELT_SOURCE,BELT_REFERENCE_2,sourcePTS,trackedPlacement} from './belt-sequence.js';
 import {beltAnchor} from './belt-geometry.js';
 import {loadBeltSource} from './belt-source.js';
@@ -21,6 +22,10 @@ let detailView='front',mode='virtual',picking=null,colors=[null,null],tracks=[ne
 let perspective='front',touchRotates=false;
 const detailCamera=createDetailCamera($('belt-detail'),()=>open&&detailView==='oblique'&&!!poseCache?.volume,()=>touchRotates);
 const capture=document.createElement('canvas'),captureContext=capture.getContext('2d',{willReadFrequently:true});
+const cameraPlayback=createCameraPlayback($('belt-video'),$('belt-resume-video'),{
+ onBlocked:()=>{$('belt-notice').textContent=tr('카메라는 연결됐지만 영상 재생이 대기 중입니다. 카메라 영상 시작을 눌러 주세요.');},
+ onRetryFailed:()=>{$('belt-notice').textContent=tr('영상 재생이 차단됐습니다. 브라우저의 미디어 재생 설정을 확인하고 다시 눌러 주세요.');},
+});
 function resetTracks(){tracks=[newBeltTrack(),newBeltTrack()];lastDetection=0}
 function modeNotice(){return mode==='real'?tr('색 표시가 가려져도 단계는 유지됩니다. 매듭 안쪽과 등 뒤는 직접 확인한 뒤 다음을 누르세요.'):tr('시연을 보며 순서대로 따라 하세요. 띠를 넣는 틈은 아래 확대 화면에서 확인하세요.')}
 function setMode(value){
@@ -71,7 +76,7 @@ function update(){
  document.querySelectorAll('[data-belt-step]').forEach(b=>b.disabled=unavailable);
  $('belt-retry').hidden=sourceState!=='error';
 }
-function stopCamera(){generation++;cameraPending=false;stream?.getTracks().forEach(t=>t.stop());stream=null;picking=null;resetTracks();$('belt-video').srcObject=null;$('belt-video').hidden=true;update()}
+function stopCamera(){generation++;cameraPlayback.cancel();cameraPending=false;stream?.getTracks().forEach(t=>t.stop());stream=null;picking=null;resetTracks();$('belt-video').srcObject=null;$('belt-video').hidden=true;update()}
 async function toggleCamera(){
  if(stream||cameraPending){stopCamera();return}
  const token=++generation;cameraPending=true;update();$('belt-notice').textContent=tr('카메라 권한을 허용해 주세요.');
@@ -79,9 +84,11 @@ async function toggleCamera(){
   if(!navigator.mediaDevices?.getUserMedia)throw new Error('unavailable');
   const acquired=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
   if(token!==generation||!open){acquired.getTracks().forEach(t=>t.stop());return}
-  stream=acquired;const video=$('belt-video');video.srcObject=stream;await video.play();
+  stream=acquired;cameraPending=false;update();const video=$('belt-video');video.srcObject=stream;
+  stream.getVideoTracks()[0].addEventListener('ended',()=>{if(token===generation){stopCamera();$('belt-notice').textContent=tr('카메라 연결이 끝났습니다. 시연은 계속 볼 수 있습니다.')}});
+  if(!await cameraPlayback.start(()=>token===generation&&open))return;
   if(token!==generation||!open)return;
-  video.hidden=false;cameraPending=false;stream.getVideoTracks()[0].addEventListener('ended',()=>{if(token===generation){stopCamera();$('belt-notice').textContent=tr('카메라 연결이 끝났습니다. 시연은 계속 볼 수 있습니다.')}});
+  cameraPending=false;
   $('belt-notice').textContent=mode==='real'?tr('A 색 등록과 B 색 등록을 눌러 실제 띠 끝의 색 표시를 선택하세요.'):tr('가이드가 배꼽 높이에 오도록 높이와 크기를 맞추세요. 단계는 직접 넘길 수 있습니다.');update();
  }catch(error){if(token!==generation)return;stopCamera();$('belt-notice').textContent=error.name==='NotAllowedError'?tr('카메라 권한이 거부됐습니다. 시연을 보거나 권한 허용 후 다시 연결하세요.'):tr('카메라를 연결하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도하세요.')}
 }

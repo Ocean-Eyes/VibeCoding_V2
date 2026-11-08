@@ -41,7 +41,12 @@ const assert=require('node:assert/strict');
      }));
      hands=gradual(hands);
      hands.forEach((hand,i)=>{pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
-     if(data.relocated)hands.forEach(h=>h.forEach(p=>p.x+=.25));
+     if(data.relocated){
+      hands.forEach(h=>h.forEach(p=>p.x+=.25));
+      // Persistent relocation must include the matching pose wrists. The
+      // one-frame spike below intentionally keeps inconsistent pose anchors.
+      hands.forEach((hand,i)=>{pose[15+i]={...hand[0],x:hand[0].x*w,y:hand[0].y*h}});
+     }
      if(data.spike)hands.forEach(h=>h.forEach(p=>p.x+=.4));
      if(data.swap)[pose[15],pose[16]]=[pose[16],pose[15]];
      if(data.one)hands.splice(1,1);if(data.reversed)hands.reverse();
