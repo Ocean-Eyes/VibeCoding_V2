@@ -4,6 +4,8 @@ PC에서 배밀기, 띠 매기 또는 조르기 수련을 열고 **스마트폰 
 
 폰은 후면 광각을 우선 사용하며, 연결 후 카메라 선택에서 전면 또는 노출된 다른 렌즈로 전환할 수 있다. PC는 시연·가이드·자세 분석을 실행한다. PC에서 중단하거나 메뉴를 나가면 폰 카메라도 종료된다. 폰에서도 **촬영 종료**로 끊을 수 있다. 촬영 중에는 폰 화면을 켜 둔다.
 
+폰은 **가로 촬영이 기본**이다. 세로 프레임이 들어오면 화면 방향에 맞춰 회전한 뒤, 고정된 1280×720 캔버스 영상을 전송한다. 이미 정상적인 가로 영상은 다시 돌리지 않는다. 전체 화각은 자르거나 늘이지 않고 맞춘다. 폰 미리보기와 PC의 화면·자세 분석은 같은 보정 영상을 사용한다. 방향 잠금 등으로 브라우저가 물리적인 방향을 알 수 없을 때는 폰의 **영상 90° 회전**으로 바로 보정할 수 있다. 렌즈를 바꿔도 전송 트랙과 가로 해상도는 유지한다.
+
 ## 연결 구조
 
 - `api/phone-camera.js`는 기존 Upstash Redis 설정(`KV_REST_API_*` 또는 `UPSTASH_REDIS_REST_*`)을 재사용한다. 새 계정이나 유료 서비스 설정을 추가하지 않는다. 리더보드와 분리된 `just-judo:phone-camera:v1:` 키만 사용한다.
@@ -20,11 +22,14 @@ npm run build
 PHONE_CAMERA_MEMORY=1 PORT=5186 npm start
 node --test tests/phone-camera-api.test.mjs tests/routes.test.mjs
 node scripts/browser-phone-camera.cjs <playwright-package-path>
+node scripts/browser-phone-camera-orientation.cjs <playwright-package-path>
 PHONE_CAMERA_REAL=1 node scripts/browser-phone-camera.cjs <playwright-package-path>
 ```
 
 PowerShell에서는 환경 변수를 `$env:PHONE_CAMERA_MEMORY='1'`, `$env:PORT='5186'`처럼 지정한다. 메모리 저장소는 localhost 개발 서버에서 명시적으로 켰을 때만 사용한다. 운영 API는 Redis가 없으면 503을 반환한다.
 
 브라우저 검사는 서로 분리된 PC/폰 컨텍스트를 실제 WebRTC로 연결한다. 기본 검사는 테스트 영상·자세 입력을 쓰고, `PHONE_CAMERA_REAL=1`은 실제 MediaPipe 모델로 수신 영상의 자세·손 분석까지 검사한다. PC 카메라를 호출하지 않는지, 양쪽 종료·취소·권한 거부 후 재시도·렌즈 교체를 확인한다. 실제 iPhone/Android 기기와 실제 Wi-Fi에서의 최종 검증은 별도다.
+
+방향 검사는 서로 다른 색의 네 모서리를 가진 영상을 사용한다. 양쪽 가로 방향, 이미 회전된 영상, 방향 정보가 없는 경우, 연결 중 방향 전환, 렌즈 교체와 수동 회전에서 폰·PC·분석 입력의 실제 픽셀 위치가 일치하는지 확인한다. 실제 기기 센서 대신 합성 영상과 화면 방향을 사용한다.
 
 QR 생성기는 [Project Nayuki 공식 배포](https://www.nayuki.io/page/qr-code-generator-library)를 로컬 ESM으로 포함했다. 원본 MIT 라이선스는 `src/qr-code.js`에 보존했다. 2026-11-08에 받은 공식 ES6 파일의 SHA-256은 `2511bc17f40a3c41d4a0578995db956b38997334d3d20113a5d4dc5c49c69480`이다. 원본에 ESM export와 출처 주석을 추가하고 줄 끝 공백을 정리했다.
