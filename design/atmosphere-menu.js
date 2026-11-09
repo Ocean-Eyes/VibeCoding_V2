@@ -8,7 +8,6 @@ const groundwork={
  osaekomi:{name:'누르기',lessons:[['곁누르기','KESA-GATAME','3D 시연을 보고 화면 우측 하단의 자세를 따라 합니다.']]}
 };
 const liveMenu=document.body.dataset.live==='true';
-if(liveMenu)catalog.basics.push(['테이핑 하는 법','TAPING','테이핑 기초 레슨 · 준비 중']);
 const destinations={OBI:'/basics/belt',BAEMILGI:'/basics/hindu-push-up','NAMI-JUJI-JIME':'/katame-waza/shime-waza/nami-juji-jime','KATA-JUJI-JIME':'/katame-waza/shime-waza/kata-juji-jime','GYAKU-JUJI-JIME':'/katame-waza/shime-waza/gyaku-juji-jime','UDE-GARAMI':'/katame-waza/kansetsu-waza/ude-garami','KESA-GATAME':'/katame-waza/osaekomi-waza/kesa-gatame','O-SOTO-GARI':'/throws/o-soto-gari','O-UCHI-GARI':'/throws/o-uchi-gari','IPPON-SEOI-NAGE':'/throws/ippon-seoi-nage'};
 let course='katame',group='shime',selected=0,lightTarget=.62,light=.62;
 if(liveMenu){if(location.pathname.includes('/basics'))course='basics';if(location.pathname.includes('/throws'))course='throws';if(location.pathname.includes('kansetsu-waza'))group='kansetsu';if(location.pathname.includes('osaekomi-waza'))group='osaekomi';}
