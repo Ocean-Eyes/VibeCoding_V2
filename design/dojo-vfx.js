@@ -34,7 +34,7 @@
     // Backlit brushwork, built from irregular fibres rather than a perfect circle.
     // It is a graphic ink gesture, not a person or a technique demonstration.
     const cx=w*.755,cy=h*.395,r=Math.min(w*.235,h*.31);
-    const rotation=-.23+Math.sin(elapsed*.075)*.035;
+    const rotation=-.23+elapsed*.13;
     ctx.save();ctx.translate(cx,cy);ctx.rotate(rotation);
     const halo=ctx.createRadialGradient(-r*.4,-r*.4,r*.1,0,0,r*1.6);
     halo.addColorStop(0,`rgba(167,157,134,${.12+accent*.045})`);
@@ -45,7 +45,7 @@
       for(let i=0;i<=100;i++){
         const a=start+(end-start)*i/100,t=i/100;
         const taper=Math.sin(Math.PI*t)**.34;
-        const radius=r+offset*taper+Math.sin(a*7+offset*.12)*2.8*taper+Math.sin(a*19+offset)*1.5*taper;
+        const radius=r+offset*taper+Math.sin(a*7+offset*.12+elapsed*.6)*4*taper+Math.sin(a*19+offset+elapsed*.9)*1.5*taper;
         const x=Math.cos(a)*radius,y=Math.sin(a)*radius*.91;
         i?ctx.lineTo(x,y):ctx.moveTo(x,y);
       }
@@ -71,12 +71,17 @@
     }
     ctx.globalAlpha=.6;
     brushPath(-r*.082,.68,3.9);ctx.lineWidth=.65;ctx.strokeStyle=rim;ctx.stroke();
-    // A travelling rim highlight only when a selection changes.
+    // Continuous light travel makes idle motion legible without a mouse action.
+    const travel=.3+(elapsed*.65)%5.0;
+    ctx.save();ctx.globalAlpha=.65;ctx.shadowColor='#d7ac79';ctx.shadowBlur=12;
+    brushPath(r*.055,travel,travel+.65);ctx.lineWidth=1.7;ctx.strokeStyle='#cdaa7a';ctx.stroke();
+    ctx.restore();
+    // An additional sweep responds immediately to a selection.
     if(accent>0){const a=.6+(1-accent)*4.7;brushPath(r*.07,a,Math.min(a+.48,6.1));ctx.globalAlpha=accent*.6;ctx.lineWidth=1;ctx.strokeStyle='#e0bb8d';ctx.stroke();}
     ctx.restore();
     // Long soft shafts from the upper right, kept behind all text.
     for(let ray=0;ray<3;ray++){
-      const shift=Math.sin(elapsed*.045+ray)*w*.012;
+      const shift=Math.sin(elapsed*.18+ray)*w*.025;
       const x=w*(.91+ray*.035)+shift;
       const light=ctx.createLinearGradient(x,-50,w*.46,h);
       light.addColorStop(0,'rgba(202,196,174,.006)');light.addColorStop(.7,'rgba(157,170,170,.002)');light.addColorStop(1,'rgba(157,170,170,0)');
@@ -88,11 +93,11 @@
     }
     // Low drifting haze, lit from the right: soft layers instead of a flat overlay.
     for (let i=0;i<5;i++) {
-      const x=w*(.38+i*.13)+Math.sin(elapsed*.035+i*1.7)*w*.07;
-      const y=h*(.56+i*.045)+Math.cos(elapsed*.05+i)*h*.035;
+      const x=w*(.38+i*.13)+Math.sin(elapsed*.20+i*1.7)*w*.11;
+      const y=h*(.56+i*.045)+Math.cos(elapsed*.16+i)*h*.055;
       ctx.save();ctx.translate(x,y);ctx.scale(1,.20+i*.025);
       const radius=w*(.28+i*.025),fog=ctx.createRadialGradient(0,0,0,0,0,radius);
-      fog.addColorStop(0,`rgba(159,169,167,${.030+i*.004})`);
+      fog.addColorStop(0,`rgba(159,169,167,${.050+i*.005})`);
       fog.addColorStop(.45,'rgba(123,146,151,.012)');fog.addColorStop(1,'rgba(123,146,151,0)');
       ctx.fillStyle=fog;ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);ctx.fill();ctx.restore();
     }
