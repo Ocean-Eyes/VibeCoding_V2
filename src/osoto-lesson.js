@@ -29,6 +29,8 @@ export function openOsotoLesson(lesson){
    if(current!==generation||disposed){releaseCamera(acquired);return;}if(!acquired){stop(t('연결을 취소했습니다.','Connection cancelled.'));return;}
    stream=acquired;$('osoto-rotate').hidden=false;video.srcObject=stream;onCameraEnded(stream,()=>{if(current===generation)stop(t('카메라 연결이 끝났습니다. 다시 시작하세요.','Camera disconnected. Start again.'));});
    if(!await playback.start(()=>current===generation&&!disposed))return;
+   // A physically upright USB camera may still report a landscape sensor frame.
+   rotation=video.videoWidth>video.videoHeight?1:0;
    tracker=createPoseTracker();tracker.onmessage=({data})=>{
     if(current!==generation||disposed)return;
     if(data.type==='ready'){clearTimeout(initTimer);ready=true;startAt=performance.now()+3000;$('osoto-status').textContent=t('전신을 보이고 금색 자세를 따라 하세요.','Show your whole body and match the gold pose.');}
