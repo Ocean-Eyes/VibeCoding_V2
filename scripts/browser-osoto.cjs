@@ -18,6 +18,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    }`}));
   const base='http://localhost:5173/dist';
   await page.goto(base+'/throws/o-soto-gari');await page.locator('#osoto-start').waitFor();
+  assert.equal(await page.locator('#osoto-title').innerText(),'초기자세 오른발 앞');assert.equal(/Initial/i.test(await page.locator('#throw-screen').innerText()),false);
   await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.playing==='true');
   const pixels=await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL());const first=Number(await page.locator('#osoto-canvas').getAttribute('data-time'));await page.waitForTimeout(2300);
   assert(Number(await page.locator('#osoto-canvas').getAttribute('data-time'))>first+1);assert.notEqual(await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL()),pixels,'animation must change the drawn pose');

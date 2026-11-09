@@ -55,3 +55,26 @@ test('Initial checks stance without demanding pulling arms yet',()=>{
  const p=observed(0);for(const i of [13,14,15,16])p[i].y+=.15;
  assert.equal(assessOsoto(p,0).matched,true);
 });
+
+// Reference events, independent of the scoring targets.
+import {sampleOsotoMotion} from '../src/osoto-motion.js';
+test('reference motion steps left, raises a bent right knee, then reaps back on the planted left foot',()=>{
+ const initial=sampleOsotoMotion(0),entry=sampleOsotoMotion(1),lift=sampleOsotoMotion(2),reap=sampleOsotoMotion(3);
+ assert(initial.legs.right.end[2]>initial.legs.left.end[2]);
+ assert(sampleOsotoMotion(.5).legs.left.end[1]>.07);
+ assert(entry.legs.left.end[2]>initial.legs.left.end[2]+.3);
+ assert(lift.legs.right.joint[1]>entry.legs.right.joint[1]+.12);
+ assert(lift.legs.right.end[1]>.35);
+ const leg=lift.legs.right,u=leg.root.map((v,i)=>v-leg.joint[i]),v=leg.end.map((v,i)=>v-leg.joint[i]);
+ const angle=Math.acos(u.reduce((n,x,i)=>n+x*v[i],0)/(Math.hypot(...u)*Math.hypot(...v)));assert(angle<Math.PI*.8,'right knee visibly bends');
+ assert(reap.legs.right.end[2]<reap.pelvis[2]-.35);assert(reap.head[2]>reap.pelvis[2]+.3);
+ for(let time=1;time<=3;time+=.02)assert(Math.hypot(...sampleOsotoMotion(time).legs.left.end.map((x,i)=>x-entry.legs.left.end[i]))<.0001);
+});
+test('reference animation preserves bone lengths and never puts feet below the floor',()=>{
+ for(let time=0;time<=3;time+=.02){const b=sampleOsotoMotion(time);
+  for(const [parts,a,c]of [[b.legs,.46,.45],[b.arms,.33,.31]])for(const limb of Object.values(parts)){
+   const d=(p,q)=>Math.hypot(...p.map((v,i)=>v-q[i]));assert(Math.abs(d(limb.root,limb.joint)-a)<.0001);assert(Math.abs(d(limb.joint,limb.end)-c)<.0001);
+  }
+  assert(b.legs.left.end[1]>=.04&&b.legs.right.end[1]>=.04);
+ }
+});
