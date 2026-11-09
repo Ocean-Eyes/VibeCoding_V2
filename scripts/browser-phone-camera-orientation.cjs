@@ -41,7 +41,8 @@ async function until(check,label){const end=Date.now()+15000;while(Date.now()<en
    Object.defineProperty(window,'orientation',{get(){return window.qaLegacyAngle??window.qaAngle;}});
    const capture=HTMLCanvasElement.prototype.captureStream;
    HTMLCanvasElement.prototype.captureStream=function(fps){const stream=capture.call(this,fps);if(this.id==='phone-frame')window.qaOutputs.push(stream);return stream;};
-   navigator.mediaDevices.getUserMedia=async()=>{
+   navigator.mediaDevices.getUserMedia=async constraints=>{
+    window.qaCaptureConstraints=constraints;
     const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
     const paint=()=>{
      const rotation=window.qaRawRotation,sideways=rotation%180!==0;
@@ -51,7 +52,7 @@ async function until(check,label){const end=Date.now()+15000;while(Date.now()<en
      ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,width,height);ctx.translate(width/2,height/2);ctx.rotate(rotation*Math.PI/180);
      ['rgb(240,40,40)','rgb(40,220,60)','rgb(40,70,240)','rgb(240,210,40)'].forEach((color,i)=>{ctx.fillStyle=color;ctx.fillRect(-frameWidth/2+(i%2)*frameWidth/2,-frameHeight/2+Math.floor(i/2)*frameHeight/2,frameWidth/2,frameHeight/2);});
     };
-    paint();setInterval(paint,33);const stream=capture.call(canvas,30);window.qaStreams.push(stream);return stream;
+    paint();setInterval(paint,33);const stream=capture.call(canvas,30);const track=stream.getVideoTracks()[0],apply=track.applyConstraints.bind(track);track.applyConstraints=async constraints=>{window.qaAppliedConstraints=constraints;return apply(constraints);};window.qaStreams.push(stream);return stream;
    };
   },portrait);
   await pcContext.route('**/api/baemilgi*',route=>route.fulfill({json:{entries:[]}}));
@@ -76,6 +77,7 @@ async function until(check,label){const end=Date.now()+15000;while(Date.now()<en
    }
    console.log(`PASS: ${label}; phone preview, remote video and inference pixels agree`);
   }
+  assert.equal(await phone.evaluate(()=>window.qaCaptureConstraints.video.aspectRatio.ideal),portrait?9/16:16/9);
   assert.equal(await phone.locator('#phone-rotate').count(),0);
   await upright(portrait?'upright portrait camera':'landscape right, portrait camera buffer');
   if(portrait){await phone.evaluate(()=>{window.qaAngle=0;window.qaRawRotation=270;});await upright('portrait default, landscape camera buffer');}
@@ -92,7 +94,7 @@ async function until(check,label){const end=Date.now()+15000;while(Date.now()<en
   await until(async()=>!matches(await sample(pc,'#bm-video')),'fixture must visibly rotate before manual correction');
   await pc.locator('#phone-camera-rotate').click();await pc.locator('#phone-camera-rotate').click();await upright('manual correction reaches PC and inference');
   const other=portrait?'landscape':'portrait';
-  await phone.evaluate(portrait=>{window.qaPortrait=!portrait;window.qaRawRotation=0;window.qaAngle=0;},portrait);await phone.locator('#phone-orientation').selectOption(other);await upright('switch framing during the same connection',other);
+  await phone.evaluate(portrait=>{window.qaPortrait=!portrait;window.qaRawRotation=0;window.qaAngle=0;},portrait);await phone.locator('#phone-orientation').selectOption(other);await upright('switch framing during the same connection',other);assert.equal(await phone.evaluate(()=>window.qaAppliedConstraints.aspectRatio.ideal),other==='portrait'?9/16:16/9);
   await phone.evaluate(portrait=>{window.qaPortrait=portrait;window.qaRawRotation=0;window.qaAngle=0;},portrait);await phone.locator('#phone-orientation').selectOption(initialOrientation);await upright('return to initial framing');
   assert.equal(await phone.evaluate(()=>window.qaOutputs.length),1,'framing changes retain the transmitted track');
   await pc.evaluate(()=>scrollTo(0,0));await pc.screenshot({path:`.test-output/phone-camera/orientation-${initialOrientation}-pc.png`});await phone.screenshot({path:`.test-output/phone-camera/orientation-${initialOrientation}-phone.png`,fullPage:true});

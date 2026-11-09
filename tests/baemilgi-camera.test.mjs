@@ -25,6 +25,7 @@ test('ultrawide wins over standard wide and front cameras regardless of enumerat
 });
 test('portrait framing requests a tall camera image while preserving lens choice',()=>{
  const {video,audio}=cameraConstraints('chosen-lens','portrait');assert.equal(audio,false);
+ assert.deepEqual(video.aspectRatio,{ideal:9/16});assert.deepEqual(cameraConstraints().video.aspectRatio,{ideal:16/9});
  assert.deepEqual(video.width,{ideal:720});assert.deepEqual(video.height,{ideal:1280});assert.deepEqual(video.deviceId,{exact:'chosen-lens'});
  assert.deepEqual(cameraConstraints().video.width,{ideal:1280});assert.deepEqual(cameraConstraints().video.height,{ideal:720});
 });

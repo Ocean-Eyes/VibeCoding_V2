@@ -26,7 +26,19 @@ function updateOrientation(){
  $('phone-placeholder').textContent=portrait?t('세로 촬영 · 후면 광각 우선','Portrait · prefer rear wide angle'):t('가로 촬영 · 후면 광각 우선','Landscape · prefer rear wide angle');
  orientedCamera?.setOrientation(portrait?'portrait':'landscape');
 }
-updateOrientation();$('phone-orientation').onchange=updateOrientation;
+updateOrientation();
+$('phone-orientation').onchange=async()=>{
+ const select=$('phone-orientation'),track=stream?.getVideoTracks()[0],current=generation;
+ if(!track){updateOrientation();return;}
+ select.disabled=true;
+ try{
+  const {width,height,aspectRatio,frameRate,resizeMode}=cameraConstraints('auto',select.value).video;
+  await track.applyConstraints({...track.getConstraints(),width,height,aspectRatio,frameRate,resizeMode});
+  if(current===generation){updateOrientation();await minimizeCameraZoom(track);}
+ }catch{
+  if(current===generation)status(t('카메라가 촬영 비율 변경을 지원하지 않습니다. 촬영을 종료한 뒤 원하는 방향으로 다시 연결해 주세요.','The camera could not change capture ratio. Stop and reconnect with the desired framing.'));
+ }finally{if(current===generation)select.disabled=false;}
+};
 const status=message=>{$('phone-status').textContent=message;};
 const preview=$('phone-preview-video');
 const playback=createCameraPlayback($('phone-video'),$('phone-resume'),{
@@ -37,7 +49,7 @@ function stop(message){
  if(peer)reusable=false;
  generation++;connected=false;playback.cancel();peer?.close();peer=null;orientedCamera?.stop();orientedCamera=null;stream?.getTracks().forEach(track=>track.stop());stream=null;
  preview.pause();preview.srcObject=null;preview.hidden=true;
- $('phone-video').srcObject=null;$('phone-video').hidden=true;$('phone-frame').hidden=true;$('phone-placeholder').hidden=false;$('phone-stop').hidden=true;$('phone-lens').disabled=false;
+ $('phone-video').srcObject=null;$('phone-video').hidden=true;$('phone-frame').hidden=true;$('phone-placeholder').hidden=false;$('phone-stop').hidden=true;$('phone-lens').disabled=false;$('phone-orientation').disabled=false;
  $('phone-start').disabled=!valid||!reusable;$('phone-start').hidden=false;wakeLock?.release().catch(()=>{});wakeLock=null;if(message)status(message);
 }
 async function keepAwake(){const current=generation;try{const acquired=await navigator.wakeLock?.request('screen');if(current!==generation||!connected){await acquired?.release();return;}wakeLock=acquired;}catch{}}
