@@ -359,3 +359,5 @@ html[lang=en] .metrics>div{flex-wrap:wrap;gap:6px}
 
 /* Draw the oriented camera frame and guide in the same coordinate space. */
 #osoto-video{opacity:0;pointer-events:none}
+
+.phone-camera-page #phone-preview-video{opacity:1;object-fit:contain;transform:none}

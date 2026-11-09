@@ -12,7 +12,7 @@ const initialOrientation=new URLSearchParams(location.search).get('orientation')
 let stream,peer,orientedCamera,generation=0,connected=false,wakeLock,reusable=true;
 $('phone-camera-root').innerHTML=`
 <header><span class="eyebrow">JUST JUDO / PHONE CAMERA</span><h1>${t('스마트폰을 카메라로','Use your phone as a camera')}</h1><p id="phone-orientation-guide"></p></header>
-<div class="phone-preview"><video id="phone-video" autoplay muted playsinline hidden></video><canvas id="phone-frame" hidden></canvas><div id="phone-placeholder"></div></div>
+<div class="phone-preview"><video id="phone-video" autoplay muted playsinline hidden></video><canvas id="phone-frame" hidden></canvas><video id="phone-preview-video" autoplay muted playsinline hidden></video><div id="phone-placeholder"></div></div>
 <div class="phone-controls"><p id="phone-status" role="status"></p>
 <label class="phone-lens-label" for="phone-orientation">${t('촬영 방향','Framing')}<select id="phone-orientation"><option value="landscape">${t('가로 (16:9)','Landscape (16:9)')}</option><option value="portrait">${t('세로 (9:16)','Portrait (9:16)')}</option></select></label>
 <label class="phone-lens-label" for="phone-lens">${t('카메라','Camera')}<select id="phone-lens"><option value="auto">${t('광각 우선 (자동)','Prefer wide angle (auto)')}</option><option value="user">${t('전면 카메라','Front camera')}</option></select></label>
@@ -28,6 +28,7 @@ function updateOrientation(){
 }
 updateOrientation();$('phone-orientation').onchange=updateOrientation;
 const status=message=>{$('phone-status').textContent=message;};
+const preview=$('phone-preview-video');
 const playback=createCameraPlayback($('phone-video'),$('phone-resume'),{
  onBlocked:()=>status(t('영상 재생을 허용하려면 카메라 영상 시작을 눌러 주세요.','Tap Start camera video to allow playback.')),
  onRetryFailed:()=>status(t('영상 재생을 다시 눌러 주세요.','Please tap Start camera video again.')),
@@ -35,6 +36,7 @@ const playback=createCameraPlayback($('phone-video'),$('phone-resume'),{
 function stop(message){
  if(peer)reusable=false;
  generation++;connected=false;playback.cancel();peer?.close();peer=null;orientedCamera?.stop();orientedCamera=null;stream?.getTracks().forEach(track=>track.stop());stream=null;
+ preview.pause();preview.srcObject=null;preview.hidden=true;
  $('phone-video').srcObject=null;$('phone-video').hidden=true;$('phone-frame').hidden=true;$('phone-rotate').hidden=true;$('phone-placeholder').hidden=false;$('phone-stop').hidden=true;$('phone-lens').disabled=false;
  $('phone-start').disabled=!valid||!reusable;$('phone-start').hidden=false;wakeLock?.release().catch(()=>{});wakeLock=null;if(message)status(message);
 }
@@ -53,7 +55,11 @@ async function capture(selection,current){
  $('phone-video').srcObject=stream;$('phone-placeholder').hidden=true;
  if(!await playback.start(()=>current===generation))return false;
  if(orientedCamera)orientedCamera.reset();else orientedCamera=createOrientedCamera($('phone-video'),$('phone-frame'),{orientation:$('phone-orientation').value});
- $('phone-frame').hidden=false;$('phone-rotate').hidden=false;return true;
+ // Preview the exact outgoing stream through a video decoder, just like the PC.
+ // Keep the capture canvas out of the visible mobile compositing path.
+ preview.srcObject=orientedCamera.stream;preview.muted=true;preview.hidden=false;
+ try{await preview.play();}catch{preview.hidden=true;$('phone-frame').hidden=false;}
+ $('phone-rotate').hidden=false;return true;
 }
 function failure(error){return error.name==='NotAllowedError'?t('카메라 권한이 거부됐습니다. 브라우저와 기기 설정에서 카메라를 허용한 뒤 다시 눌러 주세요.','Camera access was denied. Allow it in browser and device settings, then try again.'):error.code==='already_joined'?t('이 QR은 다른 폰이 사용 중입니다. PC에서 새 QR을 열어 주세요.','Another phone is using this QR code. Open a new one on the PC.'):error.code==='expired'||error.code==='closed'?t('QR 연결이 끝났습니다. PC에서 새 QR을 열어 주세요.','This QR connection ended. Open a new QR code on the PC.'):t('연결하지 못했습니다. 같은 Wi-Fi인지 확인하고 PC에서 새 QR을 열어 주세요.','Could not connect. Check the Wi-Fi and open a new QR code on the PC.');}
 $('phone-start').onclick=async()=>{

@@ -67,7 +67,7 @@ async function until(check,label){const end=Date.now()+15000;while(Date.now()<en
   }
   async function upright(label,orientation=initialOrientation){
    const dimensions=orientation==='portrait'?[720,1280]:[1280,720],aspect=dimensions[0]/dimensions[1];
-   await until(async()=>matches(await sample(phone,'#phone-frame'))&&matches(await sample(pc,'#bm-video'))&&matches(await pc.evaluate(()=>window.qaInference?.pixels))&&await pc.locator('#bm-video').evaluate((video,aspect)=>video.videoWidth/video.videoHeight===aspect,aspect),label);
+   await until(async()=>matches(await sample(phone,'#phone-frame'))&&matches(await sample(phone,'#phone-preview-video'))&&matches(await sample(pc,'#bm-video'))&&matches(await pc.evaluate(()=>window.qaInference?.pixels))&&await pc.locator('#bm-video').evaluate((video,aspect)=>video.videoWidth/video.videoHeight===aspect,aspect),label);
    assert.deepEqual(await phone.locator('#phone-frame').evaluate(canvas=>[canvas.width,canvas.height]),dimensions);
    // WebRTC may adapt the wire resolution; upright pixels and selected aspect
    // must survive that adaptation, including in the actual inference bitmap.
