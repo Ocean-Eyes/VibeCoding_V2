@@ -66,10 +66,12 @@ async function until(check,label){const end=Date.now()+15000;while(Date.now()<en
    console.log(await pc.locator('#bm-notice').textContent());throw error;
   }
   async function upright(label,orientation=initialOrientation){
-   const dimensions=orientation==='portrait'?[720,1280]:[1280,720],aspect=dimensions[0]/dimensions[1];
-   await until(async()=>matches(await sample(phone,'#phone-frame'))&&matches(await sample(phone,'#phone-preview-video'))&&matches(await sample(pc,'#bm-video'))&&matches(await pc.evaluate(()=>window.qaInference?.pixels))&&await pc.locator('#bm-video').evaluate((video,aspect)=>video.videoWidth/video.videoHeight===aspect,aspect),label);
+   await new Promise(resolve=>setTimeout(resolve,200));
+   const dimensions=await phone.locator('#phone-video').evaluate(v=>[v.videoWidth,v.videoHeight]),aspect=dimensions[0]/dimensions[1];
+   const raw=await sample(phone,'#phone-video'),same=pixels=>pixels?.length===4&&pixels.every((pixel,i)=>pixel.every((value,j)=>Math.abs(value-raw[i][j])<35));
+   await until(async()=>same(await sample(phone,'#phone-frame'))&&same(await sample(phone,'#phone-preview-video'))&&same(await sample(pc,'#bm-video'))&&same(await pc.evaluate(()=>window.qaInference?.pixels))&&await pc.locator('#bm-video').evaluate((video,aspect)=>video.videoWidth/video.videoHeight===aspect,aspect),label);
    assert.deepEqual(await phone.locator('#phone-frame').evaluate(canvas=>[canvas.width,canvas.height]),dimensions);
-   // WebRTC may adapt the wire resolution; upright pixels and selected aspect
+   // WebRTC may adapt the wire resolution; original pixels and camera aspect
    // must survive that adaptation, including in the actual inference bitmap.
    for(const [width,height] of await pc.evaluate(()=>[[document.querySelector('#bm-video').videoWidth,document.querySelector('#bm-video').videoHeight],[window.qaInference.width,window.qaInference.height]])){
     assert(width>=180);assert.equal(width/height,aspect);
@@ -86,10 +88,8 @@ async function until(check,label){const end=Date.now()+15000;while(Date.now()<en
   await phone.locator('#phone-lens').selectOption('user');await phone.waitForFunction(()=>window.qaStreams.length===2&&!document.querySelector('#phone-lens').disabled);
   await upright('lens change retains upright canvas track');
   assert.equal(await phone.evaluate(()=>window.qaOutputs.length),1,'lens changes retain the single transmitted track');
-  // Simulate a locked browser whose physical orientation cannot be inferred.
-  await phone.evaluate(()=>{window.qaRawRotation=90;});
-  await until(async()=>!matches(await sample(pc,'#bm-video')),'fixture must visibly rotate before manual correction');
-  await phone.locator('#phone-rotate').click();await phone.locator('#phone-rotate').click();await upright('manual correction reaches PC and inference');
+  assert.equal(await phone.locator('#phone-rotate').count(),0);
+  await phone.evaluate(()=>{window.qaRawRotation=90;});await upright('raw camera pixels preserved without correction');
   const other=portrait?'landscape':'portrait';
   await phone.evaluate(portrait=>{window.qaPortrait=!portrait;window.qaRawRotation=0;window.qaAngle=0;},portrait);await phone.locator('#phone-orientation').selectOption(other);await upright('switch framing during the same connection',other);
   await phone.evaluate(portrait=>{window.qaPortrait=portrait;window.qaRawRotation=0;window.qaAngle=0;},portrait);await phone.locator('#phone-orientation').selectOption(initialOrientation);await upright('return to initial framing');

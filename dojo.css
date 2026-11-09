@@ -357,7 +357,5 @@ html[lang=en] .metrics>div{flex-wrap:wrap;gap:6px}
 
 .osoto-stage.is-3d{aspect-ratio:4/3;max-width:none}.osoto-stage.is-3d~.osoto-hud{max-width:none}#osoto-3d-controls{flex-wrap:wrap;gap:10px}#osoto-timeline{display:flex;align-items:center;gap:12px;padding:12px;background:var(--panel)}#osoto-seek{min-width:0;flex:1}#osoto-speed{padding:5px}
 
-/* Draw the oriented camera frame and guide in the same coordinate space. */
-#osoto-video{opacity:0;pointer-events:none}
 
 .phone-camera-page #phone-preview-video{opacity:1;object-fit:contain;transform:none}

@@ -16,8 +16,8 @@ $('phone-camera-root').innerHTML=`
 <div class="phone-controls"><p id="phone-status" role="status"></p>
 <label class="phone-lens-label" for="phone-orientation">${t('촬영 방향','Framing')}<select id="phone-orientation"><option value="landscape">${t('가로 (16:9)','Landscape (16:9)')}</option><option value="portrait">${t('세로 (9:16)','Portrait (9:16)')}</option></select></label>
 <label class="phone-lens-label" for="phone-lens">${t('카메라','Camera')}<select id="phone-lens"><option value="auto">${t('광각 우선 (자동)','Prefer wide angle (auto)')}</option><option value="user">${t('전면 카메라','Front camera')}</option></select></label>
-<div class="phone-actions"><button id="phone-start" class="primary">${t('카메라 켜고 연결','Start camera & connect')}</button><button id="phone-stop" class="outline" hidden>${t('촬영 종료','Stop camera')}</button><button id="phone-resume" class="outline" hidden>${t('카메라 영상 시작','Start camera video')}</button><button id="phone-rotate" class="outline" hidden>${t('영상 90° 회전','Rotate video 90°')}</button></div>
-<p class="phone-help">${t('PC와 폰을 같은 Wi-Fi에 연결하세요. 방향 잠금 등으로 영상이 기울어지면 영상 90° 회전으로 맞출 수 있습니다. 촬영 중에는 이 화면을 켜 두세요.','Use the same Wi-Fi. If orientation lock leaves the picture sideways, tap Rotate video 90°. Keep this screen open while filming.')}</p></div>
+<div class="phone-actions"><button id="phone-start" class="primary">${t('카메라 켜고 연결','Start camera & connect')}</button><button id="phone-stop" class="outline" hidden>${t('촬영 종료','Stop camera')}</button><button id="phone-resume" class="outline" hidden>${t('카메라 영상 시작','Start camera video')}</button></div>
+<p class="phone-help">${t('PC와 폰을 같은 Wi-Fi에 연결하세요. 촬영 중에는 이 화면을 켜 두세요.','Use the same Wi-Fi. Keep this screen open while filming.')}</p></div>
 <p class="phone-privacy">${t('연결하면 이 폰의 영상이 QR을 띄운 PC로 실시간 전송됩니다. 영상은 연결한 PC에서 처리하며 녹화하거나 보관하지 않습니다.','Connecting sends live video from this phone to the PC that displayed the QR code. Video is processed on the connected PC and is not recorded or stored.')}</p>`;
 $('phone-orientation').value=initialOrientation;
 function updateOrientation(){
@@ -37,7 +37,7 @@ function stop(message){
  if(peer)reusable=false;
  generation++;connected=false;playback.cancel();peer?.close();peer=null;orientedCamera?.stop();orientedCamera=null;stream?.getTracks().forEach(track=>track.stop());stream=null;
  preview.pause();preview.srcObject=null;preview.hidden=true;
- $('phone-video').srcObject=null;$('phone-video').hidden=true;$('phone-frame').hidden=true;$('phone-rotate').hidden=true;$('phone-placeholder').hidden=false;$('phone-stop').hidden=true;$('phone-lens').disabled=false;
+ $('phone-video').srcObject=null;$('phone-video').hidden=true;$('phone-frame').hidden=true;$('phone-placeholder').hidden=false;$('phone-stop').hidden=true;$('phone-lens').disabled=false;
  $('phone-start').disabled=!valid||!reusable;$('phone-start').hidden=false;wakeLock?.release().catch(()=>{});wakeLock=null;if(message)status(message);
 }
 async function keepAwake(){const current=generation;try{const acquired=await navigator.wakeLock?.request('screen');if(current!==generation||!connected){await acquired?.release();return;}wakeLock=acquired;}catch{}}
@@ -59,7 +59,7 @@ async function capture(selection,current){
  // Keep the capture canvas out of the visible mobile compositing path.
  preview.srcObject=orientedCamera.stream;preview.muted=true;preview.hidden=false;
  try{await preview.play();}catch{preview.hidden=true;$('phone-frame').hidden=false;}
- $('phone-rotate').hidden=false;return true;
+ return true;
 }
 function failure(error){return error.name==='NotAllowedError'?t('카메라 권한이 거부됐습니다. 브라우저와 기기 설정에서 카메라를 허용한 뒤 다시 눌러 주세요.','Camera access was denied. Allow it in browser and device settings, then try again.'):error.code==='already_joined'?t('이 QR은 다른 폰이 사용 중입니다. PC에서 새 QR을 열어 주세요.','Another phone is using this QR code. Open a new one on the PC.'):error.code==='expired'||error.code==='closed'?t('QR 연결이 끝났습니다. PC에서 새 QR을 열어 주세요.','This QR connection ended. Open a new QR code on the PC.'):t('연결하지 못했습니다. 같은 Wi-Fi인지 확인하고 PC에서 새 QR을 열어 주세요.','Could not connect. Check the Wi-Fi and open a new QR code on the PC.');}
 $('phone-start').onclick=async()=>{
@@ -82,7 +82,6 @@ $('phone-lens').onchange=async()=>{
  catch(error){if(current===generation)stop(failure(error));}finally{if(current===generation)$('phone-lens').disabled=false;}
 };
 $('phone-stop').onclick=()=>{reusable=false;stop(t('촬영을 종료했습니다. 다시 연결하려면 PC에서 새 QR을 여세요.','Camera stopped. Open a new QR code on the PC to reconnect.'));};
-$('phone-rotate').onclick=()=>orientedCamera?.rotate();
 window.addEventListener('pagehide',()=>stop());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&connected)void keepAwake();});
 status(valid?t('연결하면 QR을 띄운 PC에서 영상을 볼 수 있습니다.','Connect to show your camera on the PC that displayed the QR code.'):t('PC의 스마트폰 카메라 연결에서 QR을 먼저 스캔해 주세요.','First scan the QR code under Connect phone camera on the PC.'));
