@@ -77,7 +77,7 @@ async function until(check,label){const end=Date.now()+15000;while(Date.now()<en
    }
    console.log(`PASS: ${label}; phone preview, remote video and inference pixels agree`);
   }
-  assert.equal(await phone.evaluate(()=>window.qaCaptureConstraints.video.aspectRatio.ideal),portrait?9/16:16/9);
+  assert.equal(await phone.evaluate(()=>window.qaCaptureConstraints.video.aspectRatio),undefined);
   assert.equal(await phone.locator('#phone-rotate').count(),0);
   await upright(portrait?'upright portrait camera':'landscape right, portrait camera buffer');
   if(portrait){await phone.evaluate(()=>{window.qaAngle=0;window.qaRawRotation=270;});await upright('portrait default, landscape camera buffer');}
@@ -94,7 +94,7 @@ async function until(check,label){const end=Date.now()+15000;while(Date.now()<en
   await until(async()=>!matches(await sample(pc,'#bm-video')),'fixture must visibly rotate before manual correction');
   await pc.locator('#phone-camera-rotate').click();await pc.locator('#phone-camera-rotate').click();await upright('manual correction reaches PC and inference');
   const other=portrait?'landscape':'portrait';
-  await phone.evaluate(portrait=>{window.qaPortrait=!portrait;window.qaRawRotation=0;window.qaAngle=0;},portrait);await phone.locator('#phone-orientation').selectOption(other);await upright('switch framing during the same connection',other);assert.equal(await phone.evaluate(()=>window.qaAppliedConstraints.aspectRatio.ideal),other==='portrait'?9/16:16/9);
+  await phone.evaluate(portrait=>{window.qaPortrait=!portrait;window.qaRawRotation=0;window.qaAngle=0;},portrait);await phone.locator('#phone-orientation').selectOption(other);await upright('switch framing during the same connection',other);assert.equal(await phone.evaluate(()=>window.qaAppliedConstraints?.aspectRatio),undefined);
   await phone.evaluate(portrait=>{window.qaPortrait=portrait;window.qaRawRotation=0;window.qaAngle=0;},portrait);await phone.locator('#phone-orientation').selectOption(initialOrientation);await upright('return to initial framing');
   assert.equal(await phone.evaluate(()=>window.qaOutputs.length),1,'framing changes retain the transmitted track');
   await pc.evaluate(()=>scrollTo(0,0));await pc.screenshot({path:`.test-output/phone-camera/orientation-${initialOrientation}-pc.png`});await phone.screenshot({path:`.test-output/phone-camera/orientation-${initialOrientation}-phone.png`,fullPage:true});
