@@ -359,3 +359,7 @@ html[lang=en] .metrics>div{flex-wrap:wrap;gap:6px}
 
 
 .phone-camera-page #phone-preview-video{opacity:1;object-fit:contain;transform:none}
+
+#osoto-target{position:absolute;right:12px;bottom:12px;width:34%;max-width:180px;background:#15222ce8;border:1px solid #d6a24d80;border-radius:8px;pointer-events:none;overflow:hidden;box-shadow:0 3px 14px #0004}
+#osoto-target-step{display:block;text-align:center;padding:8px 6px 0;color:#f1c873;font-size:12px;font-weight:700}
+.osoto-stage #osoto-target canvas{position:static;display:block;width:100%;height:auto;aspect-ratio:5/7}

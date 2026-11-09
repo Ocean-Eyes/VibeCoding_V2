@@ -107,3 +107,13 @@ test('brief visible pose jitter preserves hold progress, but missing tracking cl
  game.reset();game.update(observed(0),0);game.update(observed(0),100);
  game.update(null,150);assert.equal(game.hold,0);
 });
+
+test('sleeve hand stays at the waist while lapel hand stays at the chest',()=>{
+ for(let time=0;time<=3;time+=.1){
+  const rig=sampleOsotoMotion(time);
+  const height=hand=>hand.map((v,i)=>v-rig.pelvis[i]).reduce((sum,v,i)=>sum+v*rig.up[i],0);
+  assert(height(rig.arms.left.end)<.12);
+  assert(height(rig.arms.left.end)>.02);
+  assert(height(rig.arms.right.end)>.35);
+ }
+});

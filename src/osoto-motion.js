@@ -3,10 +3,10 @@
 // +Z is forward, anatomical right is -X. The front camera shows anatomical right on screen-left without mirroring.
 import {body,limb,add,mul} from './throw-motion.js';
 export const OSOTO_POSES=[
- {p:[0,.88,0],l:[.18,.045,-.14],r:[-.18,.045,.13],lean:.02,left:[-.23,.37,.38],right:[.13,.48,.36]},
- {p:[.12,.85,.12],l:[.23,.045,.34],r:[-.14,.045,.04],lean:.12,left:[-.12,.26,.30],right:[.10,.47,.30]},
- {p:[.16,.87,.20],l:[.23,.045,.34],r:[-.10,.48,.52],lean:.16,left:[-.10,.23,.25],right:[.10,.45,.25]},
- {p:[.15,.85,.26],l:[.23,.045,.34],r:[-.12,.40,-.23],lean:.62,left:[-.24,.12,.24],right:[.06,.38,.26]},
+ {p:[0,.88,0],l:[.18,.045,-.14],r:[-.18,.045,.13],lean:.02,left:[-.23,.08,.25],right:[.13,.48,.36]},
+ {p:[.12,.85,.12],l:[.23,.045,.34],r:[-.14,.045,.04],lean:.12,left:[-.24,.07,.24],right:[.10,.47,.30]},
+ {p:[.16,.87,.20],l:[.23,.045,.34],r:[-.10,.48,.52],lean:.16,left:[-.24,.07,.24],right:[.10,.45,.25]},
+ {p:[.15,.85,.26],l:[.23,.045,.34],r:[-.12,.40,-.23],lean:.62,left:[-.24,.06,.24],right:[.06,.38,.26]},
 ];
 const blend=(a,b,u)=>a.map((v,i)=>v+(b[i]-v)*u);
 export function sampleOsotoMotion(time){

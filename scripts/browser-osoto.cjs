@@ -31,6 +31,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/initial-front.png'});
   assert.equal(await page.locator('#osoto-video').evaluate(v=>getComputedStyle(v).transform),'none');
   await page.locator('#osoto-start').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.ready==='true');assert.equal(await page.locator('#osoto-3d').isVisible(),false);assert.equal(await page.locator('#osoto-canvas').isVisible(),true);
+  const guide=await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL());
+  const targetBox=await page.locator('#osoto-target').boundingBox(),stageBox=await page.locator('.osoto-stage').boundingBox();
+  assert(targetBox.width<stageBox.width*.4&&targetBox.x>stageBox.x+stageBox.width*.5&&targetBox.y>stageBox.y+stageBox.height*.5);
+  await page.evaluate(()=>window.qaStage=1);await page.waitForTimeout(350);
+  assert.equal(await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL()),guide,'reference does not follow or draw the tracked user');
+  await page.evaluate(()=>window.qaStage=-1);
+  await page.screenshot({path:'.test-output/osoto/corner-guide.png',fullPage:true});
   await page.waitForTimeout(4500);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),'0');
   for(let stage=0;stage<4;stage++){
    await page.evaluate(s=>window.qaStage=s,stage);
