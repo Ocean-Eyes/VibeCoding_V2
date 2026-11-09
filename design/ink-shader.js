@@ -34,15 +34,15 @@ void main(){
  float veil=pow(density,1.8)*(.6+.4*detail);
  float right=smoothstep(.10,.72,uv.x);
  float shaft=exp(-pow((uv.x+uv.y*.30-uLight-.28)*2.5,2.0));
- vec3 cool=vec3(.29,.35,.38),warm=vec3(.35,.28,.21);
+ vec3 cool=vec3(.24,.28,.29),warm=vec3(.29,.25,.20);
  vec3 smoke=mix(cool,warm,smoothstep(.25,.85,warp.y)*.40);
- vec3 color=vec3(.021,.032,.042);
- color+=smoke*veil*right*(.75+shaft*.65);
- color+=vec3(.30,.34,.34)*folds*right*.23;
- color+=vec3(.09,.105,.11)*influence*veil*.25;
+ vec3 color=vec3(.88,.87,.83);
+ color-=smoke*veil*right*(.65+shaft*.45);
+ color-=vec3(.20,.23,.23)*folds*right*.20;
+ color+=vec3(.05,.055,.06)*influence*veil*.25;
  // Preserve the dark left menu and readable fixed calligraphy.
  float vignette=1.0-smoothstep(.30,.90,length((uv-.52)*vec2(.85,1.0)));
- color*=.45+.55*vignette;
+ color*=.92+.08*vignette;
  gl_FragColor=vec4(color,1.0);
 }`;
 

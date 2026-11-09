@@ -23,10 +23,20 @@ const url=process.env.TEST_URL||'http://127.0.0.1:5173/dist/design/atmosphere.ht
   await page.mouse.move(1050,380);await page.waitForTimeout(250);
   await page.locator('[data-course=throws]').click();await page.locator('[data-lesson="1"]').click();
   assert.equal(await page.locator('#lesson-roman').textContent(),'O-UCHI-GARI');
-  await page.locator('#motion').click();const paused=await sample();await page.waitForTimeout(200);
+  assert.equal(await page.locator('#motion').count(),0);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.waitForFunction(()=>!running);
+  const paused=await sample();await page.waitForTimeout(200);
   assert.deepEqual(await sample(),paused);
   assert.equal(await page.locator('.footer a').count(),0);
   assert.equal(await page.locator('.space-mark').textContent(),'柔道');
+  await page.locator('[data-course=katame]').click();
+  const titles=()=>page.locator('[data-lesson]').evaluateAll(elements=>elements.map(e=>e.childNodes[0].textContent));
+  assert.deepEqual(await page.locator('[data-group]').allTextContents(),['조르기','꺾기','누르기']);
+  await page.locator('[data-group=shime]').click();assert.deepEqual(await titles(),['십자조르기','외십자조르기','역십자조르기']);
+  await page.locator('[data-group=kansetsu]').click();assert.deepEqual(await titles(),['팔얽어비틀기']);
+  assert.equal(await page.locator('#lesson-index').textContent(),'01 / 01');
+  await page.locator('[data-group=osaekomi]').click();assert.deepEqual(await titles(),['곁누르기']);
   const extension=await page.evaluate(()=>!!document.querySelector('#ink-fluid').getContext('webgl').getExtension('WEBGL_lose_context'));
   if(extension){
    await page.evaluate(()=>document.querySelector('#ink-fluid').getContext('webgl').getExtension('WEBGL_lose_context').loseContext());
@@ -35,10 +45,12 @@ const url=process.env.TEST_URL||'http://127.0.0.1:5173/dist/design/atmosphere.ht
   }
   await page.emulateMedia({reducedMotion:'reduce'});await page.reload();
   await page.waitForFunction(()=>document.querySelector('.scene').dataset.shader==='ready');
-  assert.equal(await page.locator('#motion').getAttribute('aria-pressed'),'false');
+  assert.equal(await page.locator('#motion').count(),0);
+  const still=await page.locator('#ink-fluid').getAttribute('data-time');await page.waitForTimeout(150);
+  assert.equal(await page.locator('#ink-fluid').getAttribute('data-time'),still);
   await page.setViewportSize({width:390,height:844});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   assert.deepEqual(errors,[]);
-  console.log(`PASS: OGL rendering (${Math.round(changed*100)}% sampled pixels visibly changed), GL errors=0, pause, menus, context-loss fallback, reduced motion, mobile.`);
+  console.log(`PASS: OGL rendering (${Math.round(changed*100)}% sampled pixels visibly changed), no VFX button, correct three-level categories, GL errors=0, context-loss fallback, reduced motion, mobile.`);
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

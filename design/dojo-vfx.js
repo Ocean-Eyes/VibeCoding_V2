@@ -33,9 +33,10 @@
     ctx.save();
     // Backlit brushwork, built from irregular fibres rather than a perfect circle.
     // It is a graphic ink gesture, not a person or a technique demonstration.
-    const cx=w*.755,cy=h*.395,r=Math.min(w*.235,h*.31);
+    const cx=w*.755,cy=h*.395,r=Math.min(w*.235,h*.20);
+    const inkOpacity=w<=800?.12:1;
     const rotation=-.23+elapsed*.13;
-    ctx.save();ctx.translate(cx,cy);ctx.rotate(rotation);
+    ctx.save();ctx.globalAlpha=inkOpacity;ctx.translate(cx,cy);ctx.rotate(rotation);
     const halo=ctx.createRadialGradient(-r*.4,-r*.4,r*.1,0,0,r*1.6);
     halo.addColorStop(0,`rgba(167,157,134,${.12+accent*.045})`);
     halo.addColorStop(.55,'rgba(112,129,132,.035)');halo.addColorStop(1,'rgba(0,0,0,0)');
@@ -66,10 +67,10 @@
     for(let strand=0;strand<23;strand++){
       const offset=(strand-11)*r*.007;
       brushPath(offset,.18,6.10);
-      ctx.strokeStyle=rim;ctx.globalAlpha=.12+(strand%5)*.09;
+      ctx.strokeStyle=rim;ctx.globalAlpha=(.12+(strand%5)*.09)*inkOpacity;
       ctx.lineWidth=strand%6===0?1.5:.5;ctx.stroke();
     }
-    ctx.globalAlpha=.6;
+    ctx.globalAlpha=.6*inkOpacity;
     brushPath(-r*.082,.68,3.9);ctx.lineWidth=.65;ctx.strokeStyle=rim;ctx.stroke();
     ctx.restore();
     // Long soft shafts from the upper right, kept behind all text.
