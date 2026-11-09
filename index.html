@@ -14,7 +14,15 @@
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     var visitorPreference=new URLSearchParams(location.search).get('exclude_visits');
     if(visitorPreference==='1'||visitorPreference==='0'){try{localStorage.setItem('just-judo-visitor-excluded',visitorPreference)}catch{}}
-    window.va('beforeSend',function(event){if(new URLSearchParams(location.search).get('exclude_visits')==='1')return null;try{if(localStorage.getItem('just-judo-visitor-excluded')==='1')return null}catch{}return event});
+    window.va('beforeSend',function(event){
+      // Filter at collection time, including client-side navigation events.
+      // Explicit automation signals only: absence of clicks/touch is not a bot signal.
+      var botAgent=/(?:bot\b|crawler|spider|slurp|headlesschrome|phantomjs|lighthouse|pagespeed|facebookexternalhit|facebookcatalog|meta-externalagent|meta-externalfetcher|twitterbot|whatsapp|telegrambot|discordbot|slackbot|linkedinbot|pinterestbot|chatgpt-user|claude-user|perplexity-user|python-requests|python-urllib|curl\/|wget\/)/i;
+      if(navigator.webdriver===true||botAgent.test(navigator.userAgent||''))return null;
+      if(new URLSearchParams(location.search).get('exclude_visits')==='1')return null;
+      try{if(localStorage.getItem('just-judo-visitor-excluded')==='1')return null}catch{}
+      return event;
+    });
   </script>
   <script defer src="/_vercel/insights/script.js"></script>
   <script type="module" src="./src/academy.js"></script>

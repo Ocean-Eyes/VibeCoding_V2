@@ -4,6 +4,8 @@ const server=process.env.TEST_SERVER||'http://127.0.0.1:5173';
 const output='.test-output/visitors';
 (async()=>{fs.mkdirSync(output,{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true});try{
  const context=await browser.newContext({viewport:{width:1365,height:1000}});
+ // Explicitly emulate a person for the widget/owner-preference scenarios.
+ await context.addInitScript(()=>{Object.defineProperty(navigator,'webdriver',{get:()=>false});Object.defineProperty(navigator,'userAgent',{get:()=> 'Mozilla/5.0 Chrome/130.0.0.0 Safari/537.36'});});
  await context.route('**/_vercel/**',r=>r.fulfill({body:'',contentType:'application/javascript'}));
  let failure=null,total=1242;const methods=[],errors=[];
  await context.route('**/api/visitors',r=>{methods.push(r.request().method());return r.fulfill(failure?{status:503,json:{error:failure}}:{json:{total,source:'vercel',metric:'visitors',period:'all-time'}})});
@@ -21,5 +23,13 @@ const output='.test-output/visitors';
  failure='analytics_unavailable';await page.reload();await ready();assert.equal(await page.locator('#visitor-total').textContent(),'—');assert.match(await page.locator('#visitor-stats').getAttribute('title'),/불러오지 못/);
  failure=null;total=0;await page.reload();await ready();assert.equal(await page.locator('#visitor-total').textContent(),'0명');
  await page.addInitScript(()=>{Storage.prototype.setItem=()=>{throw Error('blocked')}});total=1242;await page.reload();await ready();assert.equal(await page.locator('#visitor-total').textContent(),'1,242명');
- assert(methods.every(m=>m==='GET'));assert.deepEqual(errors,[]);console.log('PASS: mocked Vercel Visitors, no countries/writes, title after navigation, languages, owner event opt-out, cache-independent zero/error states, blocked storage, desktop/mobile.');
+ const automated=await browser.newContext();
+ await automated.route('**/_vercel/**',r=>r.fulfill({body:'',contentType:'application/javascript'}));
+ await automated.route('**/api/visitors',r=>r.fulfill({json:{total:1242,source:'vercel',metric:'visitors',period:'all-time'}}));
+ const bot=await automated.newPage();await bot.goto(server+'/dist/');
+ assert.equal(await bot.evaluate(()=>window.vaq.find(v=>v[0]==='beforeSend')[1]({type:'pageview',url:location.href})),null);
+ await bot.evaluate(()=>history.pushState({},'', '/dist/katame-waza'));
+ assert.equal(await bot.evaluate(()=>window.vaq.find(v=>v[0]==='beforeSend')[1]({type:'pageview',url:location.href})),null);
+ await automated.close();
+ assert(methods.every(m=>m==='GET'));assert.deepEqual(errors,[]);console.log('PASS: mocked Vercel Visitors, no countries/writes, normal-browser events, automated-browser filtering including navigation, owner opt-out, languages, zero/error states, blocked storage, desktop/mobile.');
 }finally{await browser.close()}})().catch(e=>{console.error(e);process.exitCode=1});
