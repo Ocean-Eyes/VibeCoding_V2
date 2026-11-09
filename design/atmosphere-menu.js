@@ -33,7 +33,6 @@ courseButtons.forEach(b=>b.onclick=()=>chooseCourse(b.dataset.course));
 document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>chooseGroup(b.dataset.group));
 function preview(title){document.querySelector('#preview-title').textContent=title;document.querySelector('#preview-mode').textContent='3D 시연 영역';document.querySelector('.target').hidden=true;document.querySelector('#switch-view').textContent='연습 화면 보기';dialog.showModal();}
 document.querySelector('#start').onclick=()=>preview(lessons()[selected][0]);
-document.querySelector('#camera').onclick=()=>preview('스마트폰 카메라 연결');
 document.querySelector('.close').onclick=()=>dialog.close();
 document.querySelector('#switch-view').onclick=function(){const t=document.querySelector('.target');t.hidden=!t.hidden;document.querySelector('#preview-mode').textContent=t.hidden?'3D 시연 영역':'카메라 영상 영역';this.textContent=t.hidden?'연습 화면 보기':'시연 화면 보기';};
 document.querySelectorAll('nav').forEach(nav=>nav.addEventListener('keydown',e=>{

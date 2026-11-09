@@ -1,6 +1,6 @@
 // Shared with the existing dust animation: one frame loop, no extra renderer.
 (() => {
-  let enabled = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let enabled = true;
   let strokes = [], waves = [], elapsed = 0, accent = 0;
   const scene = document.querySelector('.scene');
   const position = element => {

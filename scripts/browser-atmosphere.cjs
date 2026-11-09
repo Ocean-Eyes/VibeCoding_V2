@@ -24,10 +24,12 @@ const url=process.env.TEST_URL||'http://127.0.0.1:5173/dist/design/atmosphere.ht
   await page.locator('[data-course=throws]').click();await page.locator('[data-lesson="1"]').click();
   assert.equal(await page.locator('#lesson-roman').textContent(),'O-UCHI-GARI');
   assert.equal(await page.locator('#motion').count(),0);
+  assert.equal(await page.locator('#camera').count(),0);
+  assert.equal(await page.getByRole('button',{name:'스마트폰 카메라 연결'}).count(),0);
   await page.emulateMedia({reducedMotion:'reduce'});
-  await page.waitForFunction(()=>!running);
-  const paused=await sample();await page.waitForTimeout(200);
-  assert.deepEqual(await sample(),paused);
+  const reducedFirst=await sample();await page.waitForTimeout(1200);
+  const reducedSecond=await sample();
+  assert(reducedFirst.result.some((v,i)=>Math.abs(v-reducedSecond.result[i])>8),'VFX must keep visibly moving with the system motion preference enabled');
   assert.equal(await page.locator('.footer a').count(),0);
   assert.equal(await page.locator('.space-mark').textContent(),'柔道');
   await page.locator('[data-course=katame]').click();
@@ -47,10 +49,10 @@ const url=process.env.TEST_URL||'http://127.0.0.1:5173/dist/design/atmosphere.ht
   await page.waitForFunction(()=>document.querySelector('.scene').dataset.shader==='ready');
   assert.equal(await page.locator('#motion').count(),0);
   const still=await page.locator('#ink-fluid').getAttribute('data-time');await page.waitForTimeout(150);
-  assert.equal(await page.locator('#ink-fluid').getAttribute('data-time'),still);
+  assert(Number(await page.locator('#ink-fluid').getAttribute('data-time'))>Number(still),'VFX must start automatically after reload');
   await page.setViewportSize({width:390,height:844});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   assert.deepEqual(errors,[]);
-  console.log(`PASS: OGL rendering (${Math.round(changed*100)}% sampled pixels visibly changed), no VFX button, correct three-level categories, GL errors=0, context-loss fallback, reduced motion, mobile.`);
+  console.log(`PASS: OGL rendering (${Math.round(changed*100)}% sampled pixels visibly changed), no camera or VFX button, correct categories, GL errors=0, fallback, automatic motion with either system preference, mobile.`);
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
