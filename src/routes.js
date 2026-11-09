@@ -19,7 +19,7 @@ export const ROUTES=[
  {path:'/katame-waza/shime-waza/nami-juji-jime',screen:'lesson',category:'katame',lesson:'nami',parent:'/katame-waza/shime-waza'},
  {path:'/katame-waza/shime-waza/gyaku-juji-jime',screen:'lesson',category:'katame',lesson:'gyaku',parent:'/katame-waza/shime-waza'},
  {path:'/katame-waza/shime-waza/kata-juji-jime',screen:'lesson',category:'katame',lesson:'kata',parent:'/katame-waza/shime-waza'},
-];
+].map(route=>route.screen==='lesson'?{...route,document:'practice.html'}:route);
 export function resolveRoute(pathname,base='/'){
  const prefix=base.replace(/\/$/,'');
  if(prefix&&pathname!==prefix&&!pathname.startsWith(prefix+'/'))return null;

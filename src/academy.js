@@ -11,6 +11,7 @@ const routeBase=new URL('../',import.meta.url).pathname;
 function navigate(path){
   const url=routeURL(path,routeBase,location.search);
   if(location.pathname+location.search===url)return;
+  if(resolveRoute(path)?.screen!=='lesson'){document.dispatchEvent(new Event('judo-exit'));location.assign(url);return;}
   history.pushState(null,'',url);renderRoute();
 }
 function renderRoute(){
@@ -20,8 +21,7 @@ function renderRoute(){
   if(route?.screen==='lesson'){
     category=route.category;openLesson([...TECHNIQUES,...FOUNDATIONS,...THROW_LESSONS,...GROUND_LESSONS].find(t=>t.id===route.lesson));return;
   }
-  showHome();
-  if(route?.screen==='category'){showCategory(route.category,route.group);$('back-menu').hidden=false}
+  location.replace(routeURL(route?.path??'/',routeBase,location.search));return;
 }
 async function launchPractice(t){
   const request=++lessonRequest;
