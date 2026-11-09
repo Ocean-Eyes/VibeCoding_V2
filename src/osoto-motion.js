@@ -1,6 +1,6 @@
 // Blue judogi performer in https://www.youtube.com/shorts/wrE0Zi5VukI.
 // Authored solo reconstruction from visible entry/lift/reap events, not mocap.
-// +Z is forward, anatomical right is -X. The practice view mirrors the body.
+// +Z is forward, anatomical right is -X. The front camera shows anatomical right on screen-left without mirroring.
 import {body,limb,add,mul} from './throw-motion.js';
 export const OSOTO_POSES=[
  {p:[0,.88,0],l:[.18,.045,-.14],r:[-.18,.045,.13],lean:.02,left:[-.23,.37,.38],right:[.13,.48,.36]},

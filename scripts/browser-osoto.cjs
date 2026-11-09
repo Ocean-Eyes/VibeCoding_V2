@@ -12,7 +12,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     if(data.type==='frame'){
      const {OSOTO_TARGETS}=await deps,ratio=data.bitmap.height/data.bitmap.width;data.bitmap.close();
      const scale=Math.min(.16,ratio*.20),cy=ratio*.5;
-     const points=data.stage<0?null:OSOTO_TARGETS[data.stage].map(p=>p?{x:1-(.5+p.x*scale),y:(cy+p.y*scale)/ratio,z:p.z*scale,visibility:1}:{x:0,y:0,z:0,visibility:0});
+     const points=data.stage<0?null:OSOTO_TARGETS[data.stage].map(p=>p?{x:.5+p.x*scale,y:(cy+p.y*scale)/ratio,z:p.z*scale,visibility:1}:{x:0,y:0,z:0,visibility:0});
      self.postMessage({type:'result',points,time:data.time});
     }
    }`}));
@@ -20,12 +20,17 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.goto(base+'/throws/o-soto-gari');await page.locator('#osoto-start').waitFor();
   assert.equal(await page.locator('#osoto-title').innerText(),'초기자세 오른발 앞');assert.equal(/Initial/i.test(await page.locator('#throw-screen').innerText()),false);
   await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.playing==='true');
-  const pixels=await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL());const first=Number(await page.locator('#osoto-canvas').getAttribute('data-time'));await page.waitForTimeout(2300);
-  assert(Number(await page.locator('#osoto-canvas').getAttribute('data-time'))>first+1);assert.notEqual(await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL()),pixels,'animation must change the drawn pose');
+  assert.equal(await page.locator('#osoto-3d').isVisible(),true);assert.equal(await page.locator('#osoto-canvas').isVisible(),false);const pixels=await page.locator('#osoto-3d').evaluate(c=>c.toDataURL());const first=Number(await page.locator('#osoto-canvas').getAttribute('data-time'));await page.waitForTimeout(2300);
+  assert(Number(await page.locator('#osoto-canvas').getAttribute('data-time'))>first+1);assert.notEqual(await page.locator('#osoto-3d').evaluate(c=>c.toDataURL()),pixels,'animation must change the drawn pose');
   await page.locator('#osoto-demo').click();const paused=await page.locator('#osoto-canvas').getAttribute('data-time');await page.waitForTimeout(250);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-time'),paused);
+  for(const view of ['front','side','oblique']){await page.locator('[data-osoto-view='+view+']').click();await page.waitForTimeout(120);assert.equal(await page.locator('[data-osoto-view='+view+']').getAttribute('aria-pressed'),'true');await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/3d-'+view+'.png'});}
+  await page.locator('#osoto-seek').fill('650');await page.waitForTimeout(150);await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/3d-reap.png'});
+  await page.locator('#osoto-solo').check();await page.waitForFunction(()=>document.querySelector('#osoto-3d').dataset.solo==='true');await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/3d-solo.png'});
+  await page.locator('#osoto-solo').uncheck();await page.locator('#osoto-seek').fill('1000');await page.waitForFunction(()=>Number(document.querySelector('#osoto-3d').dataset.time)>=2.99);await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/3d-finish.png'});await page.locator('#osoto-speed').selectOption('0.5');
   await page.locator('#osoto-reset').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.stage==='0');
   await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/initial-front.png'});
-  await page.locator('#osoto-start').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.ready==='true');
+  assert.equal(await page.locator('#osoto-video').evaluate(v=>getComputedStyle(v).transform),'none');
+  await page.locator('#osoto-start').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.ready==='true');assert.equal(await page.locator('#osoto-3d').isVisible(),false);assert.equal(await page.locator('#osoto-canvas').isVisible(),true);
   await page.waitForTimeout(4500);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),'0');
   for(let stage=0;stage<4;stage++){
    await page.evaluate(s=>window.qaStage=s,stage);
@@ -34,11 +39,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   }
   assert.equal(await page.locator('#osoto-score').innerText(),'Perfect');await page.screenshot({path:'.test-output/osoto/complete.png',fullPage:true});
   await page.evaluate(()=>window.qaStage=-1);await page.locator('#osoto-reset').click();assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),'0');
-  await page.locator('#osoto-stop').click();await page.waitForFunction(()=>!document.querySelector('#osoto-video').srcObject);
+  await page.locator('#osoto-demo').click();await page.waitForFunction(()=>!document.querySelector('#osoto-video').srcObject&&document.querySelector('#osoto-canvas').dataset.demo==='true');assert.equal(await page.locator('#osoto-3d').isVisible(),true);
   for(const id of ['o-uchi-gari','ippon-seoi-nage']){await page.goto(base+'/throws/'+id);await page.locator('#throw-play').waitFor();assert.equal(await page.locator('#osoto-start').count(),0);await page.locator('#throw-play').click();await page.waitForFunction(()=>document.querySelector('#throw-canvas').dataset.playing==='true');}
   await page.setViewportSize({width:390,height:844});await page.goto(base+'/throws/o-soto-gari?lang=en');await page.locator('#osoto-start').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);assert.equal(/[가-힣]/.test(await page.locator('#throw-screen').innerText()),false);
   await page.screenshot({path:'.test-output/osoto/mobile-en.png',fullPage:true});assert.deepEqual(errors,[]);
-  console.log('PASS: synthetic pose tracking, Initial + 3 ordered holds; front animation play/pause/restart, missing/wrong pose rejection, completion, reset/stop, other throw playback, mobile English');
+  console.log('PASS: synthetic pose tracking, unmirrored Initial + 3 holds; default 3D/view/seek/solo/speed; 2D webcam switch and 3D return, missing/wrong pose rejection, completion, reset/stop, other throw playback, mobile English');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -82,14 +82,14 @@ function person(out,rig,color,performer=false,grasps=null){
  }
 }
 function disk(out,center,rx,rz,color){for(let i=0;i<16;i++){const j=(i+1)%16;triangle(out,center,add(center,[circle[i][0]*rx,0,circle[i][1]*rz]),add(center,[circle[j][0]*rx,0,circle[j][1]*rz]),color);}}
-function scene(pose,solo){
+function scene(pose,solo,performerColor=WHITE){
  const out=[],mat=[.25,.33,.32];
  triangle(out,[-2.8,-.006,-2.8],[2.8,-.006,-2.8],[2.8,-.006,2.8],mat);triangle(out,[-2.8,-.006,-2.8],[2.8,-.006,2.8],[-2.8,-.006,2.8],mat);
  for(let x=-2.5;x<=2.5;x+=.5){tube(out,[x,-.002,-2.5],[x,-.002,2.5],.002,.002,[.36,.43,.40],4);tube(out,[-2.5,-.002,x],[2.5,-.002,x],.002,.002,[.36,.43,.40],4);}
  for(const who of solo?['tori']:['tori','uke']){const rig=pose[who];disk(out,[rig.pelvis[0],.001,rig.pelvis[2]],.30,.38,[.20,.27,.27]);}
  // A gold sole ring distinguishes the working right foot from the supporting left.
  const r=pose.tori.legs.right.end;disk(out,[r[0],.004,r[2]],.09,.15,GOLD);
- person(out,pose.tori,WHITE,true,pose.grips);if(!solo){person(out,pose.uke,BLUE);
+ person(out,pose.tori,performerColor,true,pose.grips);if(!solo){person(out,pose.uke,BLUE);
   const grasp=pose.grips?.left;if(grasp){
    const base=add(grasp.centre,mul(grasp.normal,.0585)),half=mul(grasp.axis,.032);
    ribbon(out,[sub(base,half),grasp.surface,add(base,half)],.027,grasp.normal,BLUE.map(v=>v*1.12));
@@ -114,10 +114,10 @@ export function createThrowRenderer(canvas){
  gl.enable(gl.DEPTH_TEST);gl.clearColor(.105,.15,.175,1);
  let current=null,data=null;
  return {
-  draw(pose,{yaw=1.05,pitch=.22,solo=false}={}){
+  draw(pose,{yaw=1.05,pitch=.22,solo=false,gold=false}={}){
    const size=canvas.getBoundingClientRect(),ratio=Math.min(window.devicePixelRatio||1,1.5),w=Math.max(1,Math.round(size.width*ratio)),h=Math.max(1,Math.round(size.height*ratio));
    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
-   const key=pose.id+':'+pose.time+':'+solo;if(current!==key){data=scene(pose,solo);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);current=key;}
+   const key=pose.id+':'+pose.time+':'+solo+':'+gold;if(current!==key){data=scene(pose,solo,gold?GOLD:WHITE);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);current=key;}
    const depth=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)],right=[Math.cos(yaw),0,-Math.sin(yaw)],up=cross(depth,right);
    gl.uniform3fv(uniforms.cameraRight,right);gl.uniform3fv(uniforms.cameraUp,up);gl.uniform3fv(uniforms.cameraDepth,depth);
    const extent=Math.max(2.75,3.7*h/w);gl.uniform2f(uniforms.scale,2/(extent*w/h),2/extent);

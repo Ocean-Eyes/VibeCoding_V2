@@ -27,7 +27,7 @@ test('Initial and three stages must be held in order; pauses, loss and reset can
 });
 
 test('inferred landmarks outside the camera image cannot complete a pose',()=>{
- const p=observed(0,.1,.5,.3).map(v=>v?{...v,x:1-v.x,y:v.y/.75}:null);
+ const p=observed(0,.1,.5,.3).map(v=>v?{...v,x:v.x,y:v.y/.75}:null);
  assert.equal(assessOsoto(cameraPose(p,.75),0).matched,true);
  for(const i of [0,27,28]){const clipped=structuredClone(p);clipped[i].y=1.01;assert.equal(assessOsoto(cameraPose(clipped,.75),0).matched,false);}
 });
@@ -76,5 +76,14 @@ test('reference animation preserves bone lengths and never puts feet below the f
    const d=(p,q)=>Math.hypot(...p.map((v,i)=>v-q[i]));assert(Math.abs(d(limb.root,limb.joint)-a)<.0001);assert(Math.abs(d(limb.joint,limb.end)-c)<.0001);
   }
   assert(b.legs.left.end[1]>=.04&&b.legs.right.end[1]>=.04);
+ }
+});
+
+test('front view keeps anatomical right screen-left, with camera coordinates unmirrored',()=>{
+ for(let stage=0;stage<4;stage++){
+  const target=OSOTO_TARGETS[stage];assert(target[12].x<target[11].x);assert(target[28].x<target[27].x);
+  const raw=observed(stage,.1,.5,.3).map(p=>p?{...p,y:p.y/.75}:null);
+  const mapped=cameraPose(raw,.75);assert.equal(mapped[28].x,raw[28].x);assert.equal(assessOsoto(mapped,stage).matched,true);
+  const reversed=mapped.map(p=>p?{...p,x:1-p.x}:null);assert.equal(assessOsoto(reversed,stage).matched,false);
  }
 });

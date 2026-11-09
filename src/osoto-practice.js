@@ -4,7 +4,7 @@ export const OSOTO_JOINTS=[0,11,12,13,14,15,16,23,24,25,26,27,28];
 const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:((a.z??0)+(b.z??0))/2});
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export function cameraPose(points,aspect){
- return points?.map(p=>p?{...p,x:1-p.x,y:p.y*aspect,visibility:p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1?(p.visibility??1):0}:null)??null;
+ return points?.map(p=>p?{...p,x:p.x,y:p.y*aspect,visibility:p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1?(p.visibility??1):0}:null)??null;
 }
 export function normalizeBody(points){
  if(!points||OSOTO_JOINTS.some(i=>!points[i]||(points[i].visibility??1)<.45||!Number.isFinite(points[i].x)||!Number.isFinite(points[i].y)))return null;
@@ -15,7 +15,7 @@ export function normalizeBody(points){
 export function osotoPose(time){
  const b=sampleOsotoMotion(time),p=Array(33).fill(null);
  // Frontal perspective: the foot closer to the camera appears slightly lower/larger.
- const put=(i,v)=>{const z=v[2]-b.pelvis[2],perspective=1/(1-z*.30);p[i]={x:-(v[0]-b.pelvis[0])*perspective,y:-(v[1]-b.pelvis[1])*perspective,z:-z,visibility:1};};
+ const put=(i,v)=>{const z=v[2]-b.pelvis[2],perspective=1/(1-z*.30);p[i]={x:(v[0]-b.pelvis[0])*perspective,y:-(v[1]-b.pelvis[1])*perspective,z:-z,visibility:1};};
  put(0,b.head);
  for(const [side,a,e,w,h,k,f]of [['left',11,13,15,23,25,27],['right',12,14,16,24,26,28]]){
   put(a,b.shoulders[side]);put(e,b.arms[side].joint);put(w,b.arms[side].end);
@@ -46,7 +46,7 @@ export function assessOsoto(points,stage){
  const torso=dist(mid(p[11],p[12]),mid(t[11],t[12]))<.5;
  const arms=stage===0||[15,16].every(i=>dist(p[i],t[i])<.85);
  const depthReady=[11,12,23,24,27,28].every(i=>Number.isFinite(p[i].z));
- const front=depthReady&&p[12].x-p[11].x>.35&&Math.abs(p[11].z-p[12].z)<.65;
+ const front=depthReady&&p[11].x-p[12].x>.35&&Math.abs(p[11].z-p[12].z)<.65;
  const depth=depthReady&&(stage===0?p[28].z<p[27].z-.10:stage===1?p[27].z<p[28].z-.10:stage===2?p[28].z<-.35:p[28].z>.35&&(p[11].z+p[12].z)/2<-.25);
  const matched=score>=65&&left&&right&&torso&&arms&&front&&depth;
  return {score,matched,body,issue:!front?'front':!depth?'depth':!left?'left':!right?'right':!torso?'torso':!arms?'arms':matched?'hold':'position'};
