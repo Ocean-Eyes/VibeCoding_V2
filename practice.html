@@ -28,35 +28,12 @@
   <script type="module" src="./src/academy.js"></script>
 <link rel="stylesheet" href="./atmosphere.css"/><script type="module" src="./src/lesson-atmosphere.js"></script></head>
 <body>
-  <div class="dojo-room" aria-hidden="true">
-    <div class="dojo-wall"></div>
-    <div class="dojo-wainscot"></div>
-    <div class="dojo-floor"><div class="dojo-tatami"></div></div>
-    <div class="dojo-pillar dojo-pillar-left"></div>
-    <div class="dojo-pillar dojo-pillar-right"></div>
-  </div>
   <header class="topbar">
     <a id="brand-home" class="brand" href="./" aria-label="Just Judo 홈">JUST JUD<em>O</em></a>
     <span class="top-note"></span>
     <div class="header-actions"><button id="language-button" class="quiet language-button" type="button" aria-haspopup="dialog" aria-controls="language-dialog">Language · KO</button><button id="back-menu" class="quiet" hidden>← 기술 메뉴</button><button id="help" class="quiet">이용 안내 ↗</button><span class="xp-pill" id="xp">0 XP</span></div>
   </header>
   <main>
-    <section id="home-screen" hidden>
-      <section class="ink-hero" aria-label="유도 도장">
-        <div class="margin-note" lang="zh-Hant">柔能制剛</div>
-        <div class="calligraphy-piece"><svg class="enso" viewBox="0 0 600 420" aria-hidden="true"><defs><filter id="ink-edge" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".07" numOctaves="3" seed="8" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale="3.5"/></filter></defs><path d="M438 60C353 17 248 22 177 78C110 129 93 215 126 281C162 355 242 390 321 379C411 366 481 304 490 229C496 163 469 109 428 80C418 72 425 71 435 80C438 83 440 86 441 88C485 120 509 178 498 237C487 322 410 387 321 398C222 411 133 365 104 287C74 211 100 120 166 65C244 0 367 9 447 54C455 59 453 66 447 65C443 64 440 62 438 60Z" fill="currentColor" filter="url(#ink-edge)"/></svg><h1 class="brush-title" lang="ja">柔道</h1><span class="ink-seal" lang="ja">修<br>練</span></div>
-        <div class="right-note"><figure class="founder-portrait"><img src="./assets/jigoro-kano.jpg" width="378" height="469" alt="가노 지고로 초상 사진" decoding="async"></figure><span>부드러움이 능히<br>강함을 제압한다.</span><button id="featured-start" class="ink-link">조르기 수련으로 <span>→</span></button></div>
-      </section>
-      <aside class="home-safety" role="note" aria-labelledby="home-safety-title"><span class="safety-mark" aria-hidden="true">!</span><div><strong id="home-safety-title">주의 · 전문가 지도 필수</strong><p>전문 유도 지도자의 직접 지도 없이 다른 사람에게 메치기·조르기 등 유도 기술을 시도하지 마세요. 이 사이트는 혼자 하는 동작 연습용입니다.</p></div></aside>
-      <div class="chapter-heading"><span>과정을 선택하세요</span></div>
-      <nav class="chapter-grid" aria-label="수련 과정">
-        <button class="chapter" data-category="basics" aria-pressed="false"><span class="chapter-top">一 <span>시작의 준비</span></span><span class="chapter-calligraphy" lang="ja" aria-hidden="true">基本</span><span class="chapter-name">기초 <i>↗</i></span><span class="chapter-description">띠 매기 · 배밀기 · 낙법 · 테이핑</span><span class="chapter-bottom">Ghost Belt로 띠 매기</span></button>
-        <button class="chapter" data-category="katame" aria-pressed="false"><span class="chapter-top">二 <span>지금 수련하기</span></span><span class="chapter-calligraphy" lang="ja" aria-hidden="true">固技</span><span class="chapter-name">굳히기본 <i>↗</i></span><span class="chapter-description">조르기 · 꺾기 · 누르기</span><span class="chapter-bottom">조르기 3종 열림</span></button>
-        <button class="chapter" data-category="throws" aria-pressed="false"><span class="chapter-top">三 <span>동작 살펴보기</span></span><span class="chapter-calligraphy" lang="ja" aria-hidden="true">投技</span><span class="chapter-name">메치기본 <i>↗</i></span><span class="chapter-description">밭다리 후리기 · 안다리 후리기 · 한팔 업어치기</span><span class="chapter-bottom">세 기술의 연속 시연</span></button>
-      </nav>
-      <section id="course-shelf" class="course-shelf" hidden><div class="chapter-heading"><h2 id="course-title">굳히기본 / 조르기</h2><span id="course-count"></span></div><div id="course-grid" class="course-grid"></div></section>
-      <section class="journey"><div class="journey-label"><span class="journey-icon" lang="ja">修</span><div><h2>나의 수련 기록</h2><p id="storage-note">진행도는 이 브라우저에 저장됩니다.</p></div></div><div class="journey-progress"><div><span>손 위치 연습 완료</span><strong id="completion-count">0 / 3</strong></div><div class="progress"><div id="journey-fill"></div></div></div><span class="journey-stamp">첫 미션부터 시작해요</span></section>
-    </section>
     <section id="baemilgi-screen" hidden></section>
     <section id="throw-screen" hidden></section>
     <section id="belt-screen" hidden>

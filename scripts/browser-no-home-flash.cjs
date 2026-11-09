@@ -6,12 +6,19 @@ const base=process.env.SITE_URL||'http://127.0.0.1:5174/dist/';
   let release;const gate=new Promise(resolve=>release=resolve);
   await page.route('**/src/academy.js*',async route=>{await gate;await route.continue();});
   await page.goto(base+path,{waitUntil:'commit'});
-  await page.locator('#home-screen').waitFor({state:'attached'});
+  await page.locator('#back-menu').waitFor({state:'attached'});
   await page.waitForTimeout(500);
-  assert(await page.locator('#home-screen').evaluate(el=>el.hidden),'old homepage must be hidden before application JavaScript runs');
+  assert.equal(await page.locator('#home-screen,.ink-hero,.dojo-room').count(),0,'legacy DOM must not exist before application JavaScript runs');
   assert.equal(await page.locator('.ink-hero').isVisible(),false);
   release();await page.locator(screen).waitFor({state:'visible'});
-  assert.equal(await page.locator('#home-screen').isVisible(),false);
+  assert.equal(await page.locator('#home-screen').count(),0);
+  if(screen==='#practice-screen'){
+   await page.evaluate(()=>document.dispatchEvent(new CustomEvent('judo-complete',{detail:{demo:false}})));
+   assert.equal(await page.locator('#xp').textContent(),'20 XP');
+   assert(await page.evaluate(()=>JSON.parse(localStorage.getItem('just-judo-progress-v1')).nami.practice));
+   await page.locator('#result-home').click();await page.locator('[data-course]').first().waitFor({state:'visible'});
+   await page.unroute('**/src/academy.js*');continue;
+  }
   await page.unroute('**/src/academy.js*');
   await page.locator('#back-menu').click();await page.locator('[data-course]').first().waitFor({state:'visible'});
   assert.equal(await page.locator('.ink-hero').count(),0);

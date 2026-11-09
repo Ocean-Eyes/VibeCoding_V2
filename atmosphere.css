@@ -1,7 +1,6 @@
 ﻿/* Shared atmosphere skin for every practice and phone-camera page. */
 :root{--paper:#e2e1d9;--panel:#eeede6ed;--ink:#293331;--muted:#64716b;--line:#43544833;--accent:#8b4931;--blue:#526e76;--serif:Arial,'Malgun Gothic',sans-serif}
 body{background:#e2e1d9;color:var(--ink);font-family:Arial,'Malgun Gothic',sans-serif}
-.dojo-room{display:none}
 .lesson-atmosphere{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse at 76% 40%,#ced2cb,transparent 65%),#e2e1d9;isolation:isolate}
 .lesson-atmosphere canvas{position:absolute;inset:0;width:100%;height:100%}
 .lesson-atmosphere:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#eeede5b8,#eeede530 65%);pointer-events:none}
