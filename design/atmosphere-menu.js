@@ -1,11 +1,11 @@
 const catalog={
- basics:[['띠 매는 법','OBI','매듭 시연을 보고 띠 매는 순서를 따라 합니다.'],['배밀기','BAEMILGI','가로 카메라로 자세를 확인하고 배밀기를 연습합니다.'],['낙법','UKEMI','낙법 기초 · 준비 중']],
- throws:[['밭다리 후리기','O-SOTO-GARI','초기자세부터 세 단계 동작을 따라 합니다.'],['안다리 후리기','O-UCHI-GARI','3D 시연으로 동작의 흐름을 확인합니다.'],['한팔 업어치기','IPPON-SEOI-NAGE','3D 시연으로 몸의 회전과 동작을 확인합니다.']]
+ basics:[['띠 매는 법','OBI'],['배밀기','BAEMILGI'],['낙법','UKEMI']],
+ throws:[['밭다리 후리기','O-SOTO-GARI'],['안다리 후리기','O-UCHI-GARI'],['한팔 업어치기','IPPON-SEOI-NAGE']]
 };
 const groundwork={
- shime:{name:'조르기',lessons:[['십자조르기','NAMI-JUJI-JIME','목표 손 모양과 위치를 따라 합니다.'],['외십자조르기','KATA-JUJI-JIME','목표 손 모양과 위치를 따라 합니다.'],['역십자조르기','GYAKU-JUJI-JIME','목표 손 모양과 위치를 따라 합니다.']]},
- kansetsu:{name:'꺾기',lessons:[['팔얽어비틀기','UDE-GARAMI','손목 잡기, 팔 연결, 들어 올리기를 순서대로 연습합니다.']]},
- osaekomi:{name:'누르기',lessons:[['곁누르기','KESA-GATAME','3D 시연을 보고 화면 우측 하단의 자세를 따라 합니다.']]}
+ shime:{name:'조르기',lessons:[['십자조르기','NAMI-JUJI-JIME'],['외십자조르기','KATA-JUJI-JIME'],['역십자조르기','GYAKU-JUJI-JIME']]},
+ kansetsu:{name:'꺾기',lessons:[['팔얽어비틀기','UDE-GARAMI']]},
+ osaekomi:{name:'누르기',lessons:[['곁누르기','KESA-GATAME']]}
 };
 const liveMenu=document.body.dataset.live==='true';
 const destinations={OBI:'/basics/belt',BAEMILGI:'/basics/hindu-push-up','NAMI-JUJI-JIME':'/katame-waza/shime-waza/nami-juji-jime','KATA-JUJI-JIME':'/katame-waza/shime-waza/kata-juji-jime','GYAKU-JUJI-JIME':'/katame-waza/shime-waza/gyaku-juji-jime','UDE-GARAMI':'/katame-waza/kansetsu-waza/ude-garami','KESA-GATAME':'/katame-waza/osaekomi-waza/kesa-gatame','O-SOTO-GARI':'/throws/o-soto-gari','O-UCHI-GARI':'/throws/o-uchi-gari','IPPON-SEOI-NAGE':'/throws/ippon-seoi-nage'};
@@ -17,7 +17,6 @@ function chooseLesson(i){
  selected=i;const items=lessons(),item=items[i];
  const start=document.querySelector('#start');start.disabled=liveMenu&&!destinations[item[1]];if(liveMenu)start.innerHTML=start.disabled?'준비 중':'수련하기 <span>→</span>';
  document.querySelector('#lesson-title').textContent=item[0];document.querySelector('#lesson-roman').textContent=item[1];
- document.querySelector('#description').textContent=item[2];
  document.querySelector('#lesson-index').textContent=`${String(i+1).padStart(2,'0')} / ${String(items.length).padStart(2,'0')}`;
  document.querySelectorAll('[data-lesson]').forEach((b,j)=>{b.classList.toggle('selected',i===j);b.setAttribute('aria-current',String(i===j));});
  lightTarget=.53+i*.10;renderStill();
