@@ -17,7 +17,7 @@ function gripping(hands,wrist){
 }
 export class GroundProgress{
  constructor(id){this.id=id;this.reset();}
- reset(){this.stage=0;this.hold=0;this.last=null;this.under=false;this.done=false;this.until=0;}
+ reset(){this.stage=0;this.hold=0;this.last=null;this.under=false;this.done=false;this.until=0;this.leverBase=null;}
  update(points,hands,aspect,now,active=true){
   const dt=this.last===null?0:Math.min(.1,Math.max(0,(now-this.last)/1000));this.last=now;
   const body=normalize(points,aspect,this.id==='kesa-gatame');
@@ -38,6 +38,7 @@ export class GroundProgress{
     const leftGrip=hands?.some((h,i)=>i!==rightHand&&gripping([h],points[15]));
     matched=right&&this.under&&distance(l,forearm)<.32&&leftGrip;
     issue=!right?'right':!this.under?'under':matched?'hold':'connect';
+    if(this.stage===2&&matched){matched=this.leverBase!==null&&p[13].y<this.leverBase-.12;issue=matched?'hold':'lift';}
    }
   }else{
    // Seated pose proxy only; a webcam cannot measure pinning pressure.
@@ -51,7 +52,7 @@ export class GroundProgress{
   this.hold=matched?this.hold+dt:Math.max(0,this.hold-dt);
   const duration=this.id==='kesa-gatame'&&this.stage===2?1.5:1;
   const score=Math.round(Math.max(0,1-error/1.2)*100);
-  if(this.hold>=duration){this.hold=0;if(this.stage===(this.id==='ude-garami'?1:2))this.done=true;else{this.stage++;this.until=now+700;}return {stage:this.stage,hold:1,score:100,done:this.done,transition:!this.done};}
+  if(this.hold>=duration){this.hold=0;if(this.stage===2)this.done=true;else{if(this.id==='ude-garami'&&this.stage===1)this.leverBase=p[13].y;this.stage++;this.until=now+700;}return {stage:this.stage,hold:1,score:100,done:this.done,transition:!this.done};}
   return {stage:this.stage,hold:this.hold/duration,score,issue,under:this.under,matched};
  }
 }

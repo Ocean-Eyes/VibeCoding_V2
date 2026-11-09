@@ -1,6 +1,6 @@
 // Authored hand-connection demonstration. Reference: docs/ground-reference.md.
-// No joint rotation or pressure is animated; the opponent's bent arm stays fixed.
-import {body,limb,add,sub,mul,unit} from './throw-motion.js';
+// The final lever is a small demonstration, never a pressure measurement.
+import {body,limb,add,sub,mul,unit,dot,cross} from './throw-motion.js';
 function seatedBody(pose,roll){
  const rig=body(pose),c=Math.cos(roll),s=Math.sin(roll);
  const rotate=v=>[c*v[0]-s*v[1],s*v[0]+c*v[1],v[2]];
@@ -22,7 +22,7 @@ function opponent(){
  return rig;
 }
 export function sampleGround(id,time=0){
- const uke=opponent(),t=Math.max(0,Math.min(id==='ude-garami'?2:3,time));
+ const uke=opponent(),t=Math.max(0,Math.min(3,time));
  const enter=smooth(t),wrap=smooth(t-1);
  const tori=id==='ude-garami'?body({p:[-.5,.4,-.2],yaw:Math.PI,lean:0,l:[-.8,.08,-.8],r:[-.9,.08,.5]}):
  seatedBody({p:mix([-.62,.49,-.06],[-.48,.24,-.16],enter),yaw:Math.PI,lean:.1+.15*enter+.25*wrap,
@@ -31,22 +31,34 @@ export function sampleGround(id,time=0){
   // Anatomical right upper arm extends sideways; the 90-degree forearm
   // points toward the head, not toward the feet.
   uke.arms.right={root:uke.shoulders.right,joint:add(uke.shoulders.right,[-.33,0,0]),end:add(uke.shoulders.right,[-.33,0,-.31])};
+  const lift=smooth(t-2),arm=uke.arms.right;
+  // Rotate the elbow around the shoulder-to-wrist axis. Both bone lengths
+  // and the pinned wrist remain fixed while the elbow rises.
+  const pivotAxis=unit(sub(arm.end,arm.root)),v=sub(arm.joint,arm.root),angle=.28*lift;
+  arm.joint=add(arm.root,add(add(mul(v,Math.cos(angle)),mul(cross(pivotAxis,v),Math.sin(angle))),mul(pivotAxis,dot(pivotAxis,v)*(1-Math.cos(angle)))));
   const wrist=uke.arms.right.end,elbow=uke.arms.right.joint;
   // Mounted, facing uke's head: shoulders stay above the chest, with the
   // anatomical right shoulder on +X. Both hands descend from above.
   const rightRoot=mix([.005,.78,-.50],[-.10,.65,-.60],enter);
+  rightRoot[1]+=-.20*wrap+.065*lift;
   const leftRoot=add(rightRoot,[-.41,0,0]);
   const rightEnd=mix([-.35,.61,-.77],add(wrist,[0,.045,0]),enter);
   tori.arms.right=limb(rightRoot,rightEnd,.33,.31,[0,.2,-1]);
   const rightJoint=tori.arms.right.joint;
   const ownForearm=add(rightEnd,mul(unit(sub(rightJoint,rightEnd)),.115));
+  const axis=unit(sub(rightJoint,rightEnd)),toward=sub(leftRoot,ownForearm);
+  const leftNormal=unit(sub(toward,mul(axis,dot(toward,axis))));
+  // Place the palm outside the forearm; curled fingers face its surface.
+  const ownGrip=add(ownForearm,mul(leftNormal,.075));
   const under=add(elbow,[0,-.14,-.08]);
   const below=add(elbow,[0,-.14,.20]),finish=smooth((t-1.7)/.3);
   const leftEnd=t<1.45?mix([-.36,.58,-.40],below,smooth((t-1)/.45)):
-   t<1.7?mix(below,under,smooth((t-1.45)/.25)):mix(under,ownForearm,finish);
+   t<1.7?mix(below,under,smooth((t-1.45)/.25)):mix(under,ownGrip,finish);
   // The forearm approaches from below the opponent's upper arm.
-  tori.arms.left=limb(leftRoot,leftEnd,.33,.31,[.2,.1,.6]);
-  return {id,time:t,ground:true,armsOnly:true,tori,uke,gripTargets:{opponentWrist:wrist,ownForearm,under}};
+  tori.arms.left=limb(leftRoot,leftEnd,.33,.31,[-.4,-.5,1.2]);
+  return {id,time:t,ground:true,armsOnly:true,tori,uke,
+   grips:{right:{normal:[0,1,0],held:enter},left:{normal:leftNormal,held:finish}},
+   gripTargets:{opponentWrist:wrist,ownForearm,ownGrip,under}};
  }
  // The hip sits beside uke's right ribs. The trunk tilts sideways onto the
  // upper chest, facing the head; the right leg extends forward, left leg back.

@@ -67,9 +67,9 @@ export function openGroundLesson(lesson){
  function tick(now){
   if(disposed)return;void infer(now);
   const dt=lastTick?Math.min(.1,(now-lastTick)/1000):0;lastTick=now;
-  if(demo&&playing&&!document.hidden)elapsed=(elapsed+dt)%(kesa?12:10);
-  const time=demo?(kesa?Math.min(3,elapsed/3):Math.min(2,elapsed/3)):kesa?game.stage+1:game.stage===0?1:game.under?2:1.5;
-  const demoStage=kesa?Math.min(2,Math.floor(time)):time<1?0:1;
+  if(demo&&playing&&!document.hidden)elapsed=(elapsed+dt)%12;
+  const time=demo?Math.min(3,elapsed/3):kesa?game.stage+1:game.stage===0?1:game.stage===2?3:game.under?2:1.7;
+  const demoStage=Math.min(2,Math.floor(time));
   const fresh=ready&&now-lastResult<350&&!document.hidden?data:null;
   const state=demo?{stage:demoStage}:game.update(fresh?.points,fresh?.hands,video.videoHeight/(video.videoWidth||1),now,ready&&now>=startAt&&!document.hidden);
   const pose=sampleGround(lesson.id,time);
@@ -84,6 +84,7 @@ export function openGroundLesson(lesson){
   $('ground-play').textContent=demo?(playing?t('시연 일시정지','Pause demo'):t('시연 재생','Play demo')):t('3D 시연 보기','Watch 3D demo');
   $('ground-score').textContent=demo?'':state.done||state.transition?'Perfect':fresh?`${state.score}%`:'—';$('ground-hold').hidden=demo;$('ground-hold').value=state.hold||0;
   const hints={tracking:kesa?t('전신을 보여 주세요.','Show your whole body.'):t('상체와 양손을 보여 주세요.','Show your upper body and both hands.'),right:t('오른손을 가슴 아래에 두고 쥐세요.','Close your right hand below your chest.'),under:t('왼손을 오른손 아래로 넣으세요.','Move your left hand below your right hand.'),connect:t('왼손으로 오른팔 손목 위를 잡으세요.','Grip your right forearm just above the wrist.'),sit:t('옆으로 앉아 무릎을 굽히고 다리를 벌리세요.','Sit alongside, bend the knee and spread your legs.'),wrap:t('오른팔은 머리 쪽, 왼손은 소매 쪽에 두세요.','Place your right arm near the head and left hand near the sleeve.'),hold:t('그대로 유지','Hold'),position:t('가이드 자세를 따라 하세요.','Follow the guide pose.')};
+  hints.lift=t('손목을 유지하고 왼팔을 들어 올리세요.','Keep the wrist fixed and lift your left arm.');
   $('ground-feedback').textContent=demo?'':state.done?'Perfect':ready&&now<startAt?String(Math.ceil((startAt-now)/1000)):state.transition?'Perfect':hints[state.issue]||'';
   root.dataset.groundStage=String(state.stage);root.dataset.groundDone=String(!!state.done);root.dataset.groundReady=String(ready);root.dataset.groundDemo=String(demo);root.dataset.groundUnder=String(game.under);
   raf=requestAnimationFrame(tick);

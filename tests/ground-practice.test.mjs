@@ -11,7 +11,7 @@ test('opponent bent arm stays at 90 degrees throughout the connection',()=>{
  assert(uke.head[1]<.3);assert(uke.legs.left.end[1]<.2);
  }
  const pose=sampleGround('ude-garami',2);
- assert(Math.hypot(...pose.tori.arms.left.end.map((v,i)=>v-pose.gripTargets.ownForearm[i]))<1e-8);
+ assert(Math.hypot(...pose.tori.arms.left.end.map((v,i)=>v-pose.gripTargets.ownGrip[i]))<1e-8);
 });
 test('ude requires right grip, under-arm passage and then a distinct left grip',()=>{
  const game=new GroundProgress('ude-garami');let now=0;
@@ -21,7 +21,9 @@ test('ude requires right grip, under-arm passage and then a distinct left grip',
  feed(2,50);assert.equal(game.done,false,'skipping the underneath movement must not pass');
  feed(1,2);assert.equal(game.under,true);
  f=groundFixture('ude-garami',2);for(let i=0;i<30;i++)game.update(f.points,f.hands.slice(1),9/16,now+=50);assert.equal(game.done,false);
- feed(2,30);assert.equal(game.done,true);
+ feed(2,30);assert.equal(game.stage,2);assert.equal(game.done,false);
+ feed(2,40);assert.equal(game.done,false,'holding the connection alone cannot finish the lever');
+ feed(3,30);assert.equal(game.done,true);
  game.reset();assert.equal(game.under,false);assert.equal(game.stage,0);
 });
 test('kesa requires a seated base, ordered arm placement and final hold',()=>{
@@ -61,7 +63,7 @@ test('kesa keeps rigid limbs, split seated legs and a sideways trunk lean toward
 test('ude reference arms keep bone lengths and reach both grip targets',()=>{
  const d=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
  let previous;
- for(let time=0;time<=2.001;time+=.02){
+ for(let time=0;time<=3.001;time+=.02){
   const pose=sampleGround('ude-garami',time);
   for(const arm of Object.values(pose.tori.arms)){
    assert(Math.abs(d(arm.root,arm.joint)-.33)<1e-6);
@@ -72,15 +74,16 @@ test('ude reference arms keep bone lengths and reach both grip targets',()=>{
   previous=pose;
  }
  const pose=sampleGround('ude-garami',2);
- assert(d(pose.tori.arms.left.end,pose.gripTargets.ownForearm)<.001);
+ assert(d(pose.tori.arms.left.end,pose.gripTargets.ownGrip)<.001);
+ assert(Math.abs(d(pose.tori.arms.left.end,pose.gripTargets.ownForearm)-.075)<1e-6,'palm sits outside the held forearm');
  assert(d(pose.tori.arms.right.end,pose.gripTargets.opponentWrist)<.06);
 });
 
 test('mounted ude hands descend from above with a head-facing shoulder frame',()=>{
  const start=sampleGround('ude-garami',0),grip=sampleGround('ude-garami',1),under=sampleGround('ude-garami',1.7);
- for(let time=0;time<=2;time+=.02){
+ for(let time=0;time<=3;time+=.02){
   const {tori}=sampleGround('ude-garami',time),r=tori.arms.right,l=tori.arms.left;
-  assert(r.root[1]>=.65&&l.root[1]>=.65,'shoulders above the supine chest');
+  assert(r.root[1]>=.45&&l.root[1]>=.45,'shoulders above the supine chest while leaning into the connection');
   assert(Math.abs(r.root[0]-l.root[0]-.41)<1e-6,'mounted performer faces the head');
   assert(Math.abs(r.root[1]-l.root[1])<1e-6);
   assert(r.reachError<1e-6&&l.reachError<1e-6,'no hidden reach clamping');
@@ -89,4 +92,19 @@ test('mounted ude hands descend from above with a head-facing shoulder frame',()
  assert(grip.tori.arms.right.end[1]<start.tori.arms.right.end[1]-.3);
  assert(grip.tori.arms.right.end[1]>grip.uke.arms.right.end[1]);
  assert(under.tori.arms.left.end[1]<under.uke.arms.right.joint[1]-.1);
+});
+
+test('final lever raises the left elbow and uke elbow while preserving the pinned wrist and connected grip',()=>{
+ const start=sampleGround('ude-garami',2),end=sampleGround('ude-garami',3),d=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
+ assert(end.tori.arms.left.joint[1]>start.tori.arms.left.joint[1]+.05);
+ assert(end.uke.arms.right.joint[1]>start.uke.arms.right.joint[1]+.05);
+ for(let t=2;t<=3.001;t+=.01){
+  const p=sampleGround('ude-garami',t),a=p.uke.arms.right;
+  assert(d(a.end,start.uke.arms.right.end)<1e-8);
+  assert(d(p.tori.arms.right.end,start.tori.arms.right.end)<1e-8);
+  assert(Math.abs(d(a.root,a.joint)-.33)<1e-8);
+  assert(Math.abs(d(a.joint,a.end)-.31)<1e-8);
+  assert(d(p.tori.arms.left.end,p.gripTargets.ownGrip)<1e-8);
+  assert.equal(p.grips.left.held,1);assert.equal(p.grips.right.held,1);
+ }
 });

@@ -92,7 +92,7 @@ function scene(pose,solo,performerColor=WHITE){
    for(const [side,arm]of Object.entries(pose.tori.arms)){
     const color=side==='right'?GOLD:[.80,.43,.33];
     tube(out,arm.root,arm.joint,.055,.05,color);tube(out,arm.joint,arm.end,.05,.035,color);
-    hand(out,arm,pose.tori,null,side);
+    hand(out,arm,pose.tori,pose.grips?.[side],side);
    }
   }else person(out,pose.tori,performerColor,true);
   return new Float32Array(out);

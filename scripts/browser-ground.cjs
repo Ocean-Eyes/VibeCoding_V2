@@ -21,6 +21,7 @@ for(const [id,group,name]of [['ude-garami','kansetsu-waza','팔얽어비틀기']
  await page.evaluate(()=>window.qaGroundPhase=0);await page.waitForFunction(()=>document.querySelector('#throw-screen').dataset.groundStage==='1');
  if(id==='ude-garami'){await page.evaluate(()=>window.qaGroundPhase=2);await page.waitForTimeout(2300);assert.equal(await page.locator('#throw-screen').getAttribute('data-ground-done'),'false');
  await page.evaluate(()=>window.qaGroundPhase=1);await page.waitForFunction(()=>document.querySelector('#throw-screen').dataset.groundUnder==='true');await page.evaluate(()=>window.qaGroundPhase=2);}
+ if(id==='ude-garami'){await page.waitForFunction(()=>document.querySelector('#throw-screen').dataset.groundStage==='2');await page.waitForTimeout(1800);assert.equal(await page.locator('#throw-screen').getAttribute('data-ground-done'),'false');await page.evaluate(()=>window.qaGroundPhase=3);}
  await page.waitForFunction(()=>document.querySelector('#throw-screen').dataset.groundDone==='true');assert.equal(await page.locator('#ground-score').innerText(),'Perfect');
  await page.locator('#ground-reset').click();await page.evaluate(()=>window.qaGroundPhase=-1);await page.waitForFunction(()=>document.querySelector('#throw-screen').dataset.groundStage==='0');
  await page.locator('#ground-play').click();await page.waitForFunction(()=>!document.querySelector('#ground-video').srcObject&&document.querySelector('#throw-screen').dataset.groundDemo==='true');
