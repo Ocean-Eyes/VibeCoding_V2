@@ -1,5 +1,6 @@
 // Korean source phrases are stable keys; numbered slots are template values.
 export const EN = {
+ '팔얽어비틀기':'Ude-garami', '곁누르기':'Kesa-gatame',
   "금색 목표 손": "Gold target hands",
   "파란색 내 손": "Blue tracked hands",
   "금색 손 가이드에 내 손의 모양과 위치를 맞춰 보세요.": "Match your hand shapes and positions to the gold guides.",

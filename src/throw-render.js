@@ -86,6 +86,17 @@ function scene(pose,solo,performerColor=WHITE){
  const out=[],mat=[.25,.33,.32];
  triangle(out,[-2.8,-.006,-2.8],[2.8,-.006,-2.8],[2.8,-.006,2.8],mat);triangle(out,[-2.8,-.006,-2.8],[2.8,-.006,2.8],[-2.8,-.006,2.8],mat);
  for(let x=-2.5;x<=2.5;x+=.5){tube(out,[x,-.002,-2.5],[x,-.002,2.5],.002,.002,[.36,.43,.40],4);tube(out,[-2.5,-.002,x],[2.5,-.002,x],.002,.002,[.36,.43,.40],4);}
+ if(pose.ground){
+  person(out,pose.uke,BLUE);
+  if(pose.armsOnly){
+   for(const [side,arm]of Object.entries(pose.tori.arms)){
+    const color=side==='right'?GOLD:[.80,.43,.33];
+    tube(out,arm.root,arm.joint,.055,.05,color);tube(out,arm.joint,arm.end,.05,.035,color);
+    hand(out,arm,pose.tori,null,side);
+   }
+  }else person(out,pose.tori,performerColor,true);
+  return new Float32Array(out);
+ }
  for(const who of solo?['tori']:['tori','uke']){const rig=pose[who];disk(out,[rig.pelvis[0],.001,rig.pelvis[2]],.30,.38,[.20,.27,.27]);}
  // A gold sole ring distinguishes the working right foot from the supporting left.
  const r=pose.tori.legs.right.end;disk(out,[r[0],.004,r[2]],.09,.15,GOLD);
@@ -103,24 +114,24 @@ export function createThrowRenderer(canvas){
  if(!gl)throw Error('WebGL unavailable');
  const program=gl.createProgram(),vs=shader(gl,gl.VERTEX_SHADER,`
  attribute vec3 position;attribute vec3 normal;attribute vec3 color;
- uniform vec3 cameraRight;uniform vec3 cameraUp;uniform vec3 cameraDepth;uniform vec2 scale;
+ uniform vec3 center;uniform vec3 cameraRight;uniform vec3 cameraUp;uniform vec3 cameraDepth;uniform vec2 scale;
  varying vec3 litColor;
- void main(){vec3 p=position-vec3(0.,.84,0.);gl_Position=vec4(dot(p,cameraRight)*scale.x,dot(p,cameraUp)*scale.y,-dot(p,cameraDepth)/8.,1.);
+ void main(){vec3 p=position-center;gl_Position=vec4(dot(p,cameraRight)*scale.x,dot(p,cameraUp)*scale.y,-dot(p,cameraDepth)/8.,1.);
  float light=.63+.37*max(0.,dot(normalize(normal),normalize(vec3(-.4,.85,.6))));litColor=color*light;}`),fs=shader(gl,gl.FRAGMENT_SHADER,`precision mediump float;varying vec3 litColor;void main(){gl_FragColor=vec4(litColor,1.);}`);
  gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
  const buffer=gl.createBuffer();gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
  for(const [i,name] of ['position','normal','color'].entries()){const loc=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,36,i*12);}
- const uniforms=Object.fromEntries(['cameraRight','cameraUp','cameraDepth','scale'].map(n=>[n,gl.getUniformLocation(program,n)]));
+ const uniforms=Object.fromEntries(['cameraRight','cameraUp','cameraDepth','scale','center'].map(n=>[n,gl.getUniformLocation(program,n)]));
  gl.enable(gl.DEPTH_TEST);gl.clearColor(.105,.15,.175,1);
  let current=null,data=null;
  return {
-  draw(pose,{yaw=1.05,pitch=.22,solo=false,gold=false}={}){
+  draw(pose,{yaw=1.05,pitch=.22,solo=false,gold=false,center=[0,.84,0],extent:customExtent=null}={}){
    const size=canvas.getBoundingClientRect(),ratio=Math.min(window.devicePixelRatio||1,1.5),w=Math.max(1,Math.round(size.width*ratio)),h=Math.max(1,Math.round(size.height*ratio));
    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
    const key=pose.id+':'+pose.time+':'+solo+':'+gold;if(current!==key){data=scene(pose,solo,gold?GOLD:WHITE);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);current=key;}
    const depth=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)],right=[Math.cos(yaw),0,-Math.sin(yaw)],up=cross(depth,right);
-   gl.uniform3fv(uniforms.cameraRight,right);gl.uniform3fv(uniforms.cameraUp,up);gl.uniform3fv(uniforms.cameraDepth,depth);
-   const extent=Math.max(2.75,3.7*h/w);gl.uniform2f(uniforms.scale,2/(extent*w/h),2/extent);
+   gl.uniform3fv(uniforms.center,center);gl.uniform3fv(uniforms.cameraRight,right);gl.uniform3fv(uniforms.cameraUp,up);gl.uniform3fv(uniforms.cameraDepth,depth);
+   const extent=customExtent??Math.max(2.75,3.7*h/w);gl.uniform2f(uniforms.scale,2/(extent*w/h),2/extent);
    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.drawArrays(gl.TRIANGLES,0,data.length/9);
    canvas.dataset.time=pose.time.toFixed(4);canvas.dataset.technique=pose.id;canvas.dataset.solo=String(solo);
   },

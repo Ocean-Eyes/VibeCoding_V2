@@ -5,6 +5,8 @@
   "outputDirectory": "dist",
   "trailingSlash": false,
   "rewrites": [
+    { "source": "/katame-waza/kansetsu-waza/ude-garami", "destination": "/index.html" },
+    { "source": "/katame-waza/osaekomi-waza/kesa-gatame", "destination": "/index.html" },
     { "source": "/phone-camera", "destination": "/phone-camera.html" },
     { "source": "/basics", "destination": "/index.html" },
     { "source": "/basics/belt", "destination": "/index.html" },

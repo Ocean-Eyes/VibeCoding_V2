@@ -1,3 +1,4 @@
+import {GROUND_LESSONS} from './ground-lessons.js';
 import {tr,initLanguage} from './i18n.js';
 import {TECHNIQUES,FOUNDATIONS,GROUNDWORK_GROUPS,readProgress,progressTotals} from './curriculum.js';
 import {resolveRoute,routeURL,categoryPath,lessonPath} from './routes.js';
@@ -7,7 +8,7 @@ initLanguage();
 initVisitorStats();
 const $=id=>document.getElementById(id);
 let progress;try{progress=readProgress(localStorage)}catch{progress={}}
-let active=null,category='katame',group=null,lessonRequest=0,practiceModule,beltModule,baemilgiModule,throwModule;
+let active=null,category='katame',group=null,lessonRequest=0,practiceModule,beltModule,baemilgiModule,throwModule,groundModule;
 const routeBase=new URL('../',import.meta.url).pathname;
 function navigate(path){
   const url=routeURL(path,routeBase,location.search);
@@ -19,7 +20,7 @@ function renderRoute(){
   lessonRequest++;document.dispatchEvent(new Event('judo-exit'));active=null;$('baemilgi-screen').hidden=true;$('throw-screen').hidden=true;
   document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
   if(route?.screen==='lesson'){
-    category=route.category;openLesson([...TECHNIQUES,...FOUNDATIONS,...THROW_LESSONS].find(t=>t.id===route.lesson));return;
+    category=route.category;openLesson([...TECHNIQUES,...FOUNDATIONS,...THROW_LESSONS,...GROUND_LESSONS].find(t=>t.id===route.lesson));return;
   }
   showHome();
   if(route?.screen==='category'){showCategory(route.category,route.group);$('back-menu').hidden=false}
@@ -44,13 +45,13 @@ function showCategory(id,section=null){category=id;group=section;$('course-shelf
 function renderCourses(){
   const section=category==='katame'?GROUNDWORK_GROUPS.find(g=>g.id===group):null;
   $('course-title').textContent=section?.title??{basics:tr('기초를 차근차근'),katame:tr('굳히기본'),throws:tr('메치기본')}[category];
-  $('course-count').textContent=category==='katame'&&!section?tr('조르기 · 꺾기 · 누르기'):section?.available?tr('3개 미션 · 모두 선택 가능'):category==='basics'?tr('띠 매기 · 배밀기 · 낙법 · 테이핑'):tr('레슨 준비 중');
+  $('course-count').textContent=category==='katame'&&!section?tr('조르기 · 꺾기 · 누르기'):section?.available?(section.id==='shime-waza'?tr('3개 미션 · 모두 선택 가능'):throwText('1개 기술','1 technique')):category==='basics'?tr('띠 매기 · 배밀기 · 낙법 · 테이핑'):tr('레슨 준비 중');
   if(category==='throws')$('course-count').textContent=throwText('밭다리 3단계 연습 · 메치기 시연','O-soto 3-step practice · Throw demonstrations');
   $('course-grid').replaceChildren();
   if(category==='katame'&&!section){
     for(const [i,g] of GROUNDWORK_GROUPS.entries()){
       const card=document.createElement('article');card.className='lesson-card';
-      card.innerHTML=`<span class="lesson-index">${['一','二','三'][i]}</span><div class="lesson-title-group"><small>${g.label}</small><h3>${g.name}</h3><span class="tag">${g.available?tr('조르기 3종 열림'):tr('준비 중')}</span></div><p>${g.description}</p>`;
+      card.innerHTML=`<span class="lesson-index">${['一','二','三'][i]}</span><div class="lesson-title-group"><small>${g.label}</small><h3>${g.name}</h3><span class="tag">${g.available?(g.id==='shime-waza'?tr('조르기 3종 열림'):throwText('수련 가능','Available')):tr('준비 중')}</span></div><p>${g.description}</p>`;
       const button=document.createElement('button');button.className='lesson-enter';button.dataset.groundwork=g.id;button.textContent=tr('분류 보기 →');button.onclick=()=>navigate('/katame-waza/'+g.id);card.append(button);$('course-grid').append(card);
     }return;
   }
@@ -59,11 +60,12 @@ function renderCourses(){
     const label=document.createElement('span');label.textContent=tr('레슨 준비 중');const title=document.createElement('h3');title.textContent=section.name;const copy=document.createElement('p');copy.textContent=section.description;
     const back=document.createElement('button');back.className='outline';back.textContent=tr('굳히기본 분류로 →');back.onclick=()=>selectCategory('katame');panel.append(label,title,copy,back);$('course-grid').append(panel);return;
   }
-  const items=category==='throws'?THROW_LESSONS:category==='katame'?TECHNIQUES:FOUNDATIONS;
+  const items=category==='throws'?THROW_LESSONS:category==='katame'?(section?.id==='shime-waza'?TECHNIQUES:GROUND_LESSONS.filter(t=>t.group===section?.id)):FOUNDATIONS;
   for(const [i,t]of items.entries()){
     const card=document.createElement('article');card.className='lesson-card';
     const done=progress[t.id]?.practice,available=category==='katame'||t.available;
     card.innerHTML=`<span class="lesson-index">${['一','二','三','四'][i]??String(i+1)}</span><div class="lesson-title-group"><small>${t.roman||t.label}</small><h3>${t.name}</h3><span class="tag">${category==='katame'?(done?tr('수련 기록 있음'):tr('조르기 · 입문')):available?tr('시연 · 카메라 가이드'):tr('준비 중')}</span></div><span class="lesson-kanji" lang="ja" aria-hidden="true">${t.kanji}</span><p>${t.description}</p>`;
+    if(t.group)card.querySelector('.tag').textContent=throwText('단계별 연습','Step-by-step practice');
     if(t.id==='baemilgi')card.querySelector('.tag').textContent=tr('횟수 도전 · 리더보드');
     if(category==='throws')card.querySelector('.tag').textContent=throwText('3단계 시연 · 혼자 따라 하기','3-step demo · Solo practice');
     if(category==='throws'&&t.id==='o-soto-gari')card.querySelector('.tag').textContent=throwText('3단계 자세 따라 하기','3-step pose challenge');
@@ -78,6 +80,7 @@ async function openBelt(t){
   catch(error){beltModule=null;if(request===lessonRequest)$('belt-notice').textContent=tr('시연을 불러오지 못했습니다. 기술 메뉴로 돌아간 뒤 다시 열어 주세요.');console.error(error)}
 }
 function openLesson(t){
+  if(GROUND_LESSONS.some(lesson=>lesson.id===t.id)){void openGround(t);return}
   if(THROW_LESSONS.some(lesson=>lesson.id===t.id)){void openThrow(t);return}
   if(t.id==='baemilgi'){void openBaemilgi(t);return}
   if(t.id==='belt'){void openBelt(t);return}
@@ -95,6 +98,14 @@ async function openThrow(t){
   $('throw-screen').textContent=throwText('시연을 준비하고 있습니다…','Preparing the demonstration…');
   try{throwModule??=import('./throw-lesson.js');const module=await throwModule;if(request===lessonRequest&&!$('throw-screen').hidden)module.openThrowLesson(t)}
   catch(error){throwModule=null;if(request===lessonRequest)$('throw-screen').textContent=throwText('시연을 불러오지 못했습니다. 메뉴로 돌아가 다시 열어 주세요.','Could not load the demonstration. Return to the menu and try again.');console.error(error)}
+}
+async function openGround(t){
+ active=t;const request=++lessonRequest;
+ $('home-screen').hidden=$('practice-screen').hidden=$('belt-screen').hidden=$('baemilgi-screen').hidden=true;$('throw-screen').hidden=false;$('back-menu').hidden=false;
+ document.title=`${t.name} · Just Judo`;window.scrollTo(0,0);
+ $('throw-screen').textContent=throwText('준비 중…','Loading…');
+ try{groundModule??=import('./ground-lesson.js');const module=await groundModule;if(request===lessonRequest&&!$('throw-screen').hidden)module.openGroundLesson(t);}
+ catch(error){groundModule=null;if(request===lessonRequest)$('throw-screen').textContent=throwText('화면을 불러오지 못했습니다. 다시 열어 주세요.','Could not load the lesson. Please reopen it.');console.error(error);}
 }
 async function openBaemilgi(t){
   active=t;const request=++lessonRequest;

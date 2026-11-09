@@ -23,3 +23,8 @@ test('every published subpage has an exact production rewrite and valid parent',
  for(const r of ROUTES.filter(r=>r.parent))assert.ok(resolveRoute(r.parent));
  assert.equal(new Set(ROUTES.map(r=>r.path)).size,ROUTES.length);
 });
+
+test('groundwork techniques have distinct published category routes',()=>{
+ assert.equal(resolveRoute('/katame-waza/kansetsu-waza/ude-garami').lesson,'ude-garami');
+ assert.equal(resolveRoute('/katame-waza/osaekomi-waza/kesa-gatame').lesson,'kesa-gatame');
+});

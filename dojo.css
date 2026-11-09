@@ -363,3 +363,21 @@ html[lang=en] .metrics>div{flex-wrap:wrap;gap:6px}
 #osoto-target{position:absolute;right:12px;bottom:12px;width:34%;max-width:180px;background:#15222ce8;border:1px solid #d6a24d80;border-radius:8px;pointer-events:none;overflow:hidden;box-shadow:0 3px 14px #0004}
 #osoto-target-step{display:block;text-align:center;padding:8px 6px 0;color:#f1c873;font-size:12px;font-weight:700}
 .osoto-stage #osoto-target canvas{position:static;display:block;width:100%;height:auto;aspect-ratio:5/7}
+
+.ground-layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:24px;margin:24px 0}
+.ground-stage{position:relative;aspect-ratio:16/9;background:#1b2831;overflow:hidden}
+.ground-stage>video,.ground-stage>canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.ground-coach{padding:22px;border:1px solid var(--line);background:var(--panel)}
+.ground-coach h2{font-size:18px;line-height:1.5}.ground-coach ol{padding:0;list-style:none;display:grid;gap:12px}
+.ground-coach li{padding:12px;border:1px solid var(--line);line-height:1.6}.ground-coach li.current{border-color:#b88833;background:#d6a24d18}.ground-coach li.complete{color:#98752e}
+.ground-limit{font-size:11px;color:var(--muted);margin:20px 0 0}
+.ground-result{background:#15222c;color:#fff;padding:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-height:52px}
+.ground-result strong{color:#f1c873;font-size:24px}.ground-result progress{width:100%;height:6px;accent-color:#d6a24d}
+.ground-layout .throw-controls{flex-wrap:wrap}
+#ground-inset canvas{width:100%;height:auto;aspect-ratio:1;display:block;background:#1b2831}
+#ground-guide{position:absolute;right:12px;bottom:12px;width:27%;max-width:210px;border:1px solid #d6a24d88;background:#15222ce8;border-radius:7px;overflow:hidden;pointer-events:none}
+#ground-guide span{display:block;text-align:center;padding-top:7px;font-size:12px;color:#f1c873}
+#ground-guide canvas{width:100%;height:auto;display:block}
+@media(max-width:800px){.ground-layout{grid-template-columns:1fr}.ground-coach{padding:16px}#ground-inset canvas{max-width:380px;margin:auto}.ground-stage{min-height:220px}}
+.ground-layout>section,.ground-coach{min-width:0}.ground-coach{overflow-wrap:anywhere}@media(max-width:800px){.ground-layout{grid-template-columns:minmax(0,1fr)}}
+.ground-stage{width:100%;min-width:0;max-width:100%}

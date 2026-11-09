@@ -1,6 +1,8 @@
 // Shared by browser navigation and the local server. Only published screens
 // have routes; unavailable lessons stay on their category's existing cards.
 export const ROUTES=[
+ {path:'/katame-waza/kansetsu-waza/ude-garami',screen:'lesson',category:'katame',lesson:'ude-garami',parent:'/katame-waza/kansetsu-waza'},
+ {path:'/katame-waza/osaekomi-waza/kesa-gatame',screen:'lesson',category:'katame',lesson:'kesa-gatame',parent:'/katame-waza/osaekomi-waza'},
  {path:'/',screen:'home'},
  {path:'/phone-camera',screen:'camera',document:'phone-camera.html'},
  {path:'/basics',screen:'category',category:'basics',parent:'/'},

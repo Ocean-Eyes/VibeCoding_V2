@@ -29,7 +29,7 @@ export async function connectPhoneCamera({isCurrent=()=>true,orientation='landsc
   peer=createCameraPeer({role:'host',session,onStream:stream=>{
    if(settled||!isCurrent()){peer.close();return;}
    paired=settled=true;owner={peer,onEnd:null};owners.set(stream,owner);
-   const anchor=[...document.querySelectorAll('button')].find(b=>b.offsetParent!==null&&['bm-phone','osoto-phone','throw-phone','belt-phone','connect-phone'].includes(b.id));
+   const anchor=[...document.querySelectorAll('button')].find(b=>b.offsetParent!==null&&['bm-phone','osoto-phone','throw-phone','belt-phone','connect-phone','ground-phone'].includes(b.id));
    if(anchor){const button=document.createElement('button');button.id='phone-camera-rotate';button.className='outline';button.textContent=t('영상 90° 회전','Rotate video 90°');button.onclick=()=>peer.rotate();anchor.after(button);owner.rotateButton=button;}
    pending=null;dialog.close();link.removeAttribute('href');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);resolveResult(stream);
   },onClose:reason=>{

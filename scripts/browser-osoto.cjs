@@ -45,7 +45,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    if(stage<3){await page.waitForTimeout(2600);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),String(stage+1),'previous pose cannot skip the next stage');await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/front-'+(stage+1)+'.png'});}
   }
   assert.equal(await page.locator('#osoto-score').innerText(),'Perfect');await page.screenshot({path:'.test-output/osoto/complete.png',fullPage:true});
-  await page.evaluate(()=>window.qaStage=-1);await page.locator('#osoto-reset').click();assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),'0');
+  await page.evaluate(()=>window.qaStage=-1);await page.locator('#osoto-reset').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.stage==='0');
   await page.locator('#osoto-demo').click();await page.waitForFunction(()=>!document.querySelector('#osoto-video').srcObject&&document.querySelector('#osoto-canvas').dataset.demo==='true');assert.equal(await page.locator('#osoto-3d').isVisible(),true);
   for(const id of ['o-uchi-gari','ippon-seoi-nage']){await page.goto(base+'/throws/'+id);await page.locator('#throw-play').waitFor();assert.equal(await page.locator('#osoto-start').count(),0);await page.locator('#throw-play').click();await page.waitForFunction(()=>document.querySelector('#throw-canvas').dataset.playing==='true');}
   await page.setViewportSize({width:390,height:844});await page.goto(base+'/throws/o-soto-gari?lang=en');await page.locator('#osoto-start').waitFor();
