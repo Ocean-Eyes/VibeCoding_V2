@@ -3,7 +3,7 @@ import {cameraSignal,createCameraPeer} from './phone-camera-peer.js';
 import {qrcodegen} from './qr-code.js';
 const t=(ko,en)=>language==='en'?en:ko;
 const owners=new WeakMap();let pending;
-export function releaseCamera(stream){const owner=stream&&owners.get(stream);if(owner){owners.delete(stream);owner.peer.close();}stream?.getTracks().forEach(track=>track.stop());}
+export function releaseCamera(stream){const owner=stream&&owners.get(stream);if(owner){owners.delete(stream);owner.rotateButton?.remove();owner.peer.close();}stream?.getTracks().forEach(track=>track.stop());}
 export function onCameraEnded(stream,callback){const owner=owners.get(stream);if(owner){owner.onEnd=callback;if(owner.ended)queueMicrotask(callback);}else stream.getVideoTracks()[0].addEventListener('ended',callback);}
 export function cancelPhoneCamera(){pending?.cancel();}
 function drawQR(canvas,text){
@@ -11,7 +11,7 @@ function drawQR(canvas,text){
  canvas.width=canvas.height=size;const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,size,size);ctx.fillStyle='#14252d';
  for(let y=0;y<qr.size;y++)for(let x=0;x<qr.size;x++)if(qr.getModule(x,y))ctx.fillRect((x+4)*scale,(y+4)*scale,scale,scale);
 }
-export async function connectPhoneCamera({isCurrent=()=>true,orientation='landscape'}={}){
+export async function connectPhoneCamera({isCurrent=()=>true,orientation='landscape',autoRotate=false}={}){
  cancelPhoneCamera();
  if(!window.isSecureContext||typeof RTCPeerConnection==='undefined')throw Object.assign(new Error(t('이 브라우저에서는 스마트폰 카메라 연결을 시작할 수 없습니다.','This browser cannot connect a phone camera.')),{name:'PhoneCameraError'});
  let dialog=document.getElementById('phone-camera-dialog');
@@ -25,13 +25,16 @@ export async function connectPhoneCamera({isCurrent=()=>true,orientation='landsc
  try{
   session=await cameraSignal({action:'create'});
   if(settled||!isCurrent()){attempt.cancel();return result;}
-  const url=new URL('../phone-camera',import.meta.url);url.searchParams.set('lang',language);url.searchParams.set('orientation',orientation==='portrait'?'portrait':'landscape');url.hash=new URLSearchParams({room:session.room,key:session.phoneToken}).toString();
+  const url=new URL('../phone-camera',import.meta.url);url.searchParams.set('lang',language);url.searchParams.set('orientation',orientation==='portrait'?'portrait':'landscape');if(autoRotate)url.searchParams.set('autoRotate','1');url.hash=new URLSearchParams({room:session.room,key:session.phoneToken}).toString();
   peer=createCameraPeer({role:'host',session,onStream:stream=>{
    if(settled||!isCurrent()){peer.close();return;}
-   paired=settled=true;owner={peer,onEnd:null};owners.set(stream,owner);pending=null;dialog.close();link.removeAttribute('href');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);resolveResult(stream);
+   paired=settled=true;owner={peer,onEnd:null};owners.set(stream,owner);
+   const anchor=[...document.querySelectorAll('button')].find(b=>b.offsetParent!==null&&['bm-phone','osoto-phone','throw-phone','belt-phone','connect-phone'].includes(b.id));
+   if(anchor){const button=document.createElement('button');button.id='phone-camera-rotate';button.className='outline';button.textContent=t('영상 90° 회전','Rotate video 90°');button.onclick=()=>peer.rotate();anchor.after(button);owner.rotateButton=button;}
+   pending=null;dialog.close();link.removeAttribute('href');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);resolveResult(stream);
   },onClose:reason=>{
    if(reason==='local')return;
-   if(paired){if(reason!=='local'){owner.ended=true;owner.onEnd?.();}return;}
+   if(paired){owner.rotateButton?.remove();if(reason!=='local'){owner.ended=true;owner.onEnd?.();}return;}
    if(settled)return;
    settled=true;if(pending===attempt)pending=null;status.textContent=reason==='expired'?t('QR 연결 시간이 만료됐습니다. 취소 후 새 QR을 열어 주세요.','This QR code expired. Cancel and open a new one.'):t('연결하지 못했습니다. 같은 Wi-Fi인지 확인하고 다시 시도해 주세요.','Could not connect. Check that both devices use the same Wi-Fi and try again.');
    if(dialog.open)dialog.close();rejectResult(Object.assign(new Error(status.textContent),{name:'PhoneCameraError'}));

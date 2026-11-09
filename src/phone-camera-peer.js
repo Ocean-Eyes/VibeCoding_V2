@@ -3,7 +3,7 @@ export async function cameraSignal(body,{keepalive=false}={}){
  const response=await fetch('/api/phone-camera',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000),keepalive,cache:'no-store'});
  const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error||'connection_failed'),{code:data.error,status:response.status});return data;
 }
-export function createCameraPeer({role,session,stream,onStream,onConnected,onClose,signal=cameraSignal}){
+export function createCameraPeer({role,session,stream,onStream,onConnected,onClose,onRotate,signal=cameraSignal}){
  const pc=new RTCPeerConnection({iceServers:session.iceServers}),auth={room:session.room,token:session.token,role,...(session.client?{client:session.client}:{})};
  let closed=false,connected=false,remote,channel,pollTimer,disconnectTimer,connectionTimer,cursor=0,polls=0,outgoing=Promise.resolve();
  const pendingCandidates=[];
@@ -14,7 +14,7 @@ export function createCameraPeer({role,session,stream,onStream,onConnected,onClo
   pc.close();void signal({...auth,action:'close'},{keepalive:true}).catch(()=>{});onClose?.(reason);
  }
  const fail=error=>end(error?.code||'connection_failed');
- function attachChannel(value){channel=value;channel.onmessage=event=>{if(event.data==='close')end('remote');};channel.onclose=()=>{if(connected&&!closed)end('remote');};}
+ function attachChannel(value){channel=value;channel.onmessage=event=>{if(event.data==='close')end('remote');else if(event.data==='rotate'&&role==='phone')onRotate?.();};channel.onclose=()=>{if(connected&&!closed)end('remote');};}
  function send(message){outgoing=outgoing.then(()=>closed?undefined:signal({...auth,action:'send',message}));void outgoing.catch(fail);return outgoing;}
  function checkConnected(){
   if(closed||connected||pc.connectionState!=='connected'||role==='host'&&!remote)return;
@@ -58,5 +58,5 @@ export function createCameraPeer({role,session,stream,onStream,onConnected,onClo
    }else{connectionTimer=setTimeout(()=>end('connection_failed'),35000);for(const track of stream.getVideoTracks())pc.addTrack(track,stream);}
    if(!closed)void poll();
   }catch(error){fail(error);throw error;}
- },close:()=>end('local'),get connection(){return pc;}};
+ },rotate(){if(closed||channel?.readyState!=='open')return false;channel.send('rotate');return true;},close:()=>end('local'),get connection(){return pc;}};
 }

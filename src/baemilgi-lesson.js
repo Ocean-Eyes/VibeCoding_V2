@@ -174,7 +174,7 @@ async function start(source='local'){
    stream=acquired;return true;
   };
   if(source==='phone'){
-   const acquired=await connectPhoneCamera({isCurrent:()=>current===generation});if(current!==generation){releaseCamera(acquired);return;}if(!acquired){stopCamera();return;}stream=acquired;
+   const acquired=await connectPhoneCamera({isCurrent:()=>current===generation,autoRotate:true});if(current!==generation){releaseCamera(acquired);return;}if(!acquired){stopCamera();return;}stream=acquired;
   }else{
   if(!await acquire(camera))return;
   // Permission reveals device labels. Release the initial lens before switching

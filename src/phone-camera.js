@@ -54,7 +54,7 @@ async function capture(selection,current){
  stream.getVideoTracks()[0].addEventListener('ended',()=>{if(current===generation)stop(t('카메라 연결이 끝났습니다. PC에서 새 QR을 열어 주세요.','Camera ended. Open a new QR code on the PC.'));});
  $('phone-video').srcObject=stream;$('phone-placeholder').hidden=true;
  if(!await playback.start(()=>current===generation))return false;
- if(orientedCamera)orientedCamera.reset();else orientedCamera=createOrientedCamera($('phone-video'),$('phone-frame'),{orientation:$('phone-orientation').value});
+ if(orientedCamera)orientedCamera.reset();else orientedCamera=createOrientedCamera($('phone-video'),$('phone-frame'),{orientation:$('phone-orientation').value,autoRotate:new URLSearchParams(location.search).get('autoRotate')==='1'});
  // Preview the exact outgoing stream through a video decoder, just like the PC.
  // Keep the capture canvas out of the visible mobile compositing path.
  preview.srcObject=orientedCamera.stream;preview.muted=true;preview.hidden=false;
@@ -70,7 +70,7 @@ $('phone-start').onclick=async()=>{
   if(!await capture($('phone-lens').value,current))return;
   const session=await cameraSignal({...credential,action:'join'});if(current!==generation){void cameraSignal({...credential,action:'close'},{keepalive:true}).catch(()=>{});return;}
   history.replaceState(null,'',location.pathname+location.search);status(t('PC에 연결 중…','Connecting to the PC…'));
-  peer=createCameraPeer({role:'phone',session:{...session,...credential},stream:orientedCamera.stream,onConnected:()=>{
+  peer=createCameraPeer({role:'phone',session:{...session,...credential},stream:orientedCamera.stream,onRotate:()=>orientedCamera?.rotate(),onConnected:()=>{
    if(current!==generation)return;connected=true;$('phone-start').hidden=true;$('phone-lens').disabled=false;status(t('PC에 연결됐습니다 · 촬영 중','Connected to PC · camera on'));void keepAwake();
   },onClose:reason=>{if(current===generation&&reason!=='local')stop(t('PC와 연결이 종료됐습니다. 다시 연결하려면 PC에서 새 QR을 여세요.','The PC connection ended. Open a new QR code on the PC to reconnect.'));}});
   await peer.start();
