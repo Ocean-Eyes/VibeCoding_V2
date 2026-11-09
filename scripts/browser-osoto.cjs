@@ -31,6 +31,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/initial-front.png'});
   assert.equal(await page.locator('#osoto-video').evaluate(v=>getComputedStyle(v).transform),'none');
   await page.locator('#osoto-start').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.ready==='true');assert.equal(await page.locator('#osoto-3d').isVisible(),false);assert.equal(await page.locator('#osoto-canvas').isVisible(),true);
+  const originalAspect=Number(await page.locator('#osoto-canvas').getAttribute('data-camera-aspect'));
+  for(const angle of [90,180,270,0]){await page.locator('#osoto-rotate').click();await page.waitForFunction(a=>document.querySelector('#osoto-canvas').dataset.rotation===String(a),angle);const aspect=Number(await page.locator('#osoto-canvas').getAttribute('data-camera-aspect'));assert(Math.abs(aspect-(angle%180?1/originalAspect:originalAspect))<.001);}
+  await page.locator('#osoto-rotate').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.rotation==='90');await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/rotated-camera.png'});
   await page.waitForTimeout(4500);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),'0');
   for(let stage=0;stage<4;stage++){
    await page.evaluate(s=>window.qaStage=s,stage);
