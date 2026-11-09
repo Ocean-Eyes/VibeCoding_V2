@@ -51,7 +51,7 @@ function openLesson(t){
   if(t.id==='baemilgi'){void openBaemilgi(t);return}
   if(t.id==='belt'){void openBelt(t);return}
   active=t;$('belt-screen').hidden=true;
-  $('lesson-title').textContent=t.name;$('lesson-roman').textContent=t.roman;$('lesson-description').textContent=t.description;$('grip-note').textContent=t.detail;
+
   $('grip-left').textContent=tr('왼손 → 오른쪽 깃');$('grip-right').textContent=tr('오른손 → 왼쪽 깃');$('grip-caption').textContent=t.grip;$('source-link').href=t.source;
   $('practice-screen').hidden=false;$('back-menu').hidden=false;
   $('practice-title').textContent=t.name;$('practice-roman').textContent=t.roman;$('practice-grip').textContent=t.grip;

@@ -28,7 +28,7 @@ const cameraPlayback=createCameraPlayback($('belt-video'),$('belt-resume-video')
  onRetryFailed:()=>{$('belt-notice').textContent=tr('영상 재생이 차단됐습니다. 브라우저의 미디어 재생 설정을 확인하고 다시 눌러 주세요.');},
 });
 function resetTracks(){tracks=[newBeltTrack(),newBeltTrack()];lastDetection=0}
-function modeNotice(){return mode==='real'?tr('색 표시가 가려져도 단계는 유지됩니다. 매듭 안쪽과 등 뒤는 직접 확인한 뒤 다음을 누르세요.'):tr('시연을 보며 순서대로 따라 하세요. 띠를 넣는 틈은 아래 확대 화면에서 확인하세요.')}
+function modeNotice(){return mode==='real'?tr('매듭을 확인한 뒤 다음을 누르세요.'):tr('매듭은 확대 화면에서 확인하세요.')}
 function setMode(value){
  mode=value;picking=null;resetTracks();select(step,mode==='virtual'&&!reduced.matches);
  $('belt-notice').textContent=modeNotice();update();
@@ -69,8 +69,8 @@ function update(){
  $('belt-mode-virtual').setAttribute('aria-pressed',String(mode==='virtual'));$('belt-mode-real').setAttribute('aria-pressed',String(mode==='real'));
  $('belt-tracking').hidden=mode!=='real';$('belt-real-empty').hidden=mode!=='real'||!!stream;
  $('belt-perspective-controls').hidden=mode!=='virtual'||!!stream||cameraPending;
- $('belt-mode-description').textContent=mode==='real'?tr('실제 띠 양끝에 서로 다른 색 표시를 붙여 추적합니다. 옆 시연을 보고 한 단계씩 따라 하세요.'):tr('반투명 띠의 움직임을 보거나 카메라 위 가이드를 따라 해 보세요.');
- $('belt-mode-note').textContent=mode==='real'?tr('원은 실제 색 표시 위치, 옅은 띠는 목표 경로입니다. 가이드 높이·크기를 내 허리에 맞추세요. 등 뒤와 매듭 안쪽은 카메라로 확인할 수 없어 단계는 직접 넘깁니다.'):tr('카메라에서는 높이·크기를 조절해 가이드를 내 허리에 맞추세요. 매듭의 조임은 직접 확인하고, 단계는 버튼으로 넘깁니다.');
+ $('belt-mode-description').textContent=mode==='real'?tr('실제 띠 양끝에 서로 다른 색 표시를 붙여 추적합니다. 옆 시연을 보고 한 단계씩 따라 하세요.'):tr('시연을 보거나 카메라로 따라 하세요.');
+ $('belt-mode-note').textContent=mode==='real'?tr('원을 띠 양끝에 맞추고, 다음 버튼으로 단계를 넘기세요.'):tr('가이드 높이와 크기를 허리에 맞추고, 다음 버튼으로 단계를 넘기세요.');
  trackingUI();
  const unavailable=sourceState!=='ready';
  for(const id of ['belt-play','belt-prev','belt-next','belt-restart','belt-scrub','belt-speed'])if(unavailable)$(id).disabled=true;
@@ -188,7 +188,7 @@ $('belt-speed').onchange=()=>{if(animation)animation.timeline.speed=Number($('be
 document.querySelectorAll('[data-belt-view]').forEach(b=>b.onclick=()=>{detailCamera.cancel();detailView=b.dataset.beltView;document.querySelectorAll('[data-belt-view]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))});
 $('belt-detail-reset').onclick=()=>detailCamera.reset();
 $('belt-touch-rotate').onclick=()=>{touchRotates=!touchRotates;$('belt-touch-rotate').setAttribute('aria-pressed',String(touchRotates));detailCamera.cancel()};
-document.querySelectorAll('[data-belt-perspective]').forEach(b=>b.onclick=()=>{perspective=b.dataset.beltPerspective;setText('belt-perspective-hint',perspective==='first-person'?tr('내 허리와 손을 내려다보는 시점입니다.'):tr('내려다보는 시점으로도 확인할 수 있습니다.'))});
+document.querySelectorAll('[data-belt-perspective]').forEach(b=>b.onclick=()=>{perspective=b.dataset.beltPerspective;setText('belt-perspective-hint',perspective==='first-person'?tr('내 허리와 손을 내려다보는 시점입니다.'):tr(''))});
 $('belt-mode-virtual').onclick=()=>setMode('virtual');$('belt-mode-real').onclick=()=>setMode('real');
 for(const [i,key]of ['a','b'].entries())$('belt-register-'+key).onclick=()=>{picking=i;trackingUI()};
 $('belt-pick-cancel').onclick=()=>{picking=null;trackingUI()};$('belt-sample-center').onclick=()=>registerAt({x:.5,y:.5});
@@ -199,7 +199,7 @@ $('belt-canvas').onclick=e=>{
  const point=screenToVideo({x:e.clientX-r.left,y:e.clientY-r.top},rect,$('belt-mirror').checked);
  if(point)registerAt(point);else $('belt-notice').textContent=tr('검은 여백이 아닌 영상 속 색 표시를 선택하세요.');
 };
-export function openBeltLesson(){mode='virtual';perspective='front';detailView='front';detailCamera.reset();touchRotates=false;$('belt-touch-rotate').setAttribute('aria-pressed','false');setText('belt-perspective-hint',tr('내려다보는 시점으로도 확인할 수 있습니다.'));picking=null;colors=[null,null];resetTracks();cancelAnimationFrame(raf);open=true;step=0;progress=reduced.matches?1:0;playing=false;poseCache=null;if(source){sourceState='ready';select(0,!reduced.matches);$('belt-notice').textContent=modeNotice()}else void ensureSource();update();raf=requestAnimationFrame(draw)}
+export function openBeltLesson(){mode='virtual';perspective='front';detailView='front';detailCamera.reset();touchRotates=false;$('belt-touch-rotate').setAttribute('aria-pressed','false');setText('belt-perspective-hint',tr(''));picking=null;colors=[null,null];resetTracks();cancelAnimationFrame(raf);open=true;step=0;progress=reduced.matches?1:0;playing=false;poseCache=null;if(source){sourceState='ready';select(0,!reduced.matches);$('belt-notice').textContent=modeNotice()}else void ensureSource();update();raf=requestAnimationFrame(draw)}
 export function closeBeltLesson(){open=false;detailCamera.cancel();sourceToken++;sourceController?.abort();animationToken++;animation?.timeline.cancel();cancelAnimationFrame(raf);stopCamera()}
 document.addEventListener('judo-exit',closeBeltLesson);window.addEventListener('pagehide',closeBeltLesson);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&open)pause()});

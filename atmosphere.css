@@ -29,7 +29,7 @@ input,select{accent-color:#8b4931}select{background:#eeede6;color:var(--ink);bor
 .throw-caption p,.bm-demo-caption span,.bm-readout span,.bm-readout p{color:#59685e}
 .bm-readout strong,.ground-result strong,.osoto-hud strong{color:#895b2d}
 .bm-stage{background:var(--panel);color:var(--ink);border-color:var(--line)}
-.belt-current,.belt-modes,.transport,.throw-controls,.throw-legend,.throw-scrub,#osoto-timeline{background:transparent;border-color:var(--line)}
+.belt-modes,.transport,.throw-controls,.throw-legend,.throw-scrub,#osoto-timeline{background:transparent;border-color:var(--line)}
 .ground-coach li,.osoto-coach li,.pose-card,.belt-steps button{background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none}
 .ground-coach li.current,.osoto-coach li.current,.pose-card.selected,.belt-steps button[aria-current=true]{background:#b09a6f15;border-left:2px solid #956348;color:#65452d;box-shadow:none}
 .throw-steps button{background:transparent;border-color:var(--line);box-shadow:none}

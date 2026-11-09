@@ -26,11 +26,11 @@ $('phone-camera-root').innerHTML=`
 <label class="phone-lens-label" for="phone-lens">${t('카메라','Camera')}<select id="phone-lens"><option value="auto">${t('광각 우선 (자동)','Prefer wide angle (auto)')}</option><option value="user">${t('전면 카메라','Front camera')}</option></select></label>
 <div class="phone-actions"><button id="phone-start" class="primary">${t('카메라 켜고 연결','Start camera & connect')}</button><button id="phone-stop" class="outline" hidden>${t('촬영 종료','Stop camera')}</button><button id="phone-resume" class="outline" hidden>${t('카메라 영상 시작','Start camera video')}</button></div>
 <p class="phone-help">${t('PC와 폰을 같은 Wi-Fi에 연결하세요. 촬영 중에는 이 화면을 켜 두세요.','Use the same Wi-Fi. Keep this screen open while filming.')}</p></div>
-<p class="phone-privacy">${t('연결하면 이 폰의 영상이 QR을 띄운 PC로 실시간 전송됩니다. 영상은 연결한 PC에서 처리하며 녹화하거나 보관하지 않습니다.','Connecting sends live video from this phone to the PC that displayed the QR code. Video is processed on the connected PC and is not recorded or stored.')}</p>`;
+<p class="phone-privacy">${t('영상은 연결한 PC로 전송되며 저장하지 않습니다.','Video is sent to the connected PC and is not stored.')}</p>`;
 $('phone-orientation').value=initialOrientation;
 function updateOrientation(){
  const portrait=$('phone-orientation').value==='portrait';$('phone-camera-root').dataset.orientation=portrait?'portrait':'landscape';
- $('phone-orientation-guide').textContent=portrait?t('폰을 세로로 두고 머리부터 발끝까지 보여 주세요. PC에서 시연과 내 동작을 볼 수 있습니다.','Hold your phone upright and show your whole body. Watch the demonstration and your movement on the PC.'):t('폰을 가로로 두고 촬영하세요. PC에서 시연과 내 동작을 볼 수 있습니다.','Film with your phone in landscape. Watch the demonstration and your movement on the PC.');
+ $('phone-orientation-guide').textContent=portrait?t('폰을 세로로 두고 전신이 보이게 촬영하세요.','Film your whole body in portrait.'):t('폰을 가로로 두고 촬영하세요.','Film in landscape.');
  $('phone-placeholder').textContent=portrait?t('세로 촬영 · 후면 광각 우선','Portrait · prefer rear wide angle'):t('가로 촬영 · 후면 광각 우선','Landscape · prefer rear wide angle');
  orientedCamera?.setOrientation(portrait?'portrait':'landscape');
 }
