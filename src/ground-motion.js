@@ -32,16 +32,20 @@ export function sampleGround(id,time=0){
   // points toward the head, not toward the feet.
   uke.arms.right={root:uke.shoulders.right,joint:add(uke.shoulders.right,[-.33,0,0]),end:add(uke.shoulders.right,[-.33,0,-.31])};
   const wrist=uke.arms.right.end,elbow=uke.arms.right.joint;
-  const rightEnd=mix([-.96,.50,-1.20],add(wrist,[-.045,.025,0]),smooth(t));
-  const rightRoot=[-.96,.52,-1.11];
-  tori.arms.right=limb(rightRoot,rightEnd,.33,.31,[0,.4,-.4]);
+  // Mounted, facing uke's head: shoulders stay above the chest, with the
+  // anatomical right shoulder on +X. Both hands descend from above.
+  const rightRoot=mix([.005,.78,-.50],[-.10,.65,-.60],enter);
+  const leftRoot=add(rightRoot,[-.41,0,0]);
+  const rightEnd=mix([-.35,.61,-.77],add(wrist,[0,.045,0]),enter);
+  tori.arms.right=limb(rightRoot,rightEnd,.33,.31,[0,.2,-1]);
   const rightJoint=tori.arms.right.joint;
   const ownForearm=add(rightEnd,mul(unit(sub(rightJoint,rightEnd)),.115));
   const under=add(elbow,[0,-.14,-.08]);
-  const q=smooth((t-1)*2),finish=smooth((t-1.5)*2);
-  const leftEnd=t<1.5?mix([-.95,.45,-.30],under,q):mix(under,ownForearm,finish);
+  const below=add(elbow,[0,-.14,.20]),finish=smooth((t-1.7)/.3);
+  const leftEnd=t<1.45?mix([-.36,.58,-.40],below,smooth((t-1)/.45)):
+   t<1.7?mix(below,under,smooth((t-1.45)/.25)):mix(under,ownForearm,finish);
   // The forearm approaches from below the opponent's upper arm.
-  tori.arms.left=limb([-.91,.44,-.61],leftEnd,.33,.31,[0,-.4,.4]);
+  tori.arms.left=limb(leftRoot,leftEnd,.33,.31,[.2,.1,.6]);
   return {id,time:t,ground:true,armsOnly:true,tori,uke,gripTargets:{opponentWrist:wrist,ownForearm,under}};
  }
  // The hip sits beside uke's right ribs. The trunk tilts sideways onto the

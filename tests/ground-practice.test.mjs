@@ -75,3 +75,18 @@ test('ude reference arms keep bone lengths and reach both grip targets',()=>{
  assert(d(pose.tori.arms.left.end,pose.gripTargets.ownForearm)<.001);
  assert(d(pose.tori.arms.right.end,pose.gripTargets.opponentWrist)<.06);
 });
+
+test('mounted ude hands descend from above with a head-facing shoulder frame',()=>{
+ const start=sampleGround('ude-garami',0),grip=sampleGround('ude-garami',1),under=sampleGround('ude-garami',1.7);
+ for(let time=0;time<=2;time+=.02){
+  const {tori}=sampleGround('ude-garami',time),r=tori.arms.right,l=tori.arms.left;
+  assert(r.root[1]>=.65&&l.root[1]>=.65,'shoulders above the supine chest');
+  assert(Math.abs(r.root[0]-l.root[0]-.41)<1e-6,'mounted performer faces the head');
+  assert(Math.abs(r.root[1]-l.root[1])<1e-6);
+  assert(r.reachError<1e-6&&l.reachError<1e-6,'no hidden reach clamping');
+ }
+ for(const side of ['right','left'])assert(start.tori.arms[side].end[1]>.5);
+ assert(grip.tori.arms.right.end[1]<start.tori.arms.right.end[1]-.3);
+ assert(grip.tori.arms.right.end[1]>grip.uke.arms.right.end[1]);
+ assert(under.tori.arms.left.end[1]<under.uke.arms.right.joint[1]-.1);
+});

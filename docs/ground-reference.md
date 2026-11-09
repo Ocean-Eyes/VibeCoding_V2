@@ -6,6 +6,9 @@
   The requested right-hand wrist grip and left-hand figure-four connection
   are an authored solo adaptation; the opponent's right elbow remains at 90
   degrees with the forearm pointing toward the head, as requested.
+  The reference arms use a mounted, head-facing shoulder frame above the chest.
+  The right hand descends onto the wrist; the left descends on the foot side of
+  the upper arm, passes underneath, then connects to the right forearm.
   This is hand-position practice, not a measurement of joint torque or actual contact.
 - Kesa-gatame: https://www.youtube.com/watch?v=NDaQuJOFBYk (Kodokan / IJF Academy).
   Viewed frames at 4, 8, 13, 20, 30, and 40 seconds. Right-side seated position,
