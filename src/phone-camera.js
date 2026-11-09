@@ -8,6 +8,8 @@ document.documentElement.lang=language;
 const fragment=new URLSearchParams(location.hash.slice(1)),room=fragment.get('room'),key=fragment.get('key');
 const valid=/^[\w-]{24}$/.test(room??'')&&/^[\w-]{32}$/.test(key??'');
 const credential={room,token:key,role:'phone',client:randomCameraKey()};
+const autoRotate=new URLSearchParams(location.search).get('autoRotate')==='1';
+function captureConstraints(selection,orientation){const constraints=cameraConstraints(selection,orientation);if(orientation==='portrait'&&!autoRotate)constraints.video.aspectRatio={exact:9/16};return constraints;}
 const initialOrientation=new URLSearchParams(location.search).get('orientation')==='portrait'?'portrait':'landscape';
 let stream,peer,orientedCamera,generation=0,connected=false,wakeLock,reusable=true;
 $('phone-camera-root').innerHTML=`
@@ -32,7 +34,7 @@ $('phone-orientation').onchange=async()=>{
  if(!track){updateOrientation();return;}
  select.disabled=true;
  try{
-  const {width,height,aspectRatio,frameRate,resizeMode}=cameraConstraints('auto',select.value).video;
+  const {width,height,aspectRatio,frameRate,resizeMode}=captureConstraints('auto',select.value).video;
   await track.applyConstraints({...track.getConstraints(),width,height,aspectRatio,frameRate,resizeMode});
   if(current===generation){updateOrientation();await minimizeCameraZoom(track);}
  }catch{
@@ -55,7 +57,7 @@ function stop(message){
 async function keepAwake(){const current=generation;try{const acquired=await navigator.wakeLock?.request('screen');if(current!==generation||!connected){await acquired?.release();return;}wakeLock=acquired;}catch{}}
 function renderCameras(devices){const select=$('phone-lens'),selected=select.value;for(const option of [...select.options].slice(2))option.remove();devices.forEach((device,i)=>{const option=document.createElement('option');option.value=device.deviceId;option.textContent=device.label||t(`카메라 ${i+1}`,`Camera ${i+1}`);select.append(option);});select.value=[...select.options].some(option=>option.value===selected)?selected:'auto';}
 async function acquire(selection,current){
- const acquired=await navigator.mediaDevices.getUserMedia(cameraConstraints(selection,$('phone-orientation').value));if(current!==generation){acquired.getTracks().forEach(track=>track.stop());return false;}stream=acquired;return true;
+ const acquired=await navigator.mediaDevices.getUserMedia(captureConstraints(selection,$('phone-orientation').value));if(current!==generation){acquired.getTracks().forEach(track=>track.stop());return false;}stream=acquired;return true;
 }
 async function capture(selection,current){
  if(!await acquire(selection,current))return false;
@@ -66,14 +68,20 @@ async function capture(selection,current){
  stream.getVideoTracks()[0].addEventListener('ended',()=>{if(current===generation)stop(t('카메라 연결이 끝났습니다. PC에서 새 QR을 열어 주세요.','Camera ended. Open a new QR code on the PC.'));});
  $('phone-video').srcObject=stream;$('phone-placeholder').hidden=true;
  if(!await playback.start(()=>current===generation))return false;
- if(orientedCamera)orientedCamera.reset();else orientedCamera=createOrientedCamera($('phone-video'),$('phone-frame'),{orientation:$('phone-orientation').value,autoRotate:new URLSearchParams(location.search).get('autoRotate')==='1'});
+ if($('phone-orientation').value==='portrait'&&!autoRotate){
+  const video=$('phone-video'),deadline=performance.now()+1500;
+  while(video.videoWidth>=video.videoHeight&&performance.now()<deadline&&current===generation)await new Promise(resolve=>setTimeout(resolve,100));
+  if(current!==generation)return false;
+  if(video.videoWidth>=video.videoHeight)throw Object.assign(new Error('portrait_capture_unavailable'),{code:'portrait_capture_unavailable'});
+ }
+ if(orientedCamera)orientedCamera.reset();else orientedCamera=createOrientedCamera($('phone-video'),$('phone-frame'),{orientation:$('phone-orientation').value,autoRotate});
  // Preview the exact outgoing stream through a video decoder, just like the PC.
  // Keep the capture canvas out of the visible mobile compositing path.
  preview.srcObject=orientedCamera.stream;preview.muted=true;preview.hidden=false;
  try{await preview.play();}catch{preview.hidden=true;$('phone-frame').hidden=false;}
  return true;
 }
-function failure(error){return error.name==='NotAllowedError'?t('카메라 권한이 거부됐습니다. 브라우저와 기기 설정에서 카메라를 허용한 뒤 다시 눌러 주세요.','Camera access was denied. Allow it in browser and device settings, then try again.'):error.code==='already_joined'?t('이 QR은 다른 폰이 사용 중입니다. PC에서 새 QR을 열어 주세요.','Another phone is using this QR code. Open a new one on the PC.'):error.code==='expired'||error.code==='closed'?t('QR 연결이 끝났습니다. PC에서 새 QR을 열어 주세요.','This QR connection ended. Open a new QR code on the PC.'):t('연결하지 못했습니다. 같은 Wi-Fi인지 확인하고 PC에서 새 QR을 열어 주세요.','Could not connect. Check the Wi-Fi and open a new QR code on the PC.');}
+function failure(error){if(error.code==='portrait_capture_unavailable'||error.name==='OverconstrainedError')return t('카메라가 세로 촬영을 적용하지 못했습니다. 세로 촬영이 가능한 다른 렌즈를 선택해 주세요.','The camera could not provide portrait capture. Select another lens that supports portrait capture.');return error.name==='NotAllowedError'?t('카메라 권한이 거부됐습니다. 브라우저와 기기 설정에서 카메라를 허용한 뒤 다시 눌러 주세요.','Camera access was denied. Allow it in browser and device settings, then try again.'):error.code==='already_joined'?t('이 QR은 다른 폰이 사용 중입니다. PC에서 새 QR을 열어 주세요.','Another phone is using this QR code. Open a new one on the PC.'):error.code==='expired'||error.code==='closed'?t('QR 연결이 끝났습니다. PC에서 새 QR을 열어 주세요.','This QR connection ended. Open a new QR code on the PC.'):t('연결하지 못했습니다. 같은 Wi-Fi인지 확인하고 PC에서 새 QR을 열어 주세요.','Could not connect. Check the Wi-Fi and open a new QR code on the PC.');}
 $('phone-start').onclick=async()=>{
  if(!valid||!reusable)return;stop();const current=generation;$('phone-start').disabled=true;$('phone-stop').hidden=false;$('phone-lens').disabled=true;
  status(t('카메라 권한을 허용해 주세요.','Please allow camera access.'));
