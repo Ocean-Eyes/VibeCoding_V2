@@ -32,9 +32,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/initial-front.png'});
   assert.equal(await page.locator('#osoto-video').evaluate(v=>getComputedStyle(v).transform),'none');
   await page.locator('#osoto-start').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.ready==='true');assert.equal(await page.locator('#osoto-3d').isVisible(),false);assert.equal(await page.locator('#osoto-canvas').isVisible(),true);
-  const landscape=await page.locator('#osoto-video').evaluate(v=>v.videoWidth>v.videoHeight),initialAngle=landscape?90:0;
+  const landscape=await page.locator('#osoto-video').evaluate(v=>v.videoWidth>v.videoHeight),initialAngle=0;
   await page.waitForFunction(a=>document.querySelector('#osoto-canvas').dataset.rotation===String(a),initialAngle);
-  const originalAspect=Number(await page.locator('#osoto-canvas').getAttribute('data-camera-aspect'));assert(originalAspect>=1,'camera must start upright without clicking');
+  const originalAspect=Number(await page.locator('#osoto-canvas').getAttribute('data-camera-aspect'));const nativeAspect=await page.locator('#osoto-video').evaluate(v=>v.videoHeight/v.videoWidth);assert(Math.abs(originalAspect-nativeAspect)<.001,'preserve native orientation regardless of aspect ratio');
   await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/default-camera-'+(landscape?'landscape':'portrait')+'.png'});
   for(let turn=1;turn<=4;turn++){const angle=(initialAngle+turn*90)%360;await page.locator('#osoto-rotate').click();await page.waitForFunction(a=>document.querySelector('#osoto-canvas').dataset.rotation===String(a),angle);const aspect=Number(await page.locator('#osoto-canvas').getAttribute('data-camera-aspect'));assert(Math.abs(aspect-(turn%2?1/originalAspect:originalAspect))<.001);}
   await page.waitForTimeout(4500);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),'0');

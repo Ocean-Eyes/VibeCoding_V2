@@ -23,14 +23,14 @@ export function openOsotoLesson(lesson){
  const playback=createCameraPlayback(video,$('osoto-resume'),{onBlocked:()=>{$('osoto-status').textContent=t('카메라 영상 시작을 눌러 주세요.','Tap Start camera video.');}});
  function stop(message){generation++;clearTimeout(initTimer);clearTimeout(frameTimer);cancelPhoneCamera();playback.cancel();tracker?.terminate();tracker=null;releaseCamera(stream);stream=null;video.srcObject=null;video.hidden=true;ready=busy=pending=false;points=null;lastVideo=-1;startAt=Infinity;progress.hold=0;progress.last=null;$('osoto-start').disabled=$('osoto-phone').disabled=false;$('osoto-stop').hidden=$('osoto-rotate').hidden=true;if(message)$('osoto-status').textContent=message;}
  async function start(phone=false){
-  stop();demo=false;playing=false;progress.reset();const current=generation;pending=true;$('osoto-start').disabled=$('osoto-phone').disabled=true;$('osoto-stop').hidden=false;$('osoto-status').textContent=t('카메라와 자세 추적을 준비합니다…','Preparing camera and pose tracking…');
+  stop();rotation=0;demo=false;playing=false;progress.reset();const current=generation;pending=true;$('osoto-start').disabled=$('osoto-phone').disabled=true;$('osoto-stop').hidden=false;$('osoto-status').textContent=t('카메라와 자세 추적을 준비합니다…','Preparing camera and pose tracking…');
   try{
    const acquired=phone?await connectPhoneCamera({orientation:'portrait',isCurrent:()=>current===generation&&!disposed}):await navigator.mediaDevices.getUserMedia({video:{width:{ideal:720},height:{ideal:1280}},audio:false});
    if(current!==generation||disposed){releaseCamera(acquired);return;}if(!acquired){stop(t('연결을 취소했습니다.','Connection cancelled.'));return;}
    stream=acquired;$('osoto-rotate').hidden=false;video.srcObject=stream;onCameraEnded(stream,()=>{if(current===generation)stop(t('카메라 연결이 끝났습니다. 다시 시작하세요.','Camera disconnected. Start again.'));});
    if(!await playback.start(()=>current===generation&&!disposed))return;
-   // A physically upright USB camera may still report a landscape sensor frame.
-   rotation=video.videoWidth>video.videoHeight?1:0;
+   // Browser video frames already include the device's orientation metadata.
+   // Aspect ratio alone must never trigger an additional rotation.
    tracker=createPoseTracker();tracker.onmessage=({data})=>{
     if(current!==generation||disposed)return;
     if(data.type==='ready'){clearTimeout(initTimer);ready=true;startAt=performance.now()+3000;$('osoto-status').textContent=t('전신을 보이고 금색 자세를 따라 하세요.','Show your whole body and match the gold pose.');}
