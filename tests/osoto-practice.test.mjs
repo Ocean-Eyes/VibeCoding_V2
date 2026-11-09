@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OSOTO_TARGETS,assessOsoto,OsotoProgress,cameraPose} from '../src/osoto-practice.js';
-const observed=(stage,scale=.15,x=.5,y=.45)=>OSOTO_TARGETS[stage].map(p=>p?{x:x+p.x*scale,y:y+p.y*scale,visibility:1}:null);
-for(let stage=0;stage<3;stage++)test(`stage ${stage+1}: target fits at different sizes and positions`,()=>{
+import {OSOTO_TARGETS,assessOsoto,OsotoProgress,cameraPose,osotoAnimation,OSOTO_DEMO_DURATION} from '../src/osoto-practice.js';
+const observed=(stage,scale=.15,x=.5,y=.45)=>OSOTO_TARGETS[stage].map(p=>p?{x:x+p.x*scale,y:y+p.y*scale,z:p.z*scale,visibility:1}:null);
+for(let stage=0;stage<4;stage++)test(`stage ${stage+1}: target fits at different sizes and positions`,()=>{
  for(const [s,x,y]of [[.15,.5,.45],[.22,.35,.5],[.1,.6,.35]])assert.equal(assessOsoto(observed(stage,s,x,y),stage).matched,true);
 });
 test('later stages require their own leg/torso position',()=>{
@@ -14,14 +14,14 @@ test('missing or hidden feet cannot pass',()=>{
  assert.equal(assessOsoto(null,0).matched,false);
  for(const i of [0,15,16,27,28]){const p=observed(0);p[i].visibility=.1;assert.equal(assessOsoto(p,0).matched,false);}
 });
-test('all three stages must be held in order; pauses, loss and reset cannot award progress',()=>{
+test('Initial and three stages must be held in order; pauses, loss and reset cannot award progress',()=>{
  const game=new OsotoProgress();let now=0;
- for(let stage=0;stage<3;stage++){
+ for(let stage=0;stage<4;stage++){
   now+=1200;for(let n=0;n<8;n++)game.update(observed(stage),now+=50);
   game.update(null,now+=50);assert.equal(game.hold,0);
   game.update(observed(stage),now+=50,false);assert.equal(game.hold,0);
   for(let n=0;n<23;n++)game.update(observed(stage),now+=50);
-  assert.equal(game.done,stage===2);assert.equal(game.stage,Math.min(stage+1,2));
+  assert.equal(game.done,stage===3);assert.equal(game.stage,Math.min(stage+1,3));
  }
  game.reset();assert.equal(game.stage,0);assert.equal(game.done,false);
 });
@@ -30,4 +30,28 @@ test('inferred landmarks outside the camera image cannot complete a pose',()=>{
  const p=observed(0,.1,.5,.3).map(v=>v?{...v,x:1-v.x,y:v.y/.75}:null);
  assert.equal(assessOsoto(cameraPose(p,.75),0).matched,true);
  for(const i of [0,27,28]){const clipped=structuredClone(p);clipped[i].y=1.01;assert.equal(assessOsoto(cameraPose(clipped,.75),0).matched,false);}
+});
+
+test('Initial requires right foot in front, and front-facing body',()=>{
+ const p=observed(0);[p[27].z,p[28].z]=[p[28].z,p[27].z];assert.equal(assessOsoto(p,0).matched,false);
+ const side=observed(0).map(p=>p?{...p,x:.5+(p.x-.5)*.1}:null);assert.equal(assessOsoto(side,0).matched,false);
+});
+test('front/back leg depth and torso lean are mandatory even when XY matches',()=>{
+ for(const stage of [0,1,2,3]){
+  const p=observed(stage).map(p=>p?{...p,z:0}:null);assert.equal(assessOsoto(p,stage).matched,false);
+  const unknown=observed(stage).map(p=>p?{...p,z:undefined}:null);assert.equal(assessOsoto(unknown,stage).matched,false);
+ }
+});
+test('front animation holds Initial then moves through all three poses continuously',()=>{
+ assert.deepEqual(osotoAnimation(0).points,OSOTO_TARGETS[0]);
+ assert.deepEqual(osotoAnimation(1).points,OSOTO_TARGETS[0]);
+ assert.notDeepEqual(osotoAnimation(3).points,OSOTO_TARGETS[0]);
+ assert.equal(osotoAnimation(5).stage,1);assert.equal(osotoAnimation(8.5).stage,2);assert.equal(osotoAnimation(13).stage,3);
+ assert.deepEqual(osotoAnimation(OSOTO_DEMO_DURATION).points,OSOTO_TARGETS[3]);
+ for(let time=.05;time<=14;time+=.05){const a=osotoAnimation(time-.05).points,b=osotoAnimation(time).points;assert(Math.max(...[11,12,15,16,27,28].map(i=>Math.hypot(a[i].x-b[i].x,a[i].y-b[i].y,a[i].z-b[i].z)))<.4);}
+});
+
+test('Initial checks stance without demanding pulling arms yet',()=>{
+ const p=observed(0);for(const i of [13,14,15,16])p[i].y+=.15;
+ assert.equal(assessOsoto(p,0).matched,true);
 });
