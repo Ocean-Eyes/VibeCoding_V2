@@ -1,0 +1,44 @@
+﻿/* Shared atmosphere skin for every practice and phone-camera page. */
+:root{--paper:#e2e1d9;--panel:#eeede6ed;--ink:#293331;--muted:#64716b;--line:#43544833;--accent:#8b4931;--blue:#526e76;--serif:Arial,'Malgun Gothic',sans-serif}
+body{background:#e2e1d9;color:var(--ink);font-family:Arial,'Malgun Gothic',sans-serif}
+.dojo-room{display:none}
+.lesson-atmosphere{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse at 76% 40%,#ced2cb,transparent 65%),#e2e1d9;isolation:isolate}
+.lesson-atmosphere canvas{position:absolute;inset:0;width:100%;height:100%}
+.lesson-atmosphere:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#eeede5b8,#eeede530 65%);pointer-events:none}
+.topbar{margin:0 5.5%;min-height:100px;border:0;border-bottom:1px solid var(--line);background:transparent}
+.topbar .brand{font:700 21px Arial,sans-serif;letter-spacing:7px;color:#293331;gap:0}
+.brand-icon{display:none}.brand em{color:#9c4c35;font-style:normal}
+.header-actions{gap:24px}.header-actions .quiet{font-size:11px;color:#59665e;letter-spacing:.5px}
+.xp-pill{color:#68716c;background:transparent;border-left:1px solid var(--line);font-weight:400}
+main{max-width:1600px;padding:0 5.5% 40px}
+.heading,.throw-heading{border-bottom:1px solid var(--line);padding:32px 0 24px;margin-bottom:24px;background:transparent}
+.heading h1,.throw-heading h1{font-family:var(--serif);font-size:clamp(26px,3vw,38px);font-weight:400;letter-spacing:1px}
+h2,h3,.belt-current h2,.throw-caption h2,.bm-board h2{font-family:var(--serif);font-weight:500}
+.eyebrow{color:var(--accent);font-size:10px;letter-spacing:2.5px;font-weight:500}
+.session-label{background:transparent;color:var(--muted);border-color:var(--line)}
+.primary{background:#35443a;color:#f1f0e8;border:1px solid #35443a;border-radius:0;font-weight:500;letter-spacing:.4px}
+.outline{background:#efeee560;border:1px solid #7b897944;border-radius:0;color:#4c5a53}
+button:hover:not(:disabled){filter:none}.primary:hover:not(:disabled){background:#465b4e}.outline:hover:not(:disabled){background:#d4d7cb80}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #8b4931;outline-offset:4px}
+input,select{accent-color:#8b4931}select{background:#eeede6;color:var(--ink);border:1px solid var(--line);border-radius:0}
+.studio,.belt-studio,.belt-steps,.throw-demo,.ground-coach,.osoto-coach,.bm-board,.bm-demo,.phone-camera-shell{background:var(--panel);border:1px solid var(--line);box-shadow:none;border-radius:0}
+.throw-coach section,.coach,.coach-panel,.instruction-panel{background:var(--panel);border-color:var(--line);box-shadow:none}
+.throw-toolbar,.belt-toolbar,.bm-stage-top,.bm-demo .bm-stage-top{background:#e4e5dc;color:#59685e;border-bottom:1px solid var(--line);letter-spacing:1px}
+.throw-toolbar button,.belt-modes button,.belt-perspective-controls button,.bm-view-tabs button{background:transparent;color:var(--muted);border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none}
+.throw-toolbar button[aria-pressed=true],.belt-modes button[aria-pressed=true],.belt-perspective-controls button[aria-pressed=true],.bm-view-tabs button[aria-pressed=true]{background:#dedbcf66;border-color:var(--accent);color:var(--accent);box-shadow:none}
+.throw-caption,.bm-demo-caption,.bm-readout,.ground-result,.osoto-hud{background:#e1e3d9;color:var(--ink);border-top:1px solid var(--line)}
+.throw-caption p,.bm-demo-caption span,.bm-readout span,.bm-readout p{color:#59685e}
+.bm-readout strong,.ground-result strong,.osoto-hud strong{color:#895b2d}
+.bm-stage{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.belt-current,.belt-modes,.transport,.throw-controls,.throw-legend,.throw-scrub,#osoto-timeline{background:transparent;border-color:var(--line)}
+.ground-coach li,.osoto-coach li,.pose-card,.belt-steps button{background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none}
+.ground-coach li.current,.osoto-coach li.current,.pose-card.selected,.belt-steps button[aria-current=true]{background:#b09a6f15;border-left:2px solid #956348;color:#65452d;box-shadow:none}
+.throw-steps button{background:transparent;border-color:var(--line);box-shadow:none}
+.throw-steps button[aria-pressed=true]{background:#dedbcf66;border-color:#956348;color:#65452d}
+.bm-board{border-top:1px solid var(--line)}.bm-tabs [aria-pressed=true]{color:var(--accent);border-color:var(--accent)}
+dialog,.phone-pair-dialog,.bm-result{background:#eeede6;color:var(--ink);border:1px solid #84918166;box-shadow:0 20px 80px #25362b33;border-radius:0}
+dialog::backdrop,.phone-pair-dialog::backdrop,.bm-result::backdrop{background:#3d494c99;backdrop-filter:blur(6px)}
+.phone-camera-shell{margin:24px auto;padding:28px}.phone-camera-shell h1{font-weight:400;letter-spacing:1px}
+@media(max-width:760px){.topbar{min-height:86px;margin:0 5%;padding:18px 0;gap:16px}.topbar .brand{font-size:17px;letter-spacing:5px}.header-actions{gap:14px}.heading,.throw-heading{padding:24px 0 18px}.heading h1,.throw-heading h1{font-size:27px}main{padding:0 5% 24px}.phone-camera-shell{margin:0;padding:20px;border:0}.header-actions .quiet{font-size:10px}}
+#practice-screen,#belt-screen,#baemilgi-screen,#throw-screen{background:transparent;box-shadow:none;padding:0 0 26px;margin-top:0}
+.belt-steps button[aria-pressed=true],.belt-steps button.active{background:#b09a6f15;border-color:#956348;color:#65452d}
