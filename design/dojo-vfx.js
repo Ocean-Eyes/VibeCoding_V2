@@ -71,13 +71,6 @@
     }
     ctx.globalAlpha=.6;
     brushPath(-r*.082,.68,3.9);ctx.lineWidth=.65;ctx.strokeStyle=rim;ctx.stroke();
-    // Continuous light travel makes idle motion legible without a mouse action.
-    const travel=.3+(elapsed*.65)%5.0;
-    ctx.save();ctx.globalAlpha=.65;ctx.shadowColor='#d7ac79';ctx.shadowBlur=12;
-    brushPath(r*.055,travel,travel+.65);ctx.lineWidth=1.7;ctx.strokeStyle='#cdaa7a';ctx.stroke();
-    ctx.restore();
-    // An additional sweep responds immediately to a selection.
-    if(accent>0){const a=.6+(1-accent)*4.7;brushPath(r*.07,a,Math.min(a+.48,6.1));ctx.globalAlpha=accent*.6;ctx.lineWidth=1;ctx.strokeStyle='#e0bb8d';ctx.stroke();}
     ctx.restore();
     // Long soft shafts from the upper right, kept behind all text.
     for(let ray=0;ray<3;ray++){
