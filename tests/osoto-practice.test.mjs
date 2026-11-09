@@ -87,3 +87,23 @@ test('front view keeps anatomical right screen-left, with camera coordinates unm
   const reversed=mapped.map(p=>p?{...p,x:1-p.x}:null);assert.equal(assessOsoto(reversed,stage).matched,false);
  }
 });
+
+test('relaxed judging accepts foot and hand offsets while preserving stage direction',()=>{
+ for(let stage=0;stage<4;stage++){
+  const p=observed(stage);
+  p[27].x+=.15*.72;p[28].x-=.15*.72;
+  if(stage){p[15].x+=.15*.95;p[16].x-=.15*.95;}
+  assert.equal(assessOsoto(p,stage).matched,true);
+ }
+});
+test('brief visible pose jitter preserves hold progress, but missing tracking clears it',()=>{
+ const game=new OsotoProgress();let now=0;
+ for(let i=0;i<8;i++)game.update(observed(0),now+=50);
+ const before=game.hold;
+ game.update(observed(1),now+=50);
+ assert(game.hold>0&&game.hold<before);
+ for(let i=0;i<16;i++)game.update(observed(0),now+=50);
+ assert.equal(game.stage,1);
+ game.reset();game.update(observed(0),0);game.update(observed(0),100);
+ game.update(null,150);assert.equal(game.hold,0);
+});
