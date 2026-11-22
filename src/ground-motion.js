@@ -28,9 +28,9 @@ export function sampleGround(id,time=0){
  seatedBody({p:mix([-.62,.49,-.06],[-.48,.24,-.16],enter),yaw:Math.PI,lean:.1+.15*enter+.25*wrap,
  l:[-.90,.075,.50],r:mix([-.72,.075,.05],[-.70,.075,-.92],enter)},-.4*enter-.42*wrap);
  if(id==='ude-garami'){
-  // Anatomical right upper arm extends sideways; the 90-degree forearm
-  // points toward the head, not toward the feet.
-  uke.arms.right={root:uke.shoulders.right,joint:add(uke.shoulders.right,[-.33,0,0]),end:add(uke.shoulders.right,[-.33,0,-.31])};
+  // Uke's anatomical right arm is raised in a clear L: the upper arm opens
+  // away from the ribs and the forearm points upward, as in the requested pose.
+  uke.arms.right={root:uke.shoulders.right,joint:add(uke.shoulders.right,[-.30,0,0]),end:add(uke.shoulders.right,[-.30,.30,0])};
   const lift=smooth(t-2),arm=uke.arms.right;
   // Rotate the elbow around the shoulder-to-wrist axis. Both bone lengths
   // and the pinned wrist remain fixed while the elbow rises.
@@ -42,7 +42,9 @@ export function sampleGround(id,time=0){
   const rightRoot=mix([.005,.78,-.50],[-.10,.65,-.60],enter);
   rightRoot[1]+=-.20*wrap+.065*lift;
   const leftRoot=add(rightRoot,[-.41,0,0]);
-  const rightEnd=mix([-.35,.61,-.77],add(wrist,[0,.045,0]),enter);
+  // Grip across the wrist from above and the torso side. Centering a closed
+  // fist directly on uke's hand made the two rendered hands interpenetrate.
+  const rightEnd=mix([-.35,.61,-.77],add(wrist,[.09,.06,0]),enter);
   tori.arms.right=limb(rightRoot,rightEnd,.33,.31,[0,.2,-1]);
   const rightJoint=tori.arms.right.joint;
   const ownForearm=add(rightEnd,mul(unit(sub(rightJoint,rightEnd)),.115));

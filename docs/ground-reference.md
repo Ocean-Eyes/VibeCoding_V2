@@ -5,7 +5,7 @@
   second hand connecting beneath the arm inform the exercise.
   The requested right-hand wrist grip and left-hand figure-four connection
   are an authored solo adaptation; the opponent's right elbow remains at 90
-  degrees with the forearm pointing toward the head, as requested.
+  degrees with the forearm raised upward, as requested.
   The reference arms use a mounted, head-facing shoulder frame above the chest.
   The right hand descends onto the wrist; the left descends on the foot side of
   the upper arm, passes underneath, then connects to the right forearm.
