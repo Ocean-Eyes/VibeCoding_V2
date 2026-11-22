@@ -1,8 +1,10 @@
 param([string]$DevicePattern = 'Realtek', [switch]$List)
+# Cached Korean male speech, generated once with ko-KR-InJoonNeural.
 $ErrorActionPreference = 'Stop'
 
 Add-Type -TypeDefinition @'
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -44,26 +46,35 @@ public static class CompletionAudio {
   for(uint i=0;i<names.Length;i++) { Caps caps; Check(waveOutGetDevCapsW((UIntPtr)i,out caps,(uint)Marshal.SizeOf(typeof(Caps)))); names[i]=caps.name; }
   return names;
  }
- public static string Play(string pattern) {
+ public static string Play(string pattern,string wavePath) {
   var names=Devices(); int device=Array.FindIndex(names,n=>n.IndexOf(pattern,StringComparison.OrdinalIgnoreCase)>=0);
   if(device<0) throw new InvalidOperationException("No output matching: "+pattern);
-  const int rate=44100; var pcm=new short[(int)(rate*.75)];
-  for(int i=0;i<pcm.Length;i++) {
-   double t=(double)i/rate, local=t<.30?t:t-.38;
-   if(local<0||local>.30) continue;
-   double envelope=Math.Min(1,Math.Min(local/.015,(.30-local)/.025));
-   double frequency=t<.30?880:1175;
-   pcm[i]=(short)(Math.Sin(2*Math.PI*frequency*local)*envelope*short.MaxValue*.18);
+  var format=new Format(); byte[] pcm=null;
+  using(var reader=new BinaryReader(File.OpenRead(wavePath))) {
+   if(reader.ReadUInt32()!=0x46464952)throw new InvalidDataException("Not a WAV file.");
+   reader.ReadUInt32();
+   if(reader.ReadUInt32()!=0x45564157)throw new InvalidDataException("Not a WAVE stream.");
+   while(reader.BaseStream.Position+8<=reader.BaseStream.Length) {
+    uint id=reader.ReadUInt32(),length=reader.ReadUInt32();long end=reader.BaseStream.Position+length;
+    if(end>reader.BaseStream.Length)throw new InvalidDataException("Truncated WAV chunk.");
+    if(id==0x20746d66&&length>=16) {
+     format.tag=reader.ReadUInt16();format.channels=reader.ReadUInt16();format.rate=reader.ReadUInt32();
+     format.bytesPerSecond=reader.ReadUInt32();format.alignment=reader.ReadUInt16();format.bits=reader.ReadUInt16();
+    }
+    if(id==0x61746164)pcm=reader.ReadBytes(checked((int)length));
+    reader.BaseStream.Position=end+(length%2);
+   }
   }
-  var format=new Format{tag=1,channels=1,rate=rate,bytesPerSecond=rate*2,alignment=2,bits=16,extra=0};
+  if(format.tag!=1||format.bits!=16||format.bytesPerSecond==0||pcm==null||pcm.Length==0)
+   throw new InvalidDataException("Expected nonempty 16-bit PCM speech.");
   IntPtr handle=IntPtr.Zero,buffer=IntPtr.Zero,header=IntPtr.Zero; bool prepared=false;
   uint size=(uint)Marshal.SizeOf(typeof(Header));
   try {
    Check(waveOutOpen(out handle,(uint)device,ref format,IntPtr.Zero,IntPtr.Zero,0));
-   buffer=Marshal.AllocHGlobal(pcm.Length*2); Marshal.Copy(pcm,0,buffer,pcm.Length);
-   header=Marshal.AllocHGlobal((int)size); Marshal.StructureToPtr(new Header{data=buffer,length=(uint)(pcm.Length*2)},header,false);
+   buffer=Marshal.AllocHGlobal(pcm.Length); Marshal.Copy(pcm,0,buffer,pcm.Length);
+   header=Marshal.AllocHGlobal((int)size); Marshal.StructureToPtr(new Header{data=buffer,length=(uint)pcm.Length},header,false);
    Check(waveOutPrepareHeader(handle,header,size)); prepared=true; Check(waveOutWrite(handle,header,size));
-   var deadline=DateTime.UtcNow.AddSeconds(5);
+   var deadline=DateTime.UtcNow.AddSeconds(Math.Max(5,pcm.Length/(double)format.bytesPerSecond+3));
    while((((Header)Marshal.PtrToStructure(header,typeof(Header))).flags&1)==0) {
     if(DateTime.UtcNow>deadline) throw new TimeoutException("Audio device did not finish playback.");
     Thread.Sleep(10);
@@ -77,4 +88,7 @@ public static class CompletionAudio {
 }
 '@
 
-if ($List) { [CompletionAudio]::Devices() } else { [CompletionAudio]::Play($DevicePattern) }
+if ($List) { [CompletionAudio]::Devices() } else {
+ $notificationWave = Join-Path $PSScriptRoot 'audio\completion-ko-male.wav'
+ [CompletionAudio]::Play($DevicePattern, $notificationWave)
+}

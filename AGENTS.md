@@ -41,7 +41,7 @@
 
 ## 검증과 보고
 
-- 작업을 마치면 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/notify-complete.ps1 -DevicePattern Realtek`으로 PC 스피커·이어폰에 완료음을 직접 재생한다. 기본 HDMI 출력이나 `Console.Beep`을 사용하지 않는다. 실행 성공만으로 실제 청취를 확인했다고 보고하지 않는다.
+- 작업을 마치면 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/notify-complete.ps1 -DevicePattern Realtek`으로 PC 스피커·이어폰에 남성 한국어 TTS “작업이 완료되었습니다”를 재생한다. 기본 HDMI 출력이나 `Console.Beep`을 사용하지 않는다. 실행 성공만으로 실제 청취를 확인했다고 보고하지 않는다.
 - 답변과 진행 보고는 핵심만 짧게 말한다. 불필요한 장황한 설명, 반복되는 사과·다짐, 요청하지 않은 부연 멘트를 넣지 않는다.
 - 수정 전 상태를 보관하고 같은 시점·카메라·확대율로 전후를 비교한다. 사용자가 표시한 부분은 확대해서 직접 본다.
 - 실제 웹사이트에서 2D 정면과 3D 회전 화면을 모두 확인한다. 검은 띠 화면과 필요시 A/B 진단 색상을 함께 사용한다.
