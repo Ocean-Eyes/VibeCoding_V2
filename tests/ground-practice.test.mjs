@@ -2,6 +2,30 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {GroundProgress} from '../src/ground-practice.js';
 import {sampleGround} from '../src/ground-motion.js';
 import {groundFixture} from './ground-fixture.mjs';
+import {BODY_SIZE} from '../src/throw-body.js';
+
+test('threading hand and red forearm clear the opponent wrist and forearm throughout the motion',()=>{
+ const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+ const distance=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
+ // Use the visible sleeve/wrist radii and the renderer's full curled-hand
+ // envelope, including fingers. Endpoints alone miss the former crossing.
+ for(let frame=0;frame<=600;frame++){
+  const time=frame/200,{tori,uke}=sampleGround('ude-garami',time);
+  const hand=tori.arms.left,held=uke.arms.right;
+  assert(distance(hand.end,held.end)>2*BODY_SIZE.hand[0],`hands intersect at ${time}`);
+  for(let j=0;j<=100;j++){
+   const s=j/100,point=mix(held.joint,held.end,s);
+   const radii=s<.82?BODY_SIZE.sleeve:BODY_SIZE.wrist;
+   const u=s<.82?s/.82:(s-.82)/.18;
+   const radius=radii[0]+(radii[1]-radii[0])*u;
+   assert(distance(hand.end,point)>BODY_SIZE.hand[0]+radius,`hand crosses forearm at ${time}`);
+   for(let i=0;i<=30;i++){
+    const v=i/30;
+    assert(distance(mix(hand.joint,hand.end,v),point)>.05-.015*v+radius,`red forearm crosses at ${time}`);
+   }
+  }
+ }
+});
 test('opponent bent arm stays at 90 degrees throughout the connection',()=>{
  for(let t=0;t<=2;t+=.05){const {uke}=sampleGround('ude-garami',t),arm=uke.arms.right;
  assert(arm.joint[0]<arm.root[0],'anatomical right arm extends outwards');

@@ -50,12 +50,14 @@ export function sampleGround(id,time=0){
   const leftNormal=unit(sub(toward,mul(axis,dot(toward,axis))));
   // Place the palm outside the forearm; curled fingers face its surface.
   const ownGrip=add(ownForearm,mul(leftNormal,.075));
-  const under=add(elbow,[0,-.14,-.08]);
+  // Thread below the upper arm on its torso side, then rise beside the
+  // forearm. A straight rise beneath the elbow cuts through uke's wrist.
+  const under=add(elbow,[.17,-.14,-.08]);
   const below=add(elbow,[0,-.14,.20]),finish=smooth((t-1.7)/.3);
   const leftEnd=t<1.45?mix([-.36,.58,-.40],below,smooth((t-1)/.45)):
    t<1.7?mix(below,under,smooth((t-1.45)/.25)):mix(under,ownGrip,finish);
   // The forearm approaches from below the opponent's upper arm.
-  tori.arms.left=limb(leftRoot,leftEnd,.33,.31,[-.4,-.5,1.2]);
+  tori.arms.left=limb(leftRoot,leftEnd,.33,.31,mix([1,-.5,1.2],[.4,-1,0],finish));
   return {id,time:t,ground:true,armsOnly:true,tori,uke,
    grips:{right:{normal:[0,1,0],held:enter},left:{normal:leftNormal,held:finish}},
    gripTargets:{opponentWrist:wrist,ownForearm,ownGrip,under}};
