@@ -1,19 +1,22 @@
 import {add,sub,mul,unit,cross,dot} from './throw-motion.js';
-import {BODY_SIZE,JACKET_ROWS,horizontalForward} from './throw-body.js';
+import {BODY_SIZE,JACKET_ROWS,horizontalForward,tubeBody,ellipsoidBody} from './throw-body.js';
 
 const WHITE=[.88,.91,.91],BLUE=[.23,.48,.62],SKIN=[.78,.61,.46],BELT=[.075,.09,.10],GOLD=[.91,.68,.32];
 const circle=Array.from({length:16},(_,i)=>[Math.cos(i*Math.PI/8),Math.sin(i*Math.PI/8)]);
 function triangle(out,a,b,c,color,normals){
+ if(out.shapes)return;
  const n=unit(cross(sub(b,a),sub(c,a)));
  for(const [i,p] of [a,b,c].entries())out.push(...p,...(normals?.[i]??n),...color);
 }
 function tube(out,a,b,r1,r2,color,sides=12){
+ if(out.shapes){if(!out.only||out.part.startsWith(out.only))out.shapes.push(tubeBody(out.part+'.'+out.shapes.length,a,b,r1,r2,sides));return;}
  const axis=unit(sub(b,a)),u=unit(cross(axis,Math.abs(axis[2])<.9?[0,0,1]:[0,1,0])),v=cross(axis,u);
  const normals=Array.from({length:sides},(_,i)=>add(mul(u,Math.cos(i/sides*2*Math.PI)),mul(v,Math.sin(i/sides*2*Math.PI))));
  const aa=normals.map(n=>add(a,mul(n,r1))),bb=normals.map(n=>add(b,mul(n,r2)));
  for(let i=0;i<sides;i++){const j=(i+1)%sides;triangle(out,aa[i],bb[i],bb[j],color,[normals[i],normals[i],normals[j]]);triangle(out,aa[i],bb[j],aa[j],color,[normals[i],normals[j],normals[j]]);triangle(out,a,aa[j],aa[i],color);triangle(out,b,bb[i],bb[j],color);}
 }
 function ellipsoid(out,center,radii,basis,color){
+ if(out.shapes){if(!out.only||out.part.startsWith(out.only))out.shapes.push(ellipsoidBody(out.part+'.'+out.shapes.length,center,radii,basis));return;}
  const rows=8,sides=12,points=[],normals=[];
  for(let i=0;i<=rows;i++){points[i]=[];normals[i]=[];const phi=i/rows*Math.PI;
   for(let j=0;j<sides;j++){const theta=j/sides*2*Math.PI,raw=[Math.sin(phi)*Math.cos(theta),Math.cos(phi),Math.sin(phi)*Math.sin(theta)];
@@ -41,11 +44,35 @@ function jacket(out,rig,color){
  tube(out,rig.at(0,.06,.16),rig.at(-.09,-.11,.17),.019,.018,BELT,6);tube(out,rig.at(0,.06,.16),rig.at(.10,-.10,.17),.019,.018,BELT,6);
 }
 function hand(out,arm,rig,grasp,side){
+ if(grasp?.offset){
+  const end=add(arm.end,mul(unit(sub(arm.end,arm.joint)),grasp.offset));
+  tube(out,arm.end,end,.026,.026,SKIN);arm={...arm,end};
+ }
+ if(grasp?.radius){
+  // Build the grip around the outside of the held cylinder. The old fist's
+  // fingertips went straight through the forearm even when the palm cleared it.
+  const axis=grasp.axis,normal=grasp.normal,tangent=unit(cross(axis,normal));
+  const radius=grasp.radius,centre=sub(arm.end,mul(normal,grasp.palmOffset??radius+.023));
+  const at=(x,angle,r=radius+.009)=>add(centre,add(mul(axis,x),add(mul(normal,Math.cos(angle)*r),mul(tangent,Math.sin(angle)*r))));
+  ellipsoid(out,arm.end,[.030,.029,.019],[axis,tangent,normal],SKIN);
+  for(let i=0;i<4;i++){
+   const x=(i-1.5)*.013;let previous=add(arm.end,add(mul(axis,x),add(mul(normal,-.010),mul(tangent,.020))));
+   for(let j=0;j<=6;j++){
+    const angle=(25+j*(20*grasp.held+5))*Math.PI/180,point=at(x,angle);
+    tube(out,previous,point,.007,.0065,SKIN,8);previous=point;
+   }
+  }
+  let previous=add(arm.end,add(mul(axis,-.026),mul(tangent,-.015)));
+  for(let j=0;j<3;j++){const point=at(-.023,(-25-j*20)*Math.PI/180);tube(out,previous,point,.009,.008,SKIN,8);previous=point;}
+  return;
+ }
  const forearm=unit(sub(arm.end,arm.joint));
  // Orient the palm towards the held material, independently of the character's
  // torso and the camera. The same grasp survives a crossed arm or shoulder roll.
- const freeNormal=unit(sub(rig.forward,mul(forearm,dot(rig.forward,forearm))));
- const gripWeight=grasp?(grasp.orientationWeight??grasp.held):0;
+ let freeNormal=sub(rig.forward,mul(forearm,dot(rig.forward,forearm)));
+ if(Math.hypot(...freeNormal)<.001)freeNormal=sub(rig.up,mul(forearm,dot(rig.up,forearm)));
+ freeNormal=unit(freeNormal);
+ const gripWeight=grasp?(grasp.orientationWeight??grasp.held??0):0;
  const normal=unit(add(mul(freeNormal,1-gripWeight),mul(grasp?.normal??freeNormal,-gripWeight)));
  let along=unit(sub(forearm,mul(normal,dot(forearm,normal))));
  if(Math.hypot(...along)<.5)along=unit(cross(rig.right,normal));
@@ -58,7 +85,8 @@ function hand(out,arm,rig,grasp,side){
  const thumb=side==='right'?-1:1;
  tube(out,at(thumb*.026,-.010,0),at(thumb*.033,-.009,.023),.010,.009,SKIN,8);tube(out,at(thumb*.033,-.009,.023),at(thumb*.012,-.008,.040),.009,.007,SKIN,8);
 }
-function person(out,rig,color,performer=false,grasps=null){
+function person(out,rig,color,performer=false,grasps=null,prefix='person'){
+ out.part=prefix+'.body';
  const basis=[rig.right,rig.up,rig.forward];
  for(const [side,leg] of Object.entries(rig.legs)){
   tube(out,leg.root,leg.joint,...BODY_SIZE.thigh,color);tube(out,leg.joint,leg.end,...BODY_SIZE.shin,color);ellipsoid(out,leg.joint,[.085,.085,.085],basis,color);
@@ -74,25 +102,28 @@ function person(out,rig,color,performer=false,grasps=null){
  ellipsoid(out,nose,[.022,.026,.025],basis,SKIN);
  for(const side of [-1,1])ellipsoid(out,add(rig.head,add(mul(rig.right,side*.041),add(mul(rig.up,.025),mul(rig.forward,.091)))),[.009,.008,.007],basis,BELT);
  for(const [side,arm] of Object.entries(rig.arms)){
+  out.part=prefix+'.'+side+'.arm';
   tube(out,arm.root,arm.joint,...BODY_SIZE.upperArm,color);ellipsoid(out,arm.root,[.081,.081,.081],basis,color);ellipsoid(out,arm.joint,[.067,.067,.067],basis,color);
   const cuff=add(arm.joint,mul(sub(arm.end,arm.joint),.82));tube(out,arm.joint,cuff,...BODY_SIZE.sleeve,color);
   tube(out,cuff,arm.end,...BODY_SIZE.wrist,SKIN);
   if(performer)tube(out,add(cuff,mul(unit(sub(arm.joint,cuff)),.012)),cuff,.049,.048,side==='right'?GOLD:[.42,.73,.83]);
-  hand(out,arm,rig,grasps?.[side],side);
+  out.part=prefix+'.'+side+'.hand';hand(out,arm,rig,grasps?.[side],side);
  }
 }
 function disk(out,center,rx,rz,color){for(let i=0;i<16;i++){const j=(i+1)%16;triangle(out,center,add(center,[circle[i][0]*rx,0,circle[i][1]*rz]),add(center,[circle[j][0]*rx,0,circle[j][1]*rz]),color);}}
-function scene(pose,solo,performerColor=WHITE){
- const out=[],mat=[.25,.33,.32];
+function scene(pose,solo,performerColor=WHITE,shapes=null,only=null){
+ const out=[],mat=[.25,.33,.32];out.shapes=shapes;out.only=only;out.part='mat';
  triangle(out,[-2.8,-.006,-2.8],[2.8,-.006,-2.8],[2.8,-.006,2.8],mat);triangle(out,[-2.8,-.006,-2.8],[2.8,-.006,2.8],[-2.8,-.006,2.8],mat);
  for(let x=-2.5;x<=2.5;x+=.5){tube(out,[x,-.002,-2.5],[x,-.002,2.5],.002,.002,[.36,.43,.40],4);tube(out,[-2.5,-.002,x],[2.5,-.002,x],.002,.002,[.36,.43,.40],4);}
  if(pose.ground){
-  person(out,pose.uke,BLUE);
+  person(out,pose.uke,BLUE,false,pose.ukeGrips,'uke');
   if(pose.armsOnly){
    for(const [side,arm]of Object.entries(pose.tori.arms)){
     const color=side==='right'?GOLD:[.80,.43,.33];
+    out.part='tori.'+side+'.arm';
     tube(out,arm.root,arm.joint,.055,.05,color);tube(out,arm.joint,arm.end,.05,.035,color);
-    hand(out,arm,pose.tori,pose.grips?.[side],side);
+    ellipsoid(out,arm.joint,[.05,.05,.05],[[1,0,0],[0,1,0],[0,0,1]],color);
+    out.part='tori.'+side+'.hand';hand(out,arm,pose.tori,pose.grips?.[side],side);
    }
   }else person(out,pose.tori,performerColor,true);
   return new Float32Array(out);
@@ -108,6 +139,8 @@ function scene(pose,solo,performerColor=WHITE){
  }
  return new Float32Array(out);
 }
+// Collision QA consumes the same tube and palm/finger meshes as WebGL.
+export function groundContactShapes(pose,prefix=null){const shapes=[];scene(pose,false,WHITE,shapes,prefix);return shapes.filter(p=>/^(tori|uke)\.(left|right)\./.test(p.id));}
 function shader(gl,type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
 export function createThrowRenderer(canvas){
  const gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:true});

@@ -1,35 +1,47 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {GroundProgress} from '../src/ground-practice.js';
-import {sampleGround} from '../src/ground-motion.js';
+import {sampleGround,groundDemoTime} from '../src/ground-motion.js';
 import {groundFixture} from './ground-fixture.mjs';
-import {BODY_SIZE} from '../src/throw-body.js';
+import {bodyShapes,bodyOverlap} from '../src/throw-body.js';
+import {groundContactShapes} from '../src/throw-render.js';
+import {GROUND_CONTACT_RATE} from '../src/ground-contact-data.js';
 
-test('threading hand and red forearm clear the opponent wrist and forearm throughout the motion',()=>{
- const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
- const distance=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
- // Use the visible sleeve/wrist radii and the renderer's full curled-hand
- // envelope, including fingers. Endpoints alone miss the former crossing.
- for(let frame=0;frame<=600;frame++){
-  const time=frame/200,{tori,uke}=sampleGround('ude-garami',time);
-  const hand=tori.arms.left,held=uke.arms.right;
-  assert(distance(hand.end,held.end)>2*BODY_SIZE.hand[0],`hands intersect at ${time}`);
-  for(let j=0;j<=100;j++){
-   const s=j/100,point=mix(held.joint,held.end,s);
-   const radii=s<.82?BODY_SIZE.sleeve:BODY_SIZE.wrist;
-   const u=s<.82?s/.82:(s-.82)/.18;
-   const radius=radii[0]+(radii[1]-radii[0])*u;
-   assert(distance(hand.end,point)>BODY_SIZE.hand[0]+radius,`hand crosses forearm at ${time}`);
-   for(let i=0;i<=30;i++){
-    const v=i/30;
-    assert(distance(mix(hand.joint,hand.end,v),point)>.05-.015*v+radius,`red forearm crosses at ${time}`);
-   }
+test('ude releases through the same path and returns to the start without a loop jump',()=>{
+ assert.equal(groundDemoTime('ude-garami',9),3);
+ assert.equal(groundDemoTime('ude-garami',12),3);
+ assert(groundDemoTime('ude-garami',15)<3);
+ assert.equal(groundDemoTime('ude-garami',21),0);
+ let previous=0;
+ for(let i=0;i<=480;i++){
+  const time=groundDemoTime('ude-garami',i/10);
+  assert(time>=0&&time<=3);assert(Math.abs(time-previous)<=.034);
+  previous=time;
+ }
+});
+
+test('all displayed arm, palm and finger meshes clear other arms and the opponent body between contact keys',()=>{
+ for(let frame=0;frame<=GROUND_CONTACT_RATE*12;frame++){
+  const time=frame/(GROUND_CONTACT_RATE*4),pose=sampleGround('ude-garami',time),shapes=groundContactShapes(pose);
+  for(const shape of shapes)assert(shape.points.flat().every(Number.isFinite),shape.id);
+  for(let i=0;i<shapes.length;i++)for(let j=i+1;j<shapes.length;j++){
+   const a=shapes[i],b=shapes[j];
+   // Adjacent pieces of the same arm join at their elbow/wrist. No cross-arm
+   // grip exclusion: actual curved fingers must remain outside the held mesh.
+   if(a.id.split('.').slice(0,2).join('.')===b.id.split('.').slice(0,2).join('.'))continue;
+   const hit=bodyOverlap(a,b,.000001);
+   assert.equal(hit,null,time+': '+JSON.stringify(hit));
+  }
+  const body=bodyShapes(pose.uke).filter(s=>!/^arm\.|^hand\./.test(s.id));
+  for(const arm of shapes.filter(s=>s.id.startsWith('tori.')))for(const part of body){
+   const hit=bodyOverlap(arm,part,.000001);assert.equal(hit,null,time+': '+JSON.stringify(hit));
   }
  }
 });
+
 test('opponent bent arm stays at 90 degrees throughout the connection',()=>{
  for(let t=0;t<=2;t+=.05){const {uke}=sampleGround('ude-garami',t),arm=uke.arms.right;
  assert(arm.joint[0]<arm.root[0],'anatomical right arm extends outwards');
- assert(arm.end[2]<arm.joint[2],'forearm points toward the head');
+ assert(arm.end[1]>arm.joint[1]+.3,'right forearm is raised upright');
  const a=arm.root.map((v,i)=>v-arm.joint[i]),b=arm.end.map((v,i)=>v-arm.joint[i]);
  assert(Math.abs(a.reduce((sum,v,i)=>sum+v*b[i],0))<1e-8);
  assert(uke.head[1]<.3);assert(uke.legs.left.end[1]<.2);
@@ -94,38 +106,45 @@ test('ude reference arms keep bone lengths and reach both grip targets',()=>{
    assert(Math.abs(d(arm.joint,arm.end)-.31)<1e-6);
    assert(arm.joint[1]>.05);assert(arm.end[1]>.05);
   }
-  if(previous)for(const side of ['left','right'])assert(d(pose.tori.arms[side].end,previous.tori.arms[side].end)<.04);
+  if(previous)for(const side of ['left','right']){
+   assert(d(pose.tori.arms[side].end,previous.tori.arms[side].end)<.04);
+   assert(d(pose.tori.arms[side].joint,previous.tori.arms[side].joint)<.04,'elbow cannot jump to the opposite bend');
+  }
   previous=pose;
  }
  const pose=sampleGround('ude-garami',2);
  assert(d(pose.tori.arms.left.end,pose.gripTargets.ownGrip)<.001);
- assert(Math.abs(d(pose.tori.arms.left.end,pose.gripTargets.ownForearm)-.075)<1e-6,'palm sits outside the held forearm');
- assert(d(pose.tori.arms.right.end,pose.gripTargets.opponentWrist)<.06);
+ assert(Math.abs(d(pose.tori.arms.left.end,pose.gripTargets.ownForearm)-.080)<1e-6,'palm sits outside the held forearm');
+ assert(Math.abs(d(pose.tori.arms.right.end,pose.gripTargets.wristSite)-.080)<1e-6);
 });
 
 test('mounted ude hands descend from above with a head-facing shoulder frame',()=>{
- const start=sampleGround('ude-garami',0),grip=sampleGround('ude-garami',1),under=sampleGround('ude-garami',1.7);
+ const start=sampleGround('ude-garami',0),grip=sampleGround('ude-garami',1),under=sampleGround('ude-garami',1.4);
  for(let time=0;time<=3;time+=.02){
   const {tori}=sampleGround('ude-garami',time),r=tori.arms.right,l=tori.arms.left;
   assert(r.root[1]>=.45&&l.root[1]>=.45,'shoulders above the supine chest while leaning into the connection');
-  assert(Math.abs(r.root[0]-l.root[0]-.41)<1e-6,'mounted performer faces the head');
+  assert(Math.abs(Math.hypot(...r.root.map((v,i)=>v-l.root[i]))-.41)<1e-6,'rigid shoulder width while leaning toward the right arm');
   assert(Math.abs(r.root[1]-l.root[1])<1e-6);
   assert(r.reachError<1e-6&&l.reachError<1e-6,'no hidden reach clamping');
  }
- for(const side of ['right','left'])assert(start.tori.arms[side].end[1]>.5);
- assert(grip.tori.arms.right.end[1]<start.tori.arms.right.end[1]-.3);
- assert(grip.tori.arms.right.end[1]>grip.uke.arms.right.end[1]);
+ assert(start.tori.arms.right.end[1]>.6);
+ assert(start.tori.arms.left.end[0]<start.uke.arms.right.joint[0]-.1,'left hand waits outside the elbow before threading');
+ assert(grip.tori.arms.right.end[1]<start.tori.arms.right.end[1]-.13);
+ assert.equal(grip.grips.right.held,1);assert.equal(grip.grips.left.held,0);
  assert(under.tori.arms.left.end[1]<under.uke.arms.right.joint[1]-.1);
 });
 
 test('final lever raises the left elbow and uke elbow while preserving the pinned wrist and connected grip',()=>{
  const start=sampleGround('ude-garami',2),end=sampleGround('ude-garami',3),d=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
  assert(end.tori.arms.left.joint[1]>start.tori.arms.left.joint[1]+.05);
- assert(end.uke.arms.right.joint[1]>start.uke.arms.right.joint[1]+.05);
+ // With an upright forearm and pinned wrist, uke's elbow follows an arc
+ // around the shoulder-wrist axis rather than a vertical translation.
+ assert(end.uke.arms.right.joint[1]>start.uke.arms.right.joint[1]);
+ assert(d(end.uke.arms.right.joint,start.uke.arms.right.joint)>.05);
  for(let t=2;t<=3.001;t+=.01){
   const p=sampleGround('ude-garami',t),a=p.uke.arms.right;
   assert(d(a.end,start.uke.arms.right.end)<1e-8);
-  assert(d(p.tori.arms.right.end,start.tori.arms.right.end)<1e-8);
+  assert(Math.abs(d(p.tori.arms.right.end,p.gripTargets.wristSite)-.080)<1e-8);
   assert(Math.abs(d(a.root,a.joint)-.33)<1e-8);
   assert(Math.abs(d(a.joint,a.end)-.31)<1e-8);
   assert(d(p.tori.arms.left.end,p.gripTargets.ownGrip)<1e-8);

@@ -1,6 +1,6 @@
 import {throwText as t} from './throw-lessons.js';
 import {createThrowRenderer} from './throw-render.js';
-import {sampleGround} from './ground-motion.js';
+import {sampleGround,groundDemoTime} from './ground-motion.js';
 import {GroundProgress} from './ground-practice.js';
 import {createPracticeTracker} from './practice-tracking.js';
 import {createCameraPlayback} from './camera-playback.js';
@@ -67,8 +67,8 @@ export function openGroundLesson(lesson){
  function tick(now){
   if(disposed)return;void infer(now);
   const dt=lastTick?Math.min(.1,(now-lastTick)/1000):0;lastTick=now;
-  if(demo&&playing&&!document.hidden)elapsed=(elapsed+dt)%12;
-  const time=demo?Math.min(3,elapsed/3):kesa?game.stage+1:game.stage===0?1:game.stage===2?3:game.under?2:1.7;
+  if(demo&&playing&&!document.hidden)elapsed=(elapsed+dt)%(kesa?12:24);
+  const time=demo?groundDemoTime(lesson.id,elapsed):kesa?game.stage+1:game.stage===0?1:game.stage===2?3:game.under?2:1.7;
   const demoStage=Math.min(2,Math.floor(time));
   const fresh=ready&&now-lastResult<350&&!document.hidden?data:null;
   const state=demo?{stage:demoStage}:game.update(fresh?.points,fresh?.hands,video.videoHeight/(video.videoWidth||1),now,ready&&now>=startAt&&!document.hidden);
