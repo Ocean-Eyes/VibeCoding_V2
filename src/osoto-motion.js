@@ -3,8 +3,8 @@
 // +Z is forward, anatomical right is -X. The front camera shows anatomical right on screen-left without mirroring.
 import {body,limb,add,mul} from './throw-motion.js';
 export const OSOTO_POSES=[
- {p:[0,.945,0],l:[.18,.065,-.17],r:[-.18,.065,.20],lean:.02,left:[-.23,.08,.24],right:[.13,.54,.34]},
- {p:[.12,.94,.14],l:[.23,.065,.38],r:[-.14,.065,.04],lean:.08,left:[-.20,.08,.21],right:[.12,.54,.32]},
+ {p:[0,.945,0],l:[.18,.065,-.17],r:[-.18,.065,.20],lean:.02,left:[-.28,.10,.49],right:[.13,.54,.34]},
+ {p:[.12,.94,.14],l:[.23,.065,.38],r:[-.14,.065,.04],lean:.08,left:[-.27,.10,.49],right:[.12,.54,.32]},
  {p:[.16,.94,.20],l:[.23,.065,.38],r:[-.12,.50,.57],lean:.10,left:[-.20,.08,.21],right:[.12,.54,.32]},
  {p:[.15,.94,.24],l:[.23,.065,.38],r:[-.12,.43,-.49],lean:.72,left:[-.20,.08,.21],right:[.10,.54,.32]},
 ];

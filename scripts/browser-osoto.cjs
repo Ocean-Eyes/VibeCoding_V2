@@ -12,7 +12,14 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     if(data.type==='frame'){
      const {OSOTO_TARGETS}=await deps,ratio=data.bitmap.height/data.bitmap.width;data.bitmap.close();
      const scale=Math.min(.16,ratio*.20),cy=ratio*.5;
-     const points=data.stage<0?null:OSOTO_TARGETS[data.stage].map(p=>p?{x:.5+p.x*scale,y:(cy+p.y*scale)/ratio,z:p.z*scale,visibility:1}:{x:0,y:0,z:0,visibility:0});
+     let points=data.stage<0?null:OSOTO_TARGETS[data.stage].map(p=>p?{x:.5+p.x*scale,y:(cy+p.y*scale)/ratio,z:p.z*scale,visibility:1}:{x:0,y:0,z:0,visibility:0});
+     if(data.stage===3){
+      const {body,limb}=await import('./throw-motion.js'),rig=body({p:[.15,.94,.24],yaw:0,lean:.25,l:[.23,.065,.38],r:[-.12,.22,-.24]});
+      points=Array(33).fill(null);const put=(i,v)=>points[i]={x:.5+(v[0]-rig.pelvis[0])*scale/.49,y:(cy-(v[1]-rig.pelvis[1])*scale/.49)/ratio,z:-(v[2]-rig.pelvis[2])*scale/.49,visibility:1};
+      put(0,rig.head);for(const [side,a,e,w,h,k,f,hand]of [['left',11,13,15,23,25,27,[-.2,.08,.21]],['right',12,14,16,24,26,28,[.1,.54,.32]]]){
+       const arm=limb(rig.shoulders[side],rig.at(...hand),.33,.31,[0,-1,.2]);put(a,rig.shoulders[side]);put(e,arm.joint);put(w,arm.end);put(h,rig.legs[side].root);put(k,rig.legs[side].joint);put(f,rig.legs[side].end);
+      }
+     }
      if(points&&data.depth)for(const i of [11,12])points[i].z+=data.depth;
      if(points&&data.flat){points[27].y=points[28].y=(points[27].y+points[28].y)/2;points[27].z=scale*.2;points[28].z=-scale*.2;}
      if(points&&data.small){const floor=(points[27].y+points[28].y)/2;points[27].y=floor-scale*.04/ratio/2;points[28].y=floor+scale*.04/ratio/2;points[27].z=points[28].z=0;points[27].visibility=points[28].visibility=.5;}
@@ -27,21 +34,33 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   assert(Number(await page.locator('#osoto-canvas').getAttribute('data-time'))>first+1);assert.notEqual(await page.locator('#osoto-3d').evaluate(c=>c.toDataURL()),pixels,'animation must change the drawn pose');
   await page.locator('#osoto-demo').click();const paused=await page.locator('#osoto-canvas').getAttribute('data-time');await page.waitForTimeout(250);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-time'),paused);
   for(const view of ['front','side','oblique']){await page.locator('[data-osoto-view='+view+']').click();await page.waitForTimeout(120);assert.equal(await page.locator('[data-osoto-view='+view+']').getAttribute('aria-pressed'),'true');await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/3d-'+view+'.png'});}
-  assert.equal(await page.locator('#osoto-solo').count(),0);assert.equal(await page.locator('#osoto-3d').getAttribute('data-solo'),'true');
+  assert.equal(await page.locator('#osoto-solo').isChecked(),false);assert.equal(await page.locator('#osoto-3d').getAttribute('data-solo'),'false');
+  await page.locator('#osoto-solo').check();await page.waitForFunction(()=>document.querySelector('#osoto-3d').dataset.solo==='true');
+  await page.locator('#osoto-solo').uncheck();await page.waitForFunction(()=>document.querySelector('#osoto-3d').dataset.solo==='false');
+  const {throwTimeAtElapsed,THROW_DURATION}=await import('../src/throw-playback.js');
   for(const [seek,stage]of [['0',0],['350',1],['600',2],['900',3]]){
    await page.locator('#osoto-seek').fill(seek);
-   await page.waitForFunction(stage=>Number(document.querySelector('#osoto-3d').dataset.time)===stage,stage);
-   assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),String(stage),'3D demonstration and target use the same phase');
+   const time=throwTimeAtElapsed(Number(seek)/1000*THROW_DURATION);
+   await page.waitForFunction(time=>document.querySelector('#osoto-3d').dataset.time===time.toFixed(4),time);
+   assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),String(stage));
+   const originalMatches=await page.evaluate(async time=>{
+    const {sampleThrow}=await import('/dist/src/throw-motion.js'),{createThrowRenderer}=await import('/dist/src/throw-render.js');
+    const actual=document.querySelector('#osoto-3d'),box=actual.getBoundingClientRect(),reference=document.createElement('canvas');
+    reference.style=`position:absolute;left:-10000px;width:${box.width}px;height:${box.height}px`;document.body.append(reference);
+    const renderer=createThrowRenderer(reference);renderer.draw(sampleThrow('o-soto-gari',time),{yaw:1.05,pitch:.18,solo:false,gold:true});
+    const matches=actual.toDataURL()===reference.toDataURL();renderer.dispose();reference.remove();return matches;
+   },time);
+   assert.equal(originalMatches,true,'2-person demo matches the original right-handed motion, independent of practice guide changes');
    await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/3d-step-'+stage+'.png'});
   }
   await page.locator('#osoto-seek').fill('1000');await page.waitForFunction(()=>Number(document.querySelector('#osoto-3d').dataset.time)>=2.99);await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/3d-finish.png'});await page.locator('#osoto-speed').selectOption('0.5');
   await page.locator('#osoto-reset').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.stage==='0');
   await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/initial-front.png'});
-  assert.equal(await page.locator('#osoto-3d').evaluate(v=>getComputedStyle(v).transform),'matrix(-1, 0, 0, 1, 0, 0)','visible 3D demo is mirrored');
+  assert.equal(await page.locator('#osoto-3d').evaluate(v=>getComputedStyle(v).transform),'none','original 3D demonstration is not mirrored');
   const handedness=await page.evaluate(async()=>{const {OSOTO_TARGETS,createOsotoGuideProjection}=await import('/dist/src/osoto-practice.js');return [0,300].map(offset=>{const p=createOsotoGuideProjection(300,420,offset).project(OSOTO_TARGETS[0]);return p[28].x>p[27].x&&p[16].x>p[15].x;});});
   assert.deepEqual(handedness,[true,true],'gold and blue guides show right hand and foot on screen-right');
   await page.locator('#osoto-start').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.ready==='true');assert.equal(await page.locator('#osoto-3d').isVisible(),false);assert.equal(await page.locator('#osoto-canvas').isVisible(),true);
-  for(const id of ['osoto-video','osoto-tracking'])assert.equal(await page.locator('#'+id).evaluate(v=>getComputedStyle(v).transform),'matrix(-1, 0, 0, 1, 0, 0)','visible camera and tracking share the demo mirror direction');
+  for(const id of ['osoto-video','osoto-tracking'])assert.equal(await page.locator('#'+id).evaluate(v=>getComputedStyle(v).transform),'matrix(-1, 0, 0, 1, 0, 0)','camera practice remains mirrored separately from demonstration');
   const guide=await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL());
   const targetBox=await page.locator('#osoto-target').boundingBox(),stageBox=await page.locator('.osoto-stage').boundingBox();
   assert(targetBox.width<stageBox.width*.61&&targetBox.x>stageBox.x+stageBox.width*.3&&targetBox.y>stageBox.y+stageBox.height*.5);
@@ -93,6 +112,6 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.setViewportSize({width:390,height:844});await page.goto(base+'/throws/o-soto-gari?lang=en');await page.locator('#osoto-start').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);assert.equal(/[가-힣]/.test(await page.locator('#throw-screen').innerText()),false);
   await page.screenshot({path:'.test-output/osoto/mobile-en.png',fullPage:true});assert.deepEqual(errors,[]);
-  console.log('PASS: mirrored video/tracking/3D/2D, small starting step with weak depth and moderate confidence, flat-stance rejection, shared 3D/2D phases, gold left/blue right, depth-stable scale, ordered completion/reset/stop, other throw playback, mobile English. Synthetic landmarks; real camera accuracy not measured.');
+  console.log('PASS: original unmirrored 2-person demo pixel match at four moments, solo toggle, mirrored practice only, small starting step, flat-stance rejection, moderate finish completion, gold left/blue right, depth-stable scale, reset/stop, other throw playback, mobile English. Synthetic landmarks; real camera accuracy not measured.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

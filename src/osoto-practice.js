@@ -95,10 +95,10 @@ export function assessOsoto(points,stage){
  const positionScore=Math.round(Math.max(0,1-error/1.7)*100);
  // Separate critical leg and torso gates prevent an unchanged standing pose
  // or a left-leg lift from clearing later stages through an average score.
- const left=dist(p[27],t[27])<(stage===0?1.15:.85);
- const right=dist(p[28],t[28])<(stage===0?1.15:.90);
- const torso=dist(mid(p[11],p[12]),mid(t[11],t[12]))<.70;
- const arms=stage===0||[15,16].every(i=>dist(p[i],t[i])<1.15);
+ const left=dist(p[27],t[27])<(stage===0?1.15:stage===3?1:.85);
+ const right=dist(p[28],t[28])<(stage===0?1.15:stage===3?1.2:.90);
+ const torso=dist(mid(p[11],p[12]),mid(t[11],t[12]))<(stage===3?.85:.70);
+ const arms=stage===0||[15,16].every(i=>dist(p[i],t[i])<(stage===3?1.35:1.15));
  const depthReady=[11,12,23,24,25,26,27,28].every(i=>Number.isFinite(p[i].z));
  const reliableFeet=[27,28].every(i=>(p[i].visibility??1)>=.45);
  const front=depthReady&&p[11].x-p[12].x>.28&&Math.abs(p[11].z-p[12].z)<.90;
@@ -116,12 +116,12 @@ export function assessOsoto(points,stage){
  const stance=stepDirection*imageAdvance>.025&&stepDirection*depthAdvance>-.08&&upright>.70;
  const phase=depthReady&&(stage<2?stance:
   stage===2?p[27].y-p[28].y>.35&&p[26].y<.45&&p[25].y-p[26].y>.30&&p[26].z<-.30&&p[28].z<-.20&&extension<.92&&upright>.80:
-  p[28].z>.40&&p[26].z>.18&&p[28].z-p[26].z>.15&&extension>.86&&p[27].y-p[28].y>.30&&shoulder.z<-.25&&upright<.95);
+  p[28].z>.12&&p[26].z>-.05&&p[28].z-p[26].z>.04&&extension>.75&&p[27].y-p[28].y>.15&&shoulder.z<-.10&&upright<.99);
  const critical=reliableFeet&&front&&support&&phase;
- const score=critical?positionScore:Math.min(positionScore,54);
- const matched=critical&&positionScore>=55&&left&&right&&torso&&arms;
- const recoverable=stage<2&&reliableFeet&&front&&support&&upright>.70&&stepDirection*imageAdvance>.01&&stepDirection*depthAdvance>-.12;
- return {score,matched,critical,recoverable,body,issue:!reliableFeet?'tracking':!front?'front':!support?(stage<2?'support':'left'):!phase?(stage<2?'depth':stage===3&&shoulder.z>=-.25?'torso':'right'):!left?'left':!right?'right':!torso?'torso':!arms?'arms':matched?'hold':'position'};
+ const passScore=stage===3?50:55,score=critical?positionScore:Math.min(positionScore,passScore-1);
+ const matched=critical&&positionScore>=passScore&&left&&right&&torso&&arms;
+ const recoverable=reliableFeet&&front&&support&&(stage<2?upright>.70&&stepDirection*imageAdvance>.01&&stepDirection*depthAdvance>-.12:stage===3&&p[28].z>.06&&p[27].y-p[28].y>.08&&shoulder.z<-.05&&extension>.70);
+ return {score,matched,critical,recoverable,body,issue:!reliableFeet?'tracking':!front?'front':!support?(stage<2?'support':'left'):!phase?(stage<2?'depth':stage===3&&shoulder.z>=-.10?'torso':'right'):!left?'left':!right?'right':!torso?'torso':!arms?'arms':matched?'hold':'position'};
 }
 export class OsotoProgress{
  constructor(){this.reset()}

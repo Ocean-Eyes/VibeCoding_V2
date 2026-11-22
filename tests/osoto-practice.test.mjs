@@ -177,6 +177,49 @@ test('Initial checks stance without demanding pulling arms yet',()=>{
 
 // Reference events, independent of the scoring targets.
 import {sampleOsotoMotion} from '../src/osoto-motion.js';
+import {body,limb} from '../src/throw-motion.js';
+
+function moderateFinish({lean=.25,height=.22,rear=-.24}={}){
+ const rig=body({p:[.15,.94,.24],yaw:0,lean,l:[.23,.065,.38],r:[-.12,height,rear]});
+ assert(rig.legs.right.reachError<1e-8,'fixture must not silently lift an unreachable foot');
+ const points=Array(33).fill(null);
+ const put=(i,v)=>points[i]={x:.5+(v[0]-rig.pelvis[0])*.15,y:.45-(v[1]-rig.pelvis[1])*.15,z:-(v[2]-rig.pelvis[2])*.15,visibility:1};
+ put(0,rig.head);
+ for(const [side,a,e,w,h,k,f,hand]of [['left',11,13,15,23,25,27,[-.2,.08,.21]],['right',12,14,16,24,26,28,[.1,.54,.32]]]){
+  const arm=limb(rig.shoulders[side],rig.at(...hand),.33,.31,[0,-1,.2]);
+  put(a,rig.shoulders[side]);put(e,arm.joint);put(w,arm.end);put(h,rig.legs[side].root);put(k,rig.legs[side].joint);put(f,rig.legs[side].end);
+ }
+ return points;
+}
+
+test('finish accepts a moderate forward lean and lower backward leg, without accepting standing or knee lift',()=>{
+ for(const lean of [.25,.35])for(const height of [.20,.27]){
+  assert.equal(assessOsoto(moderateFinish({lean,height}),3).matched,true,`lean ${lean}, height ${height}`);
+ }
+ assert.equal(assessOsoto(moderateFinish({lean:0}),3).matched,false,'backward foot alone is not a torso lean');
+ assert.equal(assessOsoto(moderateFinish({height:.065,rear:.04}),3).matched,false,'grounded rear foot is not a reap');
+ assert.equal(assessOsoto(observed(2),3).matched,false,'forward knee lift cannot complete the finish');
+});
+
+test('a borderline finish estimate reduces hold progress instead of restarting the full second',()=>{
+ const game=new OsotoProgress();game.stage=3;let now=0;
+ for(let i=0;i<8;i++)game.update(moderateFinish(),now+=50);
+ const before=game.hold,jitter=moderateFinish();
+ for(const i of [11,12])jitter[i].z=.15*.49*-.07;
+ const state=game.update(jitter,now+=50);
+ assert.equal(state.matched,false);assert(game.hold>0&&game.hold<before);
+ for(let i=0;i<16;i++)game.update(moderateFinish(),now+=50);
+ assert.equal(game.done,true);
+});
+
+test('the sleeve arm is extended in ready and entry practice poses without stretching bones',()=>{
+ const distance=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
+ for(let time=0;time<=1;time+=.025){
+  const arm=sampleOsotoMotion(time).arms.left;
+  assert(distance(arm.root,arm.end)/(.33+.31)>.98,'sleeve arm should be nearly straight');
+  assert(arm.reachError<1e-8);
+ }
+});
 test('reference motion steps left, raises a bent right knee, then reaps back on the planted left foot',()=>{
  const initial=sampleOsotoMotion(0),entry=sampleOsotoMotion(1),lift=sampleOsotoMotion(2),reap=sampleOsotoMotion(3);
  assert(initial.legs.right.end[2]>initial.legs.left.end[2]);
