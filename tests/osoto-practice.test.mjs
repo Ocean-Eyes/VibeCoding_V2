@@ -141,7 +141,7 @@ test('knee lift and backward extension require distinct whole-leg shapes',()=>{
  const curledHeel=observed(3);curledHeel[26]={...curledHeel[26],y:.45+.15*.85,z:0};
  assert.equal(assessOsoto(curledHeel,3).matched,false);
  const flat=observed(1);assert.equal(assessOsoto(flat,2).matched,false);assert.equal(assessOsoto(flat,3).matched,false);
- for(let stage=0;stage<4;stage++){const lowConfidence=observed(stage);lowConfidence[28].visibility=.4;assert.equal(assessOsoto(lowConfidence,stage).matched,false);}
+ for(let stage=0;stage<3;stage++){const lowConfidence=observed(stage);lowConfidence[28].visibility=.4;assert.equal(assessOsoto(lowConfidence,stage).matched,false);}
 });
 test('lift and reap still require leg depth and torso lean when XY matches',()=>{
  for(const stage of [2,3]){
@@ -205,11 +205,34 @@ test('a borderline finish estimate reduces hold progress instead of restarting t
  const game=new OsotoProgress();game.stage=3;let now=0;
  for(let i=0;i<8;i++)game.update(moderateFinish(),now+=50);
  const before=game.hold,jitter=moderateFinish();
- for(const i of [11,12])jitter[i].z=.15*.49*-.07;
+ for(const i of [11,12])jitter[i].z=.15*.49*-.01;
  const state=game.update(jitter,now+=50);
  assert.equal(state.matched,false);assert(game.hold>0&&game.hold<before);
  for(let i=0;i<16;i++)game.update(moderateFinish(),now+=50);
  assert.equal(game.done,true);
+});
+
+test('finish accepts a low rear leg, slight lean and weak but consistent RGB depth',()=>{
+ const low=moderateFinish({lean:.12,height:.12,rear:-.10});
+ assert.equal(assessOsoto(low,3).matched,true);
+ const weak=observed(3).map(p=>p?{...p,z:p.z*.12}:null);
+ assert.equal(assessOsoto(weak,3).matched,true);
+ for(const i of [11,12])weak[i].x=.5+(weak[i].x-.5)*.4;
+ assert.equal(assessOsoto(weak,3).matched,true,'a small torso turn is allowed in the finish');
+});
+
+test('finish ignores occluded face and arms, accepts a partly hidden rear ankle, but still requires the supporting leg',()=>{
+ const p=moderateFinish();
+ for(const i of [0,13,14,15,16])p[i]=null;
+ p[28].visibility=.3;
+ assert.equal(assessOsoto(p,3).matched,true);
+ const game=new OsotoProgress();game.stage=3;
+ for(let now=0;now<=1200;now+=50)game.update(p,now);
+ assert.equal(game.done,true,'hand occlusion cannot reset a valid finishing hold');
+ for(const i of [23,25,27,28]){
+  const hidden=structuredClone(p);hidden[i].visibility=.1;
+  assert.equal(assessOsoto(hidden,3).matched,false,`lost leg landmark ${i}`);
+ }
 });
 
 test('the sleeve arm is extended in ready and entry practice poses without stretching bones',()=>{

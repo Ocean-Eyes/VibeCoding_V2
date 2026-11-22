@@ -14,11 +14,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      const scale=Math.min(.16,ratio*.20),cy=ratio*.5;
      let points=data.stage<0?null:OSOTO_TARGETS[data.stage].map(p=>p?{x:.5+p.x*scale,y:(cy+p.y*scale)/ratio,z:p.z*scale,visibility:1}:{x:0,y:0,z:0,visibility:0});
      if(data.stage===3){
-      const {body,limb}=await import('./throw-motion.js'),rig=body({p:[.15,.94,.24],yaw:0,lean:.25,l:[.23,.065,.38],r:[-.12,.22,-.24]});
+      const {body,limb}=await import('./throw-motion.js'),rig=body({p:[.15,.94,.24],yaw:0,lean:.12,l:[.23,.065,.38],r:[-.12,.12,-.10]});
       points=Array(33).fill(null);const put=(i,v)=>points[i]={x:.5+(v[0]-rig.pelvis[0])*scale/.49,y:(cy-(v[1]-rig.pelvis[1])*scale/.49)/ratio,z:-(v[2]-rig.pelvis[2])*scale/.49,visibility:1};
       put(0,rig.head);for(const [side,a,e,w,h,k,f,hand]of [['left',11,13,15,23,25,27,[-.2,.08,.21]],['right',12,14,16,24,26,28,[.1,.54,.32]]]){
        const arm=limb(rig.shoulders[side],rig.at(...hand),.33,.31,[0,-1,.2]);put(a,rig.shoulders[side]);put(e,arm.joint);put(w,arm.end);put(h,rig.legs[side].root);put(k,rig.legs[side].joint);put(f,rig.legs[side].end);
       }
+      for(const i of [0,13,14,15,16])points[i]=null;points[28].visibility=.3;
      }
      if(points&&data.depth)for(const i of [11,12])points[i].z+=data.depth;
      if(points&&data.flat){points[27].y=points[28].y=(points[27].y+points[28].y)/2;points[27].z=scale*.2;points[28].z=-scale*.2;}
@@ -112,6 +113,6 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.setViewportSize({width:390,height:844});await page.goto(base+'/throws/o-soto-gari?lang=en');await page.locator('#osoto-start').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);assert.equal(/[가-힣]/.test(await page.locator('#throw-screen').innerText()),false);
   await page.screenshot({path:'.test-output/osoto/mobile-en.png',fullPage:true});assert.deepEqual(errors,[]);
-  console.log('PASS: original unmirrored 2-person demo pixel match at four moments, solo toggle, mirrored practice only, small starting step, flat-stance rejection, moderate finish completion, gold left/blue right, depth-stable scale, reset/stop, other throw playback, mobile English. Synthetic landmarks; real camera accuracy not measured.');
+  console.log('PASS: original paired demo unchanged at four moments, earlier practice stages preserved, low-leg/slight-lean finish completes with hidden face/arms and partial rear-ankle confidence, reset/stop, mobile English. Synthetic landmarks; real camera accuracy not measured.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
