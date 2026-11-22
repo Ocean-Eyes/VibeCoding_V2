@@ -113,6 +113,36 @@ test('Initial requires right foot in front, and front-facing body',()=>{
  const p=observed(0);[p[27].z,p[28].z]=[p[28].z,p[27].z];assert.equal(assessOsoto(p,0).matched,false);
  const side=observed(0).map(p=>p?{...p,x:.5+(p.x-.5)*.1}:null);assert.equal(assessOsoto(side,0).matched,false);
 });
+
+test('level feet cannot pass Initial from depth noise or a rolled camera',()=>{
+ for(const depth of [.02,.08,.3,.8])for(const roll of [0,.22,-.22]){
+  const p=observed(0),floor=(p[27].y+p[28].y)/2;
+  p[27].y=p[28].y=floor;p[27].z=.15*depth/2;p[28].z=-.15*depth/2;
+  for(const v of p)if(v){const x=v.x-.5,y=v.y-.45;v.x=.5+Math.cos(roll)*x-Math.sin(roll)*y;v.y=.45+Math.sin(roll)*x+Math.cos(roll)*y;}
+  const result=assessOsoto(p,0);assert.equal(result.matched,false);assert.equal(result.critical,false);assert(result.score<55);
+ }
+});
+
+test('an invalid stance clears the hold instead of accumulating sporadic depth matches',()=>{
+ const game=new OsotoProgress();let now=0;
+ const flat=observed(0);flat[27].y=flat[28].y;flat[27].z=flat[28].z;
+ for(let cycle=0;cycle<12;cycle++){
+  for(let i=0;i<10;i++)game.update(observed(0),now+=50);
+  game.update(flat,now+=50);assert.equal(game.hold,0);
+ }
+ assert.equal(game.stage,0);
+ for(let i=0;i<23;i++)game.update(observed(0),now+=50);
+ assert.equal(game.stage,1);
+});
+
+test('knee lift and backward extension require distinct whole-leg shapes',()=>{
+ const noKneeLift=observed(2);noKneeLift[26].y=.45+.15*.85;noKneeLift[26].z=0;
+ assert.equal(assessOsoto(noKneeLift,2).matched,false);
+ const curledHeel=observed(3);curledHeel[26]={...curledHeel[26],y:.45+.15*.85,z:0};
+ assert.equal(assessOsoto(curledHeel,3).matched,false);
+ const flat=observed(1);assert.equal(assessOsoto(flat,2).matched,false);assert.equal(assessOsoto(flat,3).matched,false);
+ for(let stage=0;stage<4;stage++){const lowConfidence=observed(stage);lowConfidence[28].visibility=.4;assert.equal(assessOsoto(lowConfidence,stage).matched,false);}
+});
 test('front/back leg depth and torso lean are mandatory even when XY matches',()=>{
  for(const stage of [0,1,2,3]){
   const p=observed(stage).map(p=>p?{...p,z:0}:null);assert.equal(assessOsoto(p,stage).matched,false);
@@ -145,14 +175,33 @@ test('reference motion steps left, raises a bent right knee, then reaps back on 
  const leg=lift.legs.right,u=leg.root.map((v,i)=>v-leg.joint[i]),v=leg.end.map((v,i)=>v-leg.joint[i]);
  const angle=Math.acos(u.reduce((n,x,i)=>n+x*v[i],0)/(Math.hypot(...u)*Math.hypot(...v)));assert(angle<Math.PI*.8,'right knee visibly bends');
  assert(reap.legs.right.end[2]<reap.pelvis[2]-.35);assert(reap.head[2]>reap.pelvis[2]+.3);
+ const distance=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i])),back=reap.legs.right;
+ assert(distance(back.root,back.end)/(distance(back.root,back.joint)+distance(back.joint,back.end))>.96,'finish extends the reaping leg instead of curling its heel');
+ assert(back.end[2]<reap.pelvis[2]-.65);assert(back.end[1]>.2&&back.end[1]<.55);
  for(let time=1;time<=3;time+=.02)assert(Math.hypot(...sampleOsotoMotion(time).legs.left.end.map((x,i)=>x-entry.legs.left.end[i]))<.0001);
+});
+
+test('ready and support legs stay tall rather than crouching, and joints move continuously',()=>{
+ const d=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
+ for(const time of [0,1,2,3]){
+  const rig=sampleOsotoMotion(time),leg=rig.legs.left;
+  assert(d(leg.root,leg.end)/(.46+.45)>.96,'supporting leg has a soft knee bend');
+ }
+ const ready=sampleOsotoMotion(0).legs.right;assert(d(ready.root,ready.end)/(.46+.45)>.98);
+ let previous=sampleOsotoMotion(0);
+ for(let i=1;i<=600;i++){
+  const current=sampleOsotoMotion(i/200);
+  for(const kind of ['legs','arms'])for(const side of ['left','right'])for(const point of ['joint','end'])assert(d(current[kind][side][point],previous[kind][side][point])<.03,'no abrupt joint flips');
+  previous=current;
+ }
 });
 test('reference animation preserves bone lengths and never puts feet below the floor',()=>{
  for(let time=0;time<=3;time+=.02){const b=sampleOsotoMotion(time);
   for(const [parts,a,c]of [[b.legs,.46,.45],[b.arms,.33,.31]])for(const limb of Object.values(parts)){
    const d=(p,q)=>Math.hypot(...p.map((v,i)=>v-q[i]));assert(Math.abs(d(limb.root,limb.joint)-a)<.0001);assert(Math.abs(d(limb.joint,limb.end)-c)<.0001);
+   assert(limb.reachError<1e-8,'never conceal an unreachable pose by clamping the requested limb');
   }
-  assert(b.legs.left.end[1]>=.04&&b.legs.right.end[1]>=.04);
+  assert(b.legs.left.end[1]>=.065&&b.legs.right.end[1]>=.065,'ankle height includes the displayed sole thickness');
  }
 });
 
@@ -177,7 +226,8 @@ test('brief visible pose jitter preserves hold progress, but missing tracking cl
  const game=new OsotoProgress();let now=0;
  for(let i=0;i<8;i++)game.update(observed(0),now+=50);
  const before=game.hold;
- game.update(observed(1),now+=50);
+ const jitter=observed(0);jitter[27].x+=.15*1.0;
+ game.update(jitter,now+=50);
  assert(game.hold>0&&game.hold<before);
  for(let i=0;i<16;i++)game.update(observed(0),now+=50);
  assert.equal(game.stage,1);

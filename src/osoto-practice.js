@@ -88,21 +88,36 @@ export function osotoAnimation(elapsed){
  return {points:osotoPose(time),stage,time};
 }
 export function assessOsoto(points,stage){
- const body=normalizeBody(points);if(!body)return {score:0,matched:false,issue:'tracking'};
+ const body=normalizeBody(points);if(!body)return {score:0,matched:false,critical:false,issue:'tracking'};
  const p=body.points,t=OSOTO_TARGETS[stage],ids=stage===0?[11,12,25,26,27,28]:[11,12,13,14,15,16,25,26,27,28];
  const error=ids.reduce((n,i)=>n+Math.min(1.5,dist(p[i],t[i])),0)/ids.length;
- const score=Math.round(Math.max(0,1-error/1.7)*100);
+ const positionScore=Math.round(Math.max(0,1-error/1.7)*100);
  // Separate critical leg and torso gates prevent an unchanged standing pose
  // or a left-leg lift from clearing later stages through an average score.
  const left=dist(p[27],t[27])<.85;
  const right=dist(p[28],t[28])<.90;
  const torso=dist(mid(p[11],p[12]),mid(t[11],t[12]))<.70;
  const arms=stage===0||[15,16].every(i=>dist(p[i],t[i])<1.15);
- const depthReady=[11,12,23,24,27,28].every(i=>Number.isFinite(p[i].z));
- const front=depthReady&&p[11].x-p[12].x>.22&&Math.abs(p[11].z-p[12].z)<1.0;
- const depth=depthReady&&(stage===0?p[28].z<p[27].z-.04:stage===1?p[27].z<p[28].z-.04:stage===2?p[28].z<-.18:p[28].z>.18&&(p[11].z+p[12].z)/2<-.12);
- const matched=score>=55&&left&&right&&torso&&arms&&front&&depth;
- return {score,matched,body,issue:!front?'front':!depth?'depth':!left?'left':!right?'right':!torso?'torso':!arms?'arms':matched?'hold':'position'};
+ const depthReady=[11,12,23,24,25,26,27,28].every(i=>Number.isFinite(p[i].z));
+ const reliableFeet=[27,28].every(i=>(p[i].visibility??1)>=.6);
+ const front=depthReady&&p[11].x-p[12].x>.40&&Math.abs(p[11].z-p[12].z)<.65;
+ const planted=(knee,ankle)=>p[ankle].y>1&&p[ankle].y-p[knee].y>.32&&p[knee].y>.30;
+ const support=planted(25,27)&&(stage>=2||planted(26,28));
+ const shoulder=mid(p[11],p[12]),upright=-shoulder.y;
+ const hipX=p[23].x-p[24].x,hipY=p[23].y-p[24].y,hipWidth=Math.hypot(hipX,hipY)||1;
+ const imageAdvance=((p[28].y-p[27].y)*hipX-(p[28].x-p[27].x)*hipY)/hipWidth,depthAdvance=p[27].z-p[28].z;
+ const length=(a,b)=>Math.hypot(p[a].x-p[b].x,p[a].y-p[b].y,p[a].z-p[b].z);
+ const extension=depthReady?length(24,28)/(length(24,26)+length(26,28)):0;
+ // A z estimate alone cannot establish a step. Require the corresponding
+ // image-space stagger as well as grounded feet; a level stance must not pass.
+ const phase=depthReady&&(stage===0?depthAdvance>.20&&imageAdvance>.08&&upright>.80:
+  stage===1?depthAdvance<-.20&&imageAdvance<-.08&&upright>.80:
+  stage===2?p[27].y-p[28].y>.35&&p[26].y<.45&&p[25].y-p[26].y>.30&&p[26].z<-.30&&p[28].z<-.20&&extension<.92&&upright>.80:
+  p[28].z>.40&&p[26].z>.18&&p[28].z-p[26].z>.15&&extension>.86&&p[27].y-p[28].y>.30&&shoulder.z<-.25&&upright<.95);
+ const critical=reliableFeet&&front&&support&&phase;
+ const score=critical?positionScore:Math.min(positionScore,54);
+ const matched=critical&&positionScore>=55&&left&&right&&torso&&arms;
+ return {score,matched,critical,body,issue:!reliableFeet?'tracking':!front?'front':!support?(stage<2?'support':'left'):!phase?(stage<2?'depth':stage===3&&shoulder.z>=-.25?'torso':'right'):!left?'left':!right?'right':!torso?'torso':!arms?'arms':matched?'hold':'position'};
 }
 export class OsotoProgress{
  constructor(){this.reset()}
@@ -113,7 +128,7 @@ export class OsotoProgress{
   if(now<this.until)return {stage:this.stage,hold:0,score:100,transition:true};
   const result=assessOsoto(points,this.stage);
   // Brief pose jitter reduces progress instead of discarding the entire hold.
-  this.hold=!active||!result.body?0:result.matched?this.hold+dt:Math.max(0,this.hold-dt*.5);
+  this.hold=!active||!result.body||!result.critical?0:result.matched?this.hold+dt:Math.max(0,this.hold-dt*.5);
   if(this.hold>=1){this.hold=0;if(this.stage===3)this.done=true;else{this.stage++;this.until=now+1100;}return {...result,stage:this.stage,hold:1,transition:!this.done,done:this.done};}
   return {...result,stage:this.stage,hold:this.hold,done:false};
  }

@@ -3,10 +3,10 @@
 // +Z is forward, anatomical right is -X. The front camera shows anatomical right on screen-left without mirroring.
 import {body,limb,add,mul} from './throw-motion.js';
 export const OSOTO_POSES=[
- {p:[0,.88,0],l:[.18,.045,-.14],r:[-.18,.045,.13],lean:.02,left:[-.23,.08,.25],right:[.13,.48,.36]},
- {p:[.12,.85,.12],l:[.23,.045,.34],r:[-.14,.045,.04],lean:.12,left:[-.24,.07,.24],right:[.10,.47,.30]},
- {p:[.16,.87,.20],l:[.23,.045,.34],r:[-.10,.48,.52],lean:.16,left:[-.24,.07,.24],right:[.10,.45,.25]},
- {p:[.15,.85,.26],l:[.23,.045,.34],r:[-.12,.40,-.23],lean:.62,left:[-.24,.06,.24],right:[.06,.38,.26]},
+ {p:[0,.945,0],l:[.18,.065,-.17],r:[-.18,.065,.20],lean:.02,left:[-.23,.08,.24],right:[.13,.40,.28]},
+ {p:[.12,.94,.14],l:[.23,.065,.38],r:[-.14,.065,.04],lean:.08,left:[-.20,.08,.21],right:[.12,.39,.26]},
+ {p:[.16,.94,.20],l:[.23,.065,.38],r:[-.12,.50,.57],lean:.10,left:[-.20,.08,.21],right:[.12,.39,.26]},
+ {p:[.15,.94,.24],l:[.23,.065,.38],r:[-.12,.43,-.49],lean:.72,left:[-.20,.08,.21],right:[.10,.39,.26]},
 ];
 const blend=(a,b,u)=>a.map((v,i)=>v+(b[i]-v)*u);
 export function sampleOsotoMotion(time){
@@ -18,7 +18,7 @@ export function sampleOsotoMotion(time){
  const rig=body(pose);
  // The blue performer's finish also inclines slightly toward their left.
  // Tilt the torso rather than turning the front camera into a side view.
- const roll=t<=2?0:-.20*u,c=Math.cos(roll),s=Math.sin(roll);
+ const roll=t<=2?0:-.04*u,c=Math.cos(roll),s=Math.sin(roll);
  const rotate=v=>[c*v[0]-s*v[1],s*v[0]+c*v[1],v[2]];
  const around=p=>add(rig.pelvis,rotate(p.map((v,i)=>v-rig.pelvis[i])));
  const originalAt=rig.at;rig.at=(...args)=>around(originalAt(...args));
@@ -27,7 +27,7 @@ export function sampleOsotoMotion(time){
  rig.head=around(rig.head);rig.neck=around(rig.neck);
  for(const [side,sign]of [['left',-1],['right',1]]){
   const target=rig.at(...pose[side]);
-  rig.arms[side]=limb(rig.shoulders[side],target,.33,.31,add(mul(rig.right,sign*.5),add(mul(rig.up,-.5),mul(rig.forward,.2))));
+  rig.arms[side]=limb(rig.shoulders[side],target,.33,.31,add(mul(rig.right,sign*.25),add(mul(rig.up,-.8),mul(rig.forward,.2))));
  }
  return rig;
 }
