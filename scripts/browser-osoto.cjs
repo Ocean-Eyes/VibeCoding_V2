@@ -5,7 +5,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  try{
   fs.mkdirSync('.test-output/osoto',{recursive:true});
   const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.addInitScript(()=>{window.qaStage=-1;window.qaDepth=0;window.qaFlat=false;const Original=Worker;window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.stage=window.qaStage;d.depth=window.qaDepth;d.flat=window.qaFlat;}super.postMessage(d,t)}}});
+  await page.addInitScript(()=>{window.qaStage=-1;window.qaDepth=0;window.qaFlat=false;window.qaSmall=false;const Original=Worker;window.Worker=class extends Original{postMessage(d,t){if(d.type==='frame'){d.stage=window.qaStage;d.depth=window.qaDepth;d.flat=window.qaFlat;d.small=window.qaSmall;}super.postMessage(d,t)}}});
   await page.route('**/src/baemilgi-tracker.js*',r=>r.fulfill({contentType:'text/javascript',body:`
    const deps=import('./osoto-practice.js');self.onmessage=async({data})=>{
     if(data.type==='init')self.postMessage({type:'ready'});
@@ -15,6 +15,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      const points=data.stage<0?null:OSOTO_TARGETS[data.stage].map(p=>p?{x:.5+p.x*scale,y:(cy+p.y*scale)/ratio,z:p.z*scale,visibility:1}:{x:0,y:0,z:0,visibility:0});
      if(points&&data.depth)for(const i of [11,12])points[i].z+=data.depth;
      if(points&&data.flat){points[27].y=points[28].y=(points[27].y+points[28].y)/2;points[27].z=scale*.2;points[28].z=-scale*.2;}
+     if(points&&data.small){const floor=(points[27].y+points[28].y)/2;points[27].y=floor-scale*.04/ratio/2;points[28].y=floor+scale*.04/ratio/2;points[27].z=points[28].z=0;points[27].visibility=points[28].visibility=.5;}
      self.postMessage({type:'result',points,time:data.time});
     }
    }`}));
@@ -36,8 +37,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.locator('#osoto-seek').fill('1000');await page.waitForFunction(()=>Number(document.querySelector('#osoto-3d').dataset.time)>=2.99);await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/3d-finish.png'});await page.locator('#osoto-speed').selectOption('0.5');
   await page.locator('#osoto-reset').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.stage==='0');
   await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/initial-front.png'});
-  assert.equal(await page.locator('#osoto-video').evaluate(v=>getComputedStyle(v).transform),'none');
+  assert.equal(await page.locator('#osoto-3d').evaluate(v=>getComputedStyle(v).transform),'matrix(-1, 0, 0, 1, 0, 0)','visible 3D demo is mirrored');
+  const handedness=await page.evaluate(async()=>{const {OSOTO_TARGETS,createOsotoGuideProjection}=await import('/dist/src/osoto-practice.js');return [0,300].map(offset=>{const p=createOsotoGuideProjection(300,420,offset).project(OSOTO_TARGETS[0]);return p[28].x>p[27].x&&p[16].x>p[15].x;});});
+  assert.deepEqual(handedness,[true,true],'gold and blue guides show right hand and foot on screen-right');
   await page.locator('#osoto-start').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.ready==='true');assert.equal(await page.locator('#osoto-3d').isVisible(),false);assert.equal(await page.locator('#osoto-canvas').isVisible(),true);
+  for(const id of ['osoto-video','osoto-tracking'])assert.equal(await page.locator('#'+id).evaluate(v=>getComputedStyle(v).transform),'matrix(-1, 0, 0, 1, 0, 0)','visible camera and tracking share the demo mirror direction');
   const guide=await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL());
   const targetBox=await page.locator('#osoto-target').boundingBox(),stageBox=await page.locator('.osoto-stage').boundingBox();
   assert(targetBox.width<stageBox.width*.61&&targetBox.x>stageBox.x+stageBox.width*.3&&targetBox.y>stageBox.y+stageBox.height*.5);
@@ -77,7 +81,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   assert(Number((await page.locator('#osoto-score').innerText()).replace('%',''))<55);
   await page.evaluate(()=>window.qaFlat=false);
   for(let stage=0;stage<4;stage++){
-   await page.evaluate(s=>window.qaStage=s,stage);
+   await page.evaluate(s=>{window.qaStage=s;window.qaSmall=s===0;},stage);
    await page.waitForFunction(s=>{const c=document.querySelector('#osoto-canvas');return s===3?c.dataset.done==='true':c.dataset.stage===String(s+1)},stage);
    if(stage<3){await page.waitForTimeout(2600);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),String(stage+1),'previous pose cannot skip the next stage');await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/front-'+(stage+1)+'.png'});}
   }
@@ -89,6 +93,6 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.setViewportSize({width:390,height:844});await page.goto(base+'/throws/o-soto-gari?lang=en');await page.locator('#osoto-start').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);assert.equal(/[가-힣]/.test(await page.locator('#throw-screen').innerText()),false);
   await page.screenshot({path:'.test-output/osoto/mobile-en.png',fullPage:true});assert.deepEqual(errors,[]);
-  console.log('PASS: synthetic pose tracking, flat-stance false-positive rejection, shared 3D/2D phases, front/side/oblique/seek/speed, gold target left/blue user right/camera sticks/depth-stable scale, completion/reset/stop, other throw playback, mobile English');
+  console.log('PASS: mirrored video/tracking/3D/2D, small starting step with weak depth and moderate confidence, flat-stance rejection, shared 3D/2D phases, gold left/blue right, depth-stable scale, ordered completion/reset/stop, other throw playback, mobile English. Synthetic landmarks; real camera accuracy not measured.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

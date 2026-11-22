@@ -4,18 +4,18 @@ import {OSOTO_TARGETS,assessOsoto,OsotoProgress,cameraPose,osotoAnimation,OSOTO_
 import {normalizeGuideBody,OsotoGuideScale,projectOsotoCameraPose,drawOsotoTracking,createOsotoGuideProjection,drawOsotoBody} from '../src/osoto-practice.js';
 const observed=(stage,scale=.15,x=.5,y=.45)=>OSOTO_TARGETS[stage].map(p=>p?{x:x+p.x*scale,y:y+p.y*scale,z:p.z*scale,visibility:1}:null);
 
-test('live guide aligns translated and resized bodies to the same target without mirroring',()=>{
+test('both mirrored guide panels align translated and resized bodies without changing anatomy',()=>{
  const frame=createOsotoGuideProjection();
  for(let stage=0;stage<4;stage++)for(const [size,x,y]of [[.15,.5,.45],[.1,.65,.35],[.22,.3,.55]]){
   const guide=new OsotoGuideScale();guide.update(observed(0,size,x,y),true);
   const body=guide.update(observed(stage,size,x,y)),live=frame.project(body.points),target=frame.project(OSOTO_TARGETS[stage]);
   for(const i of [0,11,12,13,14,15,16,23,24,25,26,27,28])assert(Math.hypot(live[i].x-target[i].x,live[i].y-target[i].y)<1e-8);
-  assert(live[12].x<live[11].x,'anatomical right stays viewer-left');
+  assert(live[12].x>live[11].x,'anatomical right appears on the right in the mirror');
  }
  const wrong=observed(1);wrong[16].x+=.1;
  const guide=new OsotoGuideScale();guide.update(observed(0),true);
  const live=frame.project(guide.update(wrong).points),target=frame.project(OSOTO_TARGETS[1]);
- assert(live[16].x>target[16].x+20,'show actual hand error instead of snapping to target');
+ assert(live[16].x<target[16].x-20,'mirror actual hand error instead of snapping to target');
  assert(Math.abs(live[24].x-target[24].x)<1e-8);
 });
 
@@ -143,10 +143,22 @@ test('knee lift and backward extension require distinct whole-leg shapes',()=>{
  const flat=observed(1);assert.equal(assessOsoto(flat,2).matched,false);assert.equal(assessOsoto(flat,3).matched,false);
  for(let stage=0;stage<4;stage++){const lowConfidence=observed(stage);lowConfidence[28].visibility=.4;assert.equal(assessOsoto(lowConfidence,stage).matched,false);}
 });
-test('front/back leg depth and torso lean are mandatory even when XY matches',()=>{
- for(const stage of [0,1,2,3]){
+test('lift and reap still require leg depth and torso lean when XY matches',()=>{
+ for(const stage of [2,3]){
   const p=observed(stage).map(p=>p?{...p,z:0}:null);assert.equal(assessOsoto(p,stage).matched,false);
   const unknown=observed(stage).map(p=>p?{...p,z:undefined}:null);assert.equal(assessOsoto(unknown,stage).matched,false);
+ }
+});
+
+test('a small grounded step passes with weak depth, but level feet and a reversed step do not',()=>{
+ for(const stage of [0,1])for(const advance of [.035,.055])for(const depth of [0,.03,-.03]){
+  const p=observed(stage),direction=stage===0?1:-1,floor=(p[27].y+p[28].y)/2;
+  p[27].y=floor-direction*advance*.15/2;p[28].y=floor+direction*advance*.15/2;
+  p[27].z=direction*depth*.15/2;p[28].z=-direction*depth*.15/2;
+  p[27].visibility=p[28].visibility=.5;
+  assert.equal(assessOsoto(p,stage).matched,true,`stage ${stage}, step ${advance}, depth ${depth}`);
+  [p[27].y,p[28].y]=[p[28].y,p[27].y];
+  assert.equal(assessOsoto(p,stage).matched,false,'the opposite foot cannot advance the stage');
  }
 });
 test('front animation holds Initial then moves through all three poses continuously',()=>{
@@ -205,7 +217,7 @@ test('reference animation preserves bone lengths and never puts feet below the f
  }
 });
 
-test('front view keeps anatomical right screen-left, with camera coordinates unmirrored',()=>{
+test('judging keeps anatomical camera coordinates unmirrored before display projection',()=>{
  for(let stage=0;stage<4;stage++){
   const target=OSOTO_TARGETS[stage];assert(target[12].x<target[11].x);assert(target[28].x<target[27].x);
   const raw=observed(stage,.1,.5,.3).map(p=>p?{...p,y:p.y/.75}:null);
@@ -226,7 +238,7 @@ test('brief visible pose jitter preserves hold progress, but missing tracking cl
  const game=new OsotoProgress();let now=0;
  for(let i=0;i<8;i++)game.update(observed(0),now+=50);
  const before=game.hold;
- const jitter=observed(0);jitter[27].x+=.15*1.0;
+ const jitter=observed(0);jitter[27].x+=.15*1.3;
  game.update(jitter,now+=50);
  assert(game.hold>0&&game.hold<before);
  for(let i=0;i<16;i++)game.update(observed(0),now+=50);
@@ -235,12 +247,23 @@ test('brief visible pose jitter preserves hold progress, but missing tracking cl
  game.update(null,150);assert.equal(game.hold,0);
 });
 
+test('a brief small-step estimation dip decays the hold instead of discarding progress',()=>{
+ const game=new OsotoProgress();let now=0;
+ for(let i=0;i<8;i++)game.update(observed(0),now+=50);
+ const before=game.hold,p=observed(0),floor=(p[27].y+p[28].y)/2;
+ p[27].y=floor-.15*.02/2;p[28].y=floor+.15*.02/2;
+ game.update(p,now+=50);assert(game.hold>0&&game.hold<before);
+ for(let i=0;i<16;i++)game.update(observed(0),now+=50);
+ assert.equal(game.stage,1);
+});
+
 test('sleeve hand stays at the waist while lapel hand stays at the chest',()=>{
  for(let time=0;time<=3;time+=.1){
   const rig=sampleOsotoMotion(time);
   const height=hand=>hand.map((v,i)=>v-rig.pelvis[i]).reduce((sum,v,i)=>sum+v*rig.up[i],0);
   assert(height(rig.arms.left.end)<.12);
   assert(height(rig.arms.left.end)>.02);
-  assert(height(rig.arms.right.end)>.35);
+  assert(height(rig.arms.right.end)>.51&&height(rig.arms.right.end)<.57,'lapel grip stays near collar/shoulder height');
+  assert(height(rig.arms.right.end)-height(rig.arms.left.end)>.40,'do not raise the sleeve grip with the lapel grip');
  }
 });
