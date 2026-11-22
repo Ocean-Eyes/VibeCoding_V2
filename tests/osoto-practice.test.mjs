@@ -1,26 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {OSOTO_TARGETS,assessOsoto,OsotoProgress,cameraPose,osotoAnimation,OSOTO_DEMO_DURATION} from '../src/osoto-practice.js';
-import {normalizeGuideBody,createOsotoGuideProjection,drawOsotoBody} from '../src/osoto-practice.js';
+import {normalizeGuideBody,OsotoGuideScale,projectOsotoCameraPose,drawOsotoTracking,createOsotoGuideProjection,drawOsotoBody} from '../src/osoto-practice.js';
 const observed=(stage,scale=.15,x=.5,y=.45)=>OSOTO_TARGETS[stage].map(p=>p?{x:x+p.x*scale,y:y+p.y*scale,z:p.z*scale,visibility:1}:null);
 
 test('live guide aligns translated and resized bodies to the same target without mirroring',()=>{
  const frame=createOsotoGuideProjection();
  for(let stage=0;stage<4;stage++)for(const [size,x,y]of [[.15,.5,.45],[.1,.65,.35],[.22,.3,.55]]){
-  const body=normalizeGuideBody(observed(stage,size,x,y)),live=frame.project(body.points),target=frame.project(OSOTO_TARGETS[stage]);
+  const guide=new OsotoGuideScale();guide.update(observed(0,size,x,y),true);
+  const body=guide.update(observed(stage,size,x,y)),live=frame.project(body.points),target=frame.project(OSOTO_TARGETS[stage]);
   for(const i of [0,11,12,13,14,15,16,23,24,25,26,27,28])assert(Math.hypot(live[i].x-target[i].x,live[i].y-target[i].y)<1e-8);
   assert(live[12].x<live[11].x,'anatomical right stays viewer-left');
  }
  const wrong=observed(1);wrong[16].x+=.1;
- const live=frame.project(normalizeGuideBody(wrong).points),target=frame.project(OSOTO_TARGETS[1]);
+ const guide=new OsotoGuideScale();guide.update(observed(0),true);
+ const live=frame.project(guide.update(wrong).points),target=frame.project(OSOTO_TARGETS[1]);
  assert(live[16].x>target[16].x+20,'show actual hand error instead of snapping to target');
  assert(Math.abs(live[24].x-target[24].x)<1e-8);
 });
 
 test('matching characters share a scale and baseline in separate left and right panels',()=>{
  const left=createOsotoGuideProjection(300,420),right=createOsotoGuideProjection(300,420,300);
+ const guide=new OsotoGuideScale();guide.update(observed(0),true);
  for(let stage=0;stage<4;stage++){
-  const target=left.project(OSOTO_TARGETS[stage]),live=right.project(normalizeGuideBody(observed(stage)).points);
+  const target=left.project(OSOTO_TARGETS[stage]),live=right.project(guide.update(observed(stage)).points);
   for(const i of [0,11,12,15,16,23,24,27,28]){
    assert(Math.abs(live[i].x-target[i].x-300)<1e-8);
    assert(Math.abs(live[i].y-target[i].y)<1e-8);
@@ -39,6 +42,42 @@ test('guide shows visible limbs during partial tracking and never draws a lost j
  assert(!arcs.some(([x,y])=>x===projected[28].x&&y===projected[28].y));
  points[23].visibility=.1;assert.equal(normalizeGuideBody(points),null);
  assert.equal(normalizeGuideBody(null),null);
+});
+
+test('avatar scale ignores depth spikes and stays fixed when the torso bends',()=>{
+ const guide=new OsotoGuideScale();for(let i=0;i<15;i++)guide.update(observed(0),true);
+ const baseline=guide.update(observed(0));
+ for(const depth of [1,4,-3,NaN]){
+  const points=observed(0);points[11].z=depth;points[12].z=depth;
+  const body=guide.update(points);
+  assert.equal(body.scale,baseline.scale);
+  for(const i of [0,11,12,15,16,27,28]){
+   assert.equal(body.points[i].x,baseline.points[i].x);assert.equal(body.points[i].y,baseline.points[i].y);
+  }
+ }
+ const bent=observed(0);for(const i of [11,12])bent[i].y=(bent[i].y+.45)/2;
+ const body=guide.update(bent);
+ assert.equal(body.scale,baseline.scale);assert.equal(body.points[27].y,baseline.points[27].y,'bending cannot resize the legs');
+ guide.update(observed(0,.4),true);assert(Math.abs(guide.scale-.15)<1e-8,'one bad preparation frame cannot replace the scale');
+ guide.reset();guide.update(observed(0,.08),true);assert(Math.abs(guide.scale-.08)<1e-8);
+});
+
+test('camera sticks follow contain-fit video coordinates in portrait and landscape',()=>{
+ for(const [w,h,vw,vh,x,y]of [[540,960,1280,720,135,404.0625],[960,540,1280,720,240,135],[540,960,720,1280,135,240],[960,540,720,1280,404.0625,135]]){
+  const points=cameraPose([{x:.25,y:.25,visibility:1}],vh/vw),projected=projectOsotoCameraPose(points,w,h,vw,vh);
+  assert(Math.abs(projected[0].x-x)<1e-8);assert(Math.abs(projected[0].y-y)<1e-8);
+ }
+ assert.equal(projectOsotoCameraPose(null,540,960,720,1280),null);
+ assert.equal(projectOsotoCameraPose([],540,960,0,0),null);
+});
+
+test('camera sticks show recognized arms even with missing hips and clear lost landmarks',()=>{
+ const points=observed(0);points[23]=points[24]=null;points[15].visibility=.1;
+ const arcs=[];const ctx={save(){},restore(){},beginPath(){},stroke(){},fill(){},moveTo(x,y){assert(Number.isFinite(x)&&Number.isFinite(y))},lineTo(x,y){assert(Number.isFinite(x)&&Number.isFinite(y))},arc(x,y){arcs.push([x,y])}};
+ assert(drawOsotoTracking(ctx,points)>0);
+ assert(arcs.some(([x,y])=>x===points[16].x&&y===points[16].y));
+ assert(!arcs.some(([x,y])=>x===points[15].x&&y===points[15].y));
+ assert.equal(drawOsotoTracking(ctx,null),0);
 });
 for(let stage=0;stage<4;stage++)test(`stage ${stage+1}: target fits at different sizes and positions`,()=>{
  for(const [s,x,y]of [[.15,.5,.45],[.22,.35,.5],[.1,.6,.35]])assert.equal(assessOsoto(observed(stage,s,x,y),stage).matched,true);

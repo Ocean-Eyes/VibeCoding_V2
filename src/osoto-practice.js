@@ -8,14 +8,51 @@ export function cameraPose(points,aspect){
 }
 export function normalizeBody(points){
  if(!points||OSOTO_JOINTS.some(i=>!points[i]||(points[i].visibility??1)<.35||!Number.isFinite(points[i].x)||!Number.isFinite(points[i].y)))return null;
- return normalizeGuideBody(points);
+ const origin=mid(points[23],points[24]),shoulder=mid(points[11],points[12]);
+ return normalizeGuideBody(points,Math.hypot(origin.x-shoulder.x,origin.y-shoulder.y,origin.z-shoulder.z));
 }
 const visible=p=>p&&(p.visibility??1)>=.35&&Number.isFinite(p.x)&&Number.isFinite(p.y);
-export function normalizeGuideBody(points){
+export function normalizeGuideBody(points,referenceScale=null){
  if(!points||[11,12,23,24].some(i=>!visible(points[i])))return null;
- const origin=mid(points[23],points[24]),shoulder=mid(points[11],points[12]),scale=Math.hypot(origin.x-shoulder.x,origin.y-shoulder.y,origin.z-shoulder.z);
+ const origin=mid(points[23],points[24]),shoulder=mid(points[11],points[12]),scale=referenceScale??dist(origin,shoulder);
  if(!Number.isFinite(scale)||scale<.035)return null;
- return {origin,scale,points:points.map(p=>p?{x:(p.x-origin.x)/scale,y:(p.y-origin.y)/scale,z:Number.isFinite(p.z)?(p.z-origin.z)/scale:null,visibility:p.visibility??1}:null)};
+ return {origin,scale,points:points.map(p=>p?{x:(p.x-origin.x)/scale,y:(p.y-origin.y)/scale,z:Number.isFinite(p.z)&&Number.isFinite(origin.z)?(p.z-origin.z)/scale:null,visibility:p.visibility??1}:null)};
+}
+export class OsotoGuideScale{
+ constructor(){this.reset()}
+ reset(){this.samples=[];this.scale=null}
+ update(points,calibrating=false){
+  const body=normalizeGuideBody(points);if(!body)return null;
+  // Use image-space torso size during preparation, then retain it. Per-frame
+  // inferred depth or torso foreshortening must not resize the whole avatar.
+  if(this.scale===null||calibrating){
+   this.samples.push(body.scale/OSOTO_GUIDE_TORSO);if(this.samples.length>15)this.samples.shift();
+   const sorted=[...this.samples].sort((a,b)=>a-b);this.scale=sorted[Math.floor(sorted.length/2)];
+  }
+  return normalizeGuideBody(points,this.scale);
+ }
+}
+export function projectOsotoCameraPose(points,width,height,videoWidth,videoHeight){
+ if(!points||videoWidth<=0||videoHeight<=0)return null;
+ const factor=Math.min(width/videoWidth,height/videoHeight),imageWidth=videoWidth*factor,imageHeight=videoHeight*factor;
+ const ox=(width-imageWidth)/2,oy=(height-imageHeight)/2;
+ // cameraPose uses image-width units for both X and Y. Match object-fit:contain
+ // including its letterbox offsets; do not mirror or rotate the coordinates.
+ return points.map(p=>p?{...p,x:ox+p.x*imageWidth,y:oy+p.y*imageWidth}:null);
+}
+export function drawOsotoTracking(ctx,points){
+ if(!points)return 0;
+ const edges=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],[27,29],[29,31],[27,31],[28,30],[30,32],[28,32]];
+ const segments=edges.filter(([a,b])=>visible(points[a])&&visible(points[b])).map(([a,b])=>[points[a],points[b]]);
+ if(visible(points[0])&&visible(points[11])&&visible(points[12]))segments.push([mid(points[11],points[12]),points[0]]);
+ ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+ for(const [color,width]of [['#132a3a',5],['#80e7f0',2.5]]){
+  ctx.strokeStyle=color;ctx.lineWidth=width;
+  for(const [a,b]of segments){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+ }
+ ctx.fillStyle='#dffaff';ctx.strokeStyle='#163a4c';ctx.lineWidth=1.25;
+ for(const i of [...OSOTO_JOINTS,29,30,31,32])if(visible(points[i])){ctx.beginPath();ctx.arc(points[i].x,points[i].y,3,0,Math.PI*2);ctx.fill();ctx.stroke();}
+ ctx.restore();return segments.length;
 }
 export function osotoPose(time){
  const b=sampleOsotoMotion(time),p=Array(33).fill(null);
@@ -29,6 +66,7 @@ export function osotoPose(time){
  return normalizeBody(p).points;
 }
 export const OSOTO_TARGETS=OSOTO_TIMES.map(osotoPose);
+const OSOTO_GUIDE_TORSO=dist(mid(OSOTO_TARGETS[0][11],OSOTO_TARGETS[0][12]),mid(OSOTO_TARGETS[0][23],OSOTO_TARGETS[0][24]));
 export function createOsotoGuideProjection(width=300,height=420,offsetX=0){
  const all=OSOTO_TARGETS.flat().filter(Boolean);
  // One fixed viewport includes outstretched arms as well as all target poses.
