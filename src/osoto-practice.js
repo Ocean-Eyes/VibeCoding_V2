@@ -1,4 +1,5 @@
 import {sampleOsotoMotion} from './osoto-motion.js';
+import {assessOsotoFinish,OsotoFinishJudge} from './osoto-finish.js';
 export const OSOTO_TIMES=[0,1,2,3];
 export const OSOTO_JOINTS=[0,11,12,13,14,15,16,23,24,25,26,27,28];
 const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:((a.z??0)+(b.z??0))/2});
@@ -88,25 +89,23 @@ export function osotoAnimation(elapsed){
  const stage=time<.5?0:time<1.5?1:time<2.5?2:3;
  return {points:osotoPose(time),stage,time};
 }
-export function assessOsoto(points,stage){
- const finish=stage===3,finishJoints=[11,12,23,24,25,26,27,28];
- // Leaning forward often hides the face or hands. The finish is a torso/leg
- // pose; hidden wrists and fingertip positions must not block completion.
- const body=finish?normalizeBody(points,finishJoints,.25):normalizeBody(points);if(!body)return {score:0,matched:false,critical:false,issue:'tracking'};
- const p=body.points,t=OSOTO_TARGETS[stage],ids=finish?finishJoints:stage===0?[11,12,25,26,27,28]:[11,12,13,14,15,16,25,26,27,28];
+export function assessOsoto(points,stage,{reference=null}={}){
+ if(stage===3)return assessOsotoFinish(points,reference);
+ const body=normalizeBody(points);if(!body)return {score:0,matched:false,critical:false,issue:'tracking'};
+ const p=body.points,t=OSOTO_TARGETS[stage],ids=stage===0?[11,12,25,26,27,28]:[11,12,13,14,15,16,25,26,27,28];
  const error=ids.reduce((n,i)=>n+Math.min(1.5,dist(p[i],t[i])),0)/ids.length;
  const positionScore=Math.round(Math.max(0,1-error/1.7)*100);
  // Separate critical leg and torso gates prevent an unchanged standing pose
  // or a left-leg lift from clearing later stages through an average score.
- const left=finish||dist(p[27],t[27])<(stage===0?1.15:.85);
- const right=finish||dist(p[28],t[28])<(stage===0?1.15:.90);
- const torso=finish||dist(mid(p[11],p[12]),mid(t[11],t[12]))<.70;
- const arms=finish||stage===0||[15,16].every(i=>dist(p[i],t[i])<1.15);
+ const left=dist(p[27],t[27])<(stage===0?1.15:.85);
+ const right=dist(p[28],t[28])<(stage===0?1.15:.90);
+ const torso=dist(mid(p[11],p[12]),mid(t[11],t[12]))<.70;
+ const arms=stage===0||[15,16].every(i=>dist(p[i],t[i])<1.15);
  const depthReady=[11,12,23,24,25,26,27,28].every(i=>Number.isFinite(p[i].z));
- const reliableFeet=finish?(p[27].visibility??1)>=.35&&(p[28].visibility??1)>=.25:[27,28].every(i=>(p[i].visibility??1)>=.45);
- const front=depthReady&&p[11].x-p[12].x>(finish?.12:.28)&&Math.abs(p[11].z-p[12].z)<(finish?1.8:.90);
+ const reliableFeet=[27,28].every(i=>(p[i].visibility??1)>=.45);
+ const front=depthReady&&p[11].x-p[12].x>.28&&Math.abs(p[11].z-p[12].z)<.90;
  const planted=(knee,ankle)=>p[ankle].y>1&&p[ankle].y-p[knee].y>.32&&p[knee].y>.30;
- const support=finish?p[27].y>.85&&p[27].y-p[25].y>.18&&p[25].y>.20:planted(25,27)&&(stage>=2||planted(26,28));
+ const support=planted(25,27)&&(stage>=2||planted(26,28));
  const shoulder=mid(p[11],p[12]),upright=-shoulder.y;
  const hipX=p[23].x-p[24].x,hipY=p[23].y-p[24].y,hipWidth=Math.hypot(hipX,hipY)||1;
  const imageAdvance=((p[28].y-p[27].y)*hipX-(p[28].x-p[27].x)*hipY)/hipWidth,depthAdvance=p[27].z-p[28].z;
@@ -118,24 +117,24 @@ export function assessOsoto(points,stage){
  const stepDirection=stage===0?1:-1;
  const stance=stepDirection*imageAdvance>.025&&stepDirection*depthAdvance>-.08&&upright>.70;
  const phase=depthReady&&(stage<2?stance:
-  stage===2?p[27].y-p[28].y>.35&&p[26].y<.45&&p[25].y-p[26].y>.30&&p[26].z<-.30&&p[28].z<-.20&&extension<.92&&upright>.80:
-  p[28].z>.02&&p[26].z>-.15&&extension>.75&&p[27].y-p[28].y>.08&&shoulder.z<-.035&&(upright<.995||p[27].y-p[28].y>.35));
+  p[27].y-p[28].y>.35&&p[26].y<.45&&p[25].y-p[26].y>.30&&p[26].z<-.30&&p[28].z<-.20&&extension<.92&&upright>.80);
  const critical=reliableFeet&&front&&support&&phase;
- const passScore=finish?45:55,score=critical?positionScore:Math.min(positionScore,passScore-1);
+ const passScore=55,score=critical?positionScore:Math.min(positionScore,passScore-1);
  const matched=critical&&positionScore>=passScore&&left&&right&&torso&&arms;
- const recoverable=reliableFeet&&front&&support&&(stage<2?upright>.70&&stepDirection*imageAdvance>.01&&stepDirection*depthAdvance>-.12:finish&&p[28].z>-.08&&p[27].y-p[28].y>.025&&shoulder.z<.02&&extension>.65);
- return {score,matched,critical,recoverable,body,issue:!reliableFeet?'tracking':!front?'front':!support?(stage<2?'support':'left'):!phase?(stage<2?'depth':finish&&shoulder.z>=-.035?'torso':'right'):!left?'left':!right?'right':!torso?'torso':!arms?'arms':matched?'hold':'position'};
+ const recoverable=reliableFeet&&front&&support&&stage<2&&upright>.70&&stepDirection*imageAdvance>.01&&stepDirection*depthAdvance>-.12;
+ return {score,matched,critical,recoverable,body,issue:!reliableFeet?'tracking':!front?'front':!support?(stage<2?'support':'left'):!phase?(stage<2?'depth':'right'):!left?'left':!right?'right':!torso?'torso':!arms?'arms':matched?'hold':'position'};
 }
 export class OsotoProgress{
  constructor(){this.reset()}
- reset(){this.stage=0;this.hold=0;this.done=false;this.last=null;this.until=0}
+ reset(){this.stage=0;this.hold=0;this.done=false;this.last=null;this.until=0;this.finishJudge=new OsotoFinishJudge()}
  update(points,now,active=true){
   const dt=this.last===null?0:Math.min(.1,Math.max(0,(now-this.last)/1000));this.last=now;
   if(this.done)return {done:true,stage:3,hold:1,score:100,matched:true};
   if(now<this.until)return {stage:this.stage,hold:0,score:100,transition:true};
-  const result=assessOsoto(points,this.stage);
+  const result=this.stage===3?this.finishJudge.update(points,now):assessOsoto(points,this.stage);
+  if(active&&this.stage<2&&result.matched)this.finishJudge.observeReference(points,this.stage);
   // Brief pose jitter reduces progress instead of discarding the entire hold.
-  this.hold=!active||!result.body||(!result.critical&&!result.recoverable)?0:result.matched?this.hold+dt:Math.max(0,this.hold-dt*.5);
+  this.hold=!active||!result.body||(!result.critical&&!result.recoverable)?0:result.grace?this.hold:result.matched?this.hold+dt:Math.max(0,this.hold-dt*.5);
   if(this.hold>=1){this.hold=0;if(this.stage===3)this.done=true;else{this.stage++;this.until=now+1100;}return {...result,stage:this.stage,hold:1,transition:!this.done,done:this.done};}
   return {...result,stage:this.stage,hold:this.hold,done:false};
  }

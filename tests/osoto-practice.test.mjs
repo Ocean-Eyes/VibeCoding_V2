@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {OSOTO_TARGETS,assessOsoto,OsotoProgress,cameraPose,osotoAnimation,OSOTO_DEMO_DURATION} from '../src/osoto-practice.js';
 import {normalizeGuideBody,OsotoGuideScale,projectOsotoCameraPose,drawOsotoTracking,createOsotoGuideProjection,drawOsotoBody} from '../src/osoto-practice.js';
+import {finishFixture} from './fixtures/osoto-finish-corpus.mjs';
 const observed=(stage,scale=.15,x=.5,y=.45)=>OSOTO_TARGETS[stage].map(p=>p?{x:x+p.x*scale,y:y+p.y*scale,z:p.z*scale,visibility:1}:null);
 
 test('both mirrored guide panels align translated and resized bodies without changing anatomy',()=>{
@@ -95,7 +96,9 @@ test('Initial and three stages must be held in order; pauses, loss and reset can
  const game=new OsotoProgress();let now=0;
  for(let stage=0;stage<4;stage++){
   now+=1200;for(let n=0;n<8;n++)game.update(observed(stage),now+=50);
-  game.update(null,now+=50);assert.equal(game.hold,0);
+  const beforeLoss=game.hold;game.update(null,now+=50);
+  assert.equal(game.hold,stage===3?beforeLoss:0);
+  if(stage===3){game.update(null,now+=300);assert.equal(game.hold,0,'long tracking loss still clears the finish');}
   game.update(observed(stage),now+=50,false);assert.equal(game.hold,0);
   for(let n=0;n<23;n++)game.update(observed(stage),now+=50);
   assert.equal(game.done,stage===3);assert.equal(game.stage,Math.min(stage+1,3));
@@ -138,7 +141,8 @@ test('an invalid stance clears the hold instead of accumulating sporadic depth m
 test('knee lift and backward extension require distinct whole-leg shapes',()=>{
  const noKneeLift=observed(2);noKneeLift[26].y=.45+.15*.85;noKneeLift[26].z=0;
  assert.equal(assessOsoto(noKneeLift,2).matched,false);
- const curledHeel=observed(3);curledHeel[26]={...curledHeel[26],y:.45+.15*.85,z:0};
+ // Use fixed-length anatomy: moving only one knee fabricated unequal legs.
+ const curledHeel=finishFixture({lift:.55,back:.05,lean:.30});
  assert.equal(assessOsoto(curledHeel,3).matched,false);
  const flat=observed(1);assert.equal(assessOsoto(flat,2).matched,false);assert.equal(assessOsoto(flat,3).matched,false);
  for(let stage=0;stage<3;stage++){const lowConfidence=observed(stage);lowConfidence[28].visibility=.4;assert.equal(assessOsoto(lowConfidence,stage).matched,false);}
@@ -207,8 +211,10 @@ test('a borderline finish estimate reduces hold progress instead of restarting t
  const before=game.hold,jitter=moderateFinish();
  for(const i of [11,12])jitter[i].z=.15*.49*-.01;
  const state=game.update(jitter,now+=50);
- assert.equal(state.matched,false);assert(game.hold>0&&game.hold<before);
- for(let i=0;i<16;i++)game.update(moderateFinish(),now+=50);
+ assert.equal(state.matched,true);assert(game.hold>before,'one depth spike is filtered instead of resetting a good pose');
+ for(let i=0;i<10;i++)game.update(structuredClone(jitter),now+=50);
+ assert.equal(game.done,false,'sustained loss of the lean cannot award completion');
+ for(let i=0;i<30;i++)game.update(moderateFinish(),now+=50);
  assert.equal(game.done,true);
 });
 

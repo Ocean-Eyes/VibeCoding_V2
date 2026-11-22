@@ -15,7 +15,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      let points=data.stage<0?null:OSOTO_TARGETS[data.stage].map(p=>p?{x:.5+p.x*scale,y:(cy+p.y*scale)/ratio,z:p.z*scale,visibility:1}:{x:0,y:0,z:0,visibility:0});
      if(data.stage===3){
       const {body,limb}=await import('./throw-motion.js'),rig=body({p:[.15,.94,.24],yaw:0,lean:.12,l:[.23,.065,.38],r:[-.12,.12,-.10]});
-      points=Array(33).fill(null);const put=(i,v)=>points[i]={x:.5+(v[0]-rig.pelvis[0])*scale/.49,y:(cy-(v[1]-rig.pelvis[1])*scale/.49)/ratio,z:-(v[2]-rig.pelvis[2])*scale/.49,visibility:1};
+      points=Array(33).fill(null);const put=(i,v)=>{
+       const z=v[2]-rig.pelvis[2],perspective=1/(1-z*.30);
+       points[i]={x:.5+(v[0]-rig.pelvis[0])*perspective*scale/.49,y:(cy-(v[1]-rig.pelvis[1])*perspective*scale/.49)/ratio,z:-z*scale/.49,visibility:1};
+      };
       put(0,rig.head);for(const [side,a,e,w,h,k,f,hand]of [['left',11,13,15,23,25,27,[-.2,.08,.21]],['right',12,14,16,24,26,28,[.1,.54,.32]]]){
        const arm=limb(rig.shoulders[side],rig.at(...hand),.33,.31,[0,-1,.2]);put(a,rig.shoulders[side]);put(e,arm.joint);put(w,arm.end);put(h,rig.legs[side].root);put(k,rig.legs[side].joint);put(f,rig.legs[side].end);
       }
@@ -102,7 +105,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.evaluate(()=>window.qaFlat=false);
   for(let stage=0;stage<4;stage++){
    await page.evaluate(s=>{window.qaStage=s;window.qaSmall=s===0;},stage);
-   await page.waitForFunction(s=>{const c=document.querySelector('#osoto-canvas');return s===3?c.dataset.done==='true':c.dataset.stage===String(s+1)},stage);
+   try{await page.waitForFunction(s=>{const c=document.querySelector('#osoto-canvas');return s===3?c.dataset.done==='true':c.dataset.stage===String(s+1)},stage);}
+   catch(error){console.error('Practice stalled',stage,await page.locator('#osoto-feedback').innerText(),await page.locator('#osoto-canvas').getAttribute('data-score'));throw error;}
    if(stage<3){await page.waitForTimeout(2600);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),String(stage+1),'previous pose cannot skip the next stage');await page.locator('.osoto-stage').screenshot({path:'.test-output/osoto/front-'+(stage+1)+'.png'});}
   }
   assert.equal(await page.locator('#osoto-score').innerText(),'Perfect');await page.screenshot({path:'.test-output/osoto/complete.png',fullPage:true});
