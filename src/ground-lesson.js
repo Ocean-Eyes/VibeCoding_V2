@@ -68,7 +68,7 @@ export function openGroundLesson(lesson){
   if(disposed)return;void infer(now);
   const dt=lastTick?Math.min(.1,(now-lastTick)/1000):0;lastTick=now;
   if(demo&&playing&&!document.hidden)elapsed=(elapsed+dt)%(kesa?12:24);
-  const time=demo?groundDemoTime(lesson.id,elapsed):kesa?game.stage+1:game.stage===0?1:game.stage===2?3:game.under?2:1.7;
+  const time=demo?groundDemoTime(lesson.id,elapsed):kesa?game.stage+1:game.stage===0?1:game.stage===2?3:game.under?2:1.35;
   const demoStage=Math.min(2,Math.floor(time));
   const fresh=ready&&now-lastResult<350&&!document.hidden?data:null;
   const state=demo?{stage:demoStage}:game.update(fresh?.points,fresh?.hands,video.videoHeight/(video.videoWidth||1),now,ready&&now>=startAt&&!document.hidden);

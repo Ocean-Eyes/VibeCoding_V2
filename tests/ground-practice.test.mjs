@@ -119,7 +119,7 @@ test('ude reference arms keep bone lengths and reach both grip targets',()=>{
 });
 
 test('mounted ude hands descend from above with a head-facing shoulder frame',()=>{
- const start=sampleGround('ude-garami',0),grip=sampleGround('ude-garami',1),under=sampleGround('ude-garami',1.4);
+ const start=sampleGround('ude-garami',0),grip=sampleGround('ude-garami',1),under=sampleGround('ude-garami',1.35);
  for(let time=0;time<=3;time+=.02){
   const {tori}=sampleGround('ude-garami',time),r=tori.arms.right,l=tori.arms.left;
   assert(r.root[1]>=.45&&l.root[1]>=.45,'shoulders above the supine chest while leaning into the connection');
