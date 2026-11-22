@@ -7,11 +7,16 @@ const base=process.env.SITE_URL||'http://localhost:5174/dist',dir='.test-output/
   const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
-   localStorage.setItem('just-judo-visitor-excluded','1');window.qaMissing=false;window.qaDenied=false;window.qaDelay=false;window.qaPhoneCancel=false;window.qaWorkers=new Set();
-   const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async options=>{if(window.qaDenied)throw new DOMException('Denied','NotAllowedError');if(window.qaDelay)await new Promise(r=>window.qaResolve=r);return window.qaStream=await get(options)};
+   localStorage.setItem('just-judo-visitor-excluded','1');window.qaMissing=false;window.qaDenied=false;window.qaDelay=false;window.qaPhoneCancel=false;window.qaWorkers=new Set();window.qaDimensions=null;window.qaDepth=0;window.qaTrackerError=false;window.qaBlockPlay=false;
+   const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async options=>{
+    if(window.qaDenied)throw new DOMException('Denied','NotAllowedError');if(window.qaDelay)await new Promise(r=>window.qaResolve=r);
+    if(window.qaDimensions){const canvas=document.createElement('canvas');[canvas.width,canvas.height]=window.qaDimensions;window.qaCanvas=canvas;const stream=canvas.captureStream(20),ctx=canvas.getContext('2d');let frame=0;const draw=()=>{if(stream.getTracks()[0].readyState==='ended')return;ctx.fillStyle=frame++%2?'#344552':'#25313b';ctx.fillRect(0,0,canvas.width,canvas.height);requestAnimationFrame(draw)};draw();return window.qaStream=stream;}
+    return window.qaStream=await get(options);
+   };
+   const play=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){if(this.id==='throw-video'&&window.qaBlockPlay){window.qaBlockPlay=false;return Promise.reject(new DOMException('Tap required','NotAllowedError'))}return play.call(this)};
    const Original=Worker;window.Worker=class extends Original{
     constructor(...args){super(...args);window.qaWorkers.add(this)}
-    postMessage(d,t){if(d.type==='frame'){d.missing=window.qaMissing;d.id=location.pathname.split('/').pop();}super.postMessage(d,t)}
+    postMessage(d,t){if(d.type==='frame'){d.missing=window.qaMissing;d.depth=window.qaDepth;d.fail=window.qaTrackerError;d.id=location.pathname.split('/').pop();}super.postMessage(d,t)}
     terminate(){window.qaWorkers.delete(this);super.terminate()}
    };
   });
@@ -19,10 +24,10 @@ const base=process.env.SITE_URL||'http://localhost:5174/dist',dir='.test-output/
    self.onmessage=async({data})=>{
     if(data.type==='init')self.postMessage({type:'ready'});
     if(data.type==='frame'){
-     const {throwGuidePose}=await import('./throw-guide.js'),{sampleThrow}=await import('./throw-motion.js');
+     const {createThrowGuide}=await import('./throw-guide.js'),{sampleThrow}=await import('./throw-motion.js');
      const ratio=data.bitmap.height/data.bitmap.width;data.bitmap.close();
-     const points=data.missing?null:throwGuidePose(sampleThrow(data.id,0).tori).map(p=>p?{x:.5+p.x*.15,y:(ratio*.5+p.y*.15)/ratio,z:p.z*.15,visibility:1}:null);
-     self.postMessage({type:'result',points,time:data.time});
+     if(data.fail){self.postMessage({type:'error'});return;}const points=data.missing?null:createThrowGuide(data.id).pose(sampleThrow(data.id,0).tori).map(p=>p?{x:.5+p.x*.15,y:(ratio*.5+p.y*.15)/ratio,z:p.z*.15,visibility:1}:null);
+     if(points&&data.depth)for(const i of [11,12])points[i].z+=data.depth;self.postMessage({type:'result',points,time:data.time});
     }
    }`}));
   // Check phone button wiring and cancellation separately from WebRTC transport.
@@ -64,6 +69,7 @@ const base=process.env.SITE_URL||'http://localhost:5174/dist',dir='.test-output/
    await page.locator('#throw-solo').check();await page.waitForFunction(()=>document.querySelector('#throw-canvas').dataset.solo==='true');await page.locator('#throw-solo').uncheck();
    await page.locator('#throw-speed').selectOption('0.5');await page.locator('#throw-restart').click();await page.waitForFunction(()=>Number(document.querySelector('#throw-canvas').dataset.progress)<.1);await page.screenshot({path:dir+'/'+id+'-desktop.png',fullPage:true});
    await page.locator('#throw-speed').selectOption('1');await page.locator('#throw-seek').fill('995');await page.locator('#throw-play').click();await page.waitForFunction(()=>Number(document.querySelector('#throw-canvas').dataset.progress)<.1);assert.equal(await page.locator('#throw-canvas').getAttribute('data-playing'),'true','demo loops like osoto');
+   if(id==='ippon-seoi-nage')assert.match(await page.locator('#throw-camera-cue').innerText(),/\uC67C\uCABD \uC5B4\uAE68/);
    await page.locator('#throw-start').click();await page.waitForFunction(()=>document.querySelector('#throw-canvas').dataset.ready==='true');
    await page.waitForFunction(()=>document.querySelector('#throw-guide').dataset.tracked==='true'&&document.querySelector('#throw-tracking').dataset.tracked==='true');
    assert.equal(await page.locator('#throw-canvas').isVisible(),false);assert.equal(await page.locator('#throw-video').isVisible(),true);
@@ -75,6 +81,7 @@ const base=process.env.SITE_URL||'http://localhost:5174/dist',dir='.test-output/
     for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){const i=(y*c.width+x)*4,s=x<c.width/2?'Left':'Right';if(rgba[i]===214&&rgba[i+1]===162&&rgba[i+2]===77)n['gold'+s]++;if(rgba[i]===110&&rgba[i+1]===188&&rgba[i+2]===229)n['blue'+s]++;}return n;
    });assert(colors.goldLeft>100&&colors.blueRight>100);assert.equal(colors.goldRight,0);assert.equal(colors.blueLeft,0);
    await page.locator('.throw-lesson-stage').screenshot({path:dir+'/'+id+'-camera.png'});
+   const stable=await page.locator('#throw-guide').evaluate(c=>c.toDataURL());await page.evaluate(()=>window.qaDepth=4);await page.waitForTimeout(200);assert.equal(await page.locator('#throw-guide').evaluate(c=>c.toDataURL()),stable,'depth spikes cannot collapse or resize either avatar');await page.evaluate(()=>window.qaDepth=0);
    const target=await page.locator('#throw-guide').evaluate(c=>c.toDataURL());await page.locator('#throw-seek').fill('650');await page.waitForTimeout(150);assert.notEqual(await page.locator('#throw-guide').evaluate(c=>c.toDataURL()),target,'timeline changes the correct technique reference during camera use');
    await page.evaluate(()=>window.qaMissing=true);await page.waitForFunction(()=>document.querySelector('#throw-guide').dataset.tracked==='false'&&document.querySelector('#throw-tracking').dataset.tracked==='false');
    await page.evaluate(()=>window.qaMissing=false);await page.waitForFunction(()=>document.querySelector('#throw-guide').dataset.tracked==='true');
@@ -84,6 +91,15 @@ const base=process.env.SITE_URL||'http://localhost:5174/dist',dir='.test-output/
    await page.locator('#throw-play').click();await page.waitForFunction(()=>document.querySelector('#throw-canvas').dataset.demo==='true');assert.equal(await page.evaluate(()=>window.qaStream.getTracks().every(t=>t.readyState==='ended')&&window.qaWorkers.size===0),true);
    await page.evaluate(()=>window.qaDenied=true);await page.locator('#throw-start').click();await page.waitForFunction(()=>!document.querySelector('#throw-start').disabled);assert.equal(await page.locator('#throw-canvas').isVisible(),true);assert((await page.locator('#throw-camera-status').innerText()).length>0);
    await page.evaluate(()=>{window.qaDenied=false;window.qaDelay=true});await page.locator('#throw-start').click();await page.waitForFunction(()=>!!window.qaResolve);await page.locator('#throw-camera-stop').click();await page.evaluate(()=>window.qaResolve());await page.waitForTimeout(300);assert.equal(await page.evaluate(()=>window.qaStream.getTracks().every(t=>t.readyState==='ended')&&window.qaWorkers.size===0),true,'cancelled getUserMedia releases late stream');
+   await page.evaluate(()=>{window.qaDelay=false;window.qaBlockPlay=true});await page.locator('#throw-start').click();await page.locator('#throw-camera-resume').waitFor();await page.locator('#throw-camera-resume').click();await page.waitForFunction(()=>document.querySelector('#throw-canvas').dataset.ready==='true');await page.locator('#throw-camera-stop').click();
+   await page.evaluate(()=>window.qaBlockPlay=true);await page.locator('#throw-start').click();await page.locator('#throw-camera-resume').waitFor();await page.locator('#throw-camera-stop').click();assert.equal(await page.evaluate(()=>window.qaStream.getTracks().every(t=>t.readyState==='ended')),true,'cancel pending playback gesture');
+   for(const dimensions of [[720,1280],[1280,720],[960,960]]){
+    await page.evaluate(d=>window.qaDimensions=d,dimensions);await page.locator('#throw-start').click();await page.waitForFunction(d=>{const v=document.querySelector('#throw-video');return v.videoWidth===d[0]&&v.videoHeight===d[1]&&document.querySelector('#throw-guide').dataset.tracked==='true'},dimensions);
+    assert.equal(await page.locator('#throw-video').evaluate(v=>getComputedStyle(v).objectFit),'contain');
+    await page.evaluate(()=>{const c=window.qaCanvas;[c.width,c.height]=[c.height,c.width]});await page.waitForFunction(d=>{const v=document.querySelector('#throw-video');return v.videoWidth===d[1]&&v.videoHeight===d[0]&&document.querySelector('#throw-guide').dataset.tracked==='true'},dimensions);
+    assert.equal(await page.locator('#throw-video').evaluate(v=>getComputedStyle(v).transform),'matrix(-1, 0, 0, 1, 0, 0)','orientation changes never add an implicit 90 degree rotation');await page.locator('#throw-camera-stop').click();
+   }
+   await page.evaluate(()=>{window.qaDimensions=null;window.qaTrackerError=true});await page.locator('#throw-start').click();await page.waitForFunction(()=>!document.querySelector('#throw-start').disabled&&document.querySelector('#throw-canvas').dataset.demo==='true');assert.equal(await page.evaluate(()=>window.qaStream.getTracks().every(t=>t.readyState==='ended')&&window.qaWorkers.size===0),true,'worker failure releases all resources');await page.evaluate(()=>window.qaTrackerError=false);
    await page.evaluate(()=>window.qaDelay=false);await page.locator('#throw-start').click();await page.waitForFunction(()=>document.querySelector('#throw-canvas').dataset.ready==='true');assert.equal(await page.evaluate(()=>{document.dispatchEvent(new Event('judo-exit'));return window.qaStream.getTracks().every(t=>t.readyState==='ended')&&window.qaWorkers.size===0}),true,'lesson exit releases camera and worker');await page.locator('#brand-home').click();await page.locator('.main-menu').waitFor();
   }
   for(const width of [390,768,1024])for(const id of ['o-soto-gari','o-uchi-gari','ippon-seoi-nage']){
@@ -91,6 +107,6 @@ const base=process.env.SITE_URL||'http://localhost:5174/dist',dir='.test-output/
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'no horizontal overflow');assert.equal(/[\uac00-\ud7a3]/.test(await page.locator('#throw-screen').innerText()),false);
    if(width===390)await page.screenshot({path:dir+'/'+id+'-mobile-en.png',fullPage:true});
   }
-  assert.deepEqual(errors,[]);fs.writeFileSync(dir+'/result.json',JSON.stringify({metrics,errors,pairedDemoFrames:24},null,2));console.log('PASS: shared layout across all three throws; 24 original paired demo frames; playback, views, solo, timeline, webcam/phone wiring, gold/blue guides, tracking loss, cancellation, permission denial, cleanup; 9 responsive English pages. Synthetic camera/landmarks, not a physical phone test.');
+  assert.deepEqual(errors,[]);fs.writeFileSync(dir+'/result.json',JSON.stringify({metrics,errors,pairedDemoFrames:24},null,2));console.log('PASS: shared layout across all three throws; 24 original paired demo frames; playback, views, solo, timeline, webcam/phone wiring, gold/blue guides, tracking loss, cancellation, permission denial, cleanup, autoplay recovery/cancel, 6 camera shapes and live resizing, depth spikes, worker failure; side-on shoulder throw guide; 9 responsive English pages. Synthetic camera/landmarks, not a physical phone test.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

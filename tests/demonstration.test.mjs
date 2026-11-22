@@ -61,7 +61,7 @@ test('final hands follow the V collar and their cuffs cross without breaking und
 });
 
 import {TECHNIQUES} from '../src/curriculum.js';
-test('Kodokan cross-grip variations retain their palm orientation and distinct final action',()=>{
+test('cross-grip variations retain palm orientation and the approved hold-only finish',()=>{
   const [nami,gyaku,kata]=TECHNIQUES;
   assert.deepEqual(nami.directions,['↓','↓']);assert.deepEqual(nami.actions,['press','press']);
   assert.deepEqual(gyaku.directions,['↑','↑']);assert.deepEqual(gyaku.actions,['draw','draw']);
@@ -70,8 +70,8 @@ test('Kodokan cross-grip variations retain their palm orientation and distinct f
   assert.match(demonstrationAt(2,gyaku).label,/네 손가락/);
   assert.match(demonstrationAt(2,kata).label,/네 손가락/);
   assert.match(demonstrationAt(5,kata).label,/엄지/);
-  assert.equal(new Set(TECHNIQUES.map(t=>demonstrationAt(9,t).label)).size,3);
   for(const t of TECHNIQUES){
+    assert.equal(t.finish,'손 모양과 위치 유지');assert.equal(demonstrationAt(9,t).label,t.finish);
     assert.deepEqual(demonstrationAt(9,t).hands,GRIP_STEPS[2]);
     assert.equal(demonstrationAt(6,t).finish,0);assert.equal(demonstrationAt(8,t).finish,1);
   }

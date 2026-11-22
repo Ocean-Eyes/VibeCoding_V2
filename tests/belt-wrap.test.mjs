@@ -39,8 +39,9 @@ test('the wrap-to-first-pass boundary keeps the same endpoints',()=>{
  const before=paperMotion({...frames[540],originalPTS:9-1e-7}),after=paperMotion(frames[540]);
  for(const material of ['A','B'])assert.ok(Math.hypot(...before.guideEnds[material].position.map((x,j)=>x-after.guideEnds[material].position[j]))<1e-5);
 });
+// Compare repository LF bytes, including in a Windows CRLF checkout.
 test('the shipped wrap helper matches its provenance hash',()=>{
- assert.equal(createHash('sha256').update(readFileSync(new URL('../src/belt-wrap-motion.js',import.meta.url))).digest('hex'),BELT_REVIEW.wrapMotionSHA256);
+ assert.equal(createHash('sha256').update(readFileSync(new URL('../src/belt-wrap-motion.js',import.meta.url),'utf8').replaceAll('\r\n','\n')).digest('hex'),BELT_REVIEW.wrapMotionSHA256);
 });
 
 

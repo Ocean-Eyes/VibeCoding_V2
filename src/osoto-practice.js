@@ -139,13 +139,24 @@ export class OsotoProgress{
   return {...result,stage:this.stage,hold:this.hold,done:false};
  }
 }
-export function drawOsotoBody(ctx,p,color,bodyScale=null,{outline='#49371f',belt='#4c3823'}={}){
+export function drawOsotoBody(ctx,p,color,bodyScale=null,{outline='#49371f',belt='#4c3823',torsoDepth=0}={}){
  if(!p||[11,12,23,24].some(i=>!visible(p[i])))return;
  const scale=bodyScale??dist(mid(p[11],p[12]),mid(p[23],p[24]));
  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=color;ctx.fillStyle=color;
  for(const [a,b,width]of [[23,25,.22],[25,27,.17],[24,26,.22],[26,28,.17]]){
   if(!visible(p[a])||!visible(p[b]))continue;
   ctx.lineWidth=scale*width;ctx.beginPath();ctx.moveTo(p[a].x,p[a].y);ctx.lineTo(p[b].x,p[b].y);ctx.stroke();
+ }
+ const shoulder=mid(p[11],p[12]),hip=mid(p[23],p[24]),length=dist(shoulder,hip)||1;
+ const normal={x:(hip.y-shoulder.y)/length,y:-(hip.x-shoulder.x)/length};
+ // Side-on shoulder/hip landmarks overlap in the image, but the jacket still
+ // has its physical front-to-back depth. Do not move or widen tracked joints.
+ if(torsoDepth>0){
+  const half=scale*torsoDepth/2;ctx.beginPath();
+  for(const [n,[v,sign]]of [[shoulder,1],[hip,1],[hip,-1],[shoulder,-1]].entries()){
+   const x=v.x+normal.x*half*sign,y=v.y+normal.y*half*sign;n?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.closePath();ctx.fill();
  }
  ctx.beginPath();for(const [n,i]of [11,12,24,23].entries())n?ctx.lineTo(p[i].x,p[i].y):ctx.moveTo(p[i].x,p[i].y);ctx.closePath();ctx.fill();
  // Pulling forearms are in front of the chest, not hidden behind its fill.
@@ -160,7 +171,9 @@ export function drawOsotoBody(ctx,p,color,bodyScale=null,{outline='#49371f',belt
   ctx.beginPath();ctx.arc(p[0].x,p[0].y,scale*.21,0,Math.PI*2);ctx.fill();
  }
  for(const i of [15,16,27,28])if(visible(p[i])){ctx.beginPath();ctx.arc(p[i].x,p[i].y,scale*(i<20?.085:.10),0,Math.PI*2);ctx.fill();}
- ctx.strokeStyle=belt;ctx.lineWidth=scale*.07;ctx.beginPath();ctx.moveTo(p[23].x,p[23].y);ctx.lineTo(p[24].x,p[24].y);ctx.stroke();
+ ctx.strokeStyle=belt;ctx.lineWidth=scale*.07;ctx.beginPath();
+ if(torsoDepth>0&&dist(p[23],p[24])<scale*torsoDepth){const half=scale*torsoDepth/2;ctx.moveTo(hip.x-normal.x*half,hip.y-normal.y*half);ctx.lineTo(hip.x+normal.x*half,hip.y+normal.y*half);}
+ else{ctx.moveTo(p[23].x,p[23].y);ctx.lineTo(p[24].x,p[24].y);}ctx.stroke();
  ctx.font=`bold ${Math.max(12,scale*.16)}px sans-serif`;ctx.textAlign='center';ctx.fillStyle='#fff';
  for(const [i,label]of [[27,'L'],[28,'R']])if(visible(p[i]))ctx.fillText(label,p[i].x,p[i].y+scale*.05);
  ctx.restore();

@@ -3,7 +3,7 @@ import {throwText as t} from './throw-lessons.js';
 import {sampleThrow} from './throw-motion.js';
 import {THROW_DURATION,throwTimeAtElapsed} from './throw-playback.js';
 import {createThrowRenderer,drawFootMap} from './throw-render.js';
-import {createThrowGuide} from './throw-guide.js';
+import {createThrowGuide,PROFILE_TORSO_DEPTH} from './throw-guide.js';
 import {drawOsotoBody,OsotoGuideScale,cameraPose,projectOsotoCameraPose,drawOsotoTracking} from './osoto-practice.js';
 import {createPoseTracker} from './baemilgi-tracking.js';
 import {createCameraPlayback} from './camera-playback.js';
@@ -12,7 +12,7 @@ import {connectPhoneCamera,cancelPhoneCamera,releaseCamera,onCameraEnded} from '
 let cleanup=()=>{};
 export function openThrowLesson(lesson){
  cleanup();if(lesson.id==='o-soto-gari'){cleanup=openOsotoLesson(lesson);return;}
- const root=document.getElementById('throw-screen');
+ const root=document.getElementById('throw-screen'),profile=lesson.id==='ippon-seoi-nage';
  root.innerHTML=`
   <header class="throw-heading"><div><div class="eyebrow">NAGE-WAZA / ${lesson.roman.toUpperCase()}</div><h1>${lesson.name}</h1></div><span class="throw-kanji" lang="ja" aria-hidden="true">${lesson.kanji}</span></header>
   <div class="throw-lesson-layout">
@@ -23,7 +23,7 @@ export function openThrowLesson(lesson){
     <div class="throw-controls"><button id="throw-play" class="outline"></button><button id="throw-start" class="primary">${t('웹캠으로 시작','Start with webcam')}</button><button id="throw-phone" class="outline">${t('스마트폰 카메라 연결','Connect phone camera')}</button><button id="throw-restart" class="outline">${t('처음부터','Restart')}</button><button id="throw-camera-stop" class="outline" hidden>${t('카메라 끄기','Stop camera')}</button><button id="throw-camera-resume" class="outline" hidden>${t('카메라 영상 시작','Start camera video')}</button></div>
     <p id="throw-camera-status" class="throw-lesson-status" role="status"></p>
    </section>
-   <aside class="throw-lesson-coach"><div class="eyebrow">FOLLOW THE GOLD</div><h2>${lesson.name}</h2><p>${lesson.description}</p><canvas id="throw-feet" class="throw-feet" width="300" height="230" role="img" aria-label="${t('위에서 본 발 위치','Foot positions from above')}"></canvas></aside>
+   <aside class="throw-lesson-coach"><div class="eyebrow">FOLLOW THE GOLD</div><h2>${lesson.name}</h2><p id="throw-camera-cue">${profile?t('왼쪽 어깨가 카메라를 향하게 옆으로 서세요.','Stand sideways with your left shoulder toward the camera.'):lesson.description}</p><canvas id="throw-feet" class="throw-feet" width="300" height="230" role="img" aria-label="${t('위에서 본 발 위치','Foot positions from above')}"></canvas></aside>
   </div>`;
  const $=id=>root.querySelector('#'+id),video=$('throw-video'),canvas=$('throw-canvas'),stage=root.querySelector('.throw-lesson-stage');
  const guide=$('throw-guide'),ctx=guide.getContext('2d'),tracking=$('throw-tracking'),trackingCtx=tracking.getContext('2d');
@@ -73,7 +73,7 @@ export function openThrowLesson(lesson){
   const fresh=ready&&now-lastResult<300&&!document.hidden?points:null;
   ctx.clearRect(0,0,guide.width,guide.height);
   for(const [body,color,offset,style]of [[projection.pose(currentPose.tori),'#d6a24d',0,{}],[fresh?guideBody?.points:null,'#6ebce5',300,{outline:'#1e4054',belt:'#1d3646'}]]){
-   if(!body)continue;ctx.save();ctx.beginPath();ctx.rect(offset,0,300,420);ctx.clip();drawOsotoBody(ctx,projection.project(body,offset),color,projection.scale,style);ctx.restore();
+   if(!body)continue;ctx.save();ctx.beginPath();ctx.rect(offset,0,300,420);ctx.clip();drawOsotoBody(ctx,projection.project(body,offset),color,projection.scale,{...style,torsoDepth:profile?PROFILE_TORSO_DEPTH:0});ctx.restore();
   }
   guide.dataset.tracked=String(!!fresh&&!!guideBody);
   const box=video.getBoundingClientRect(),ratio=Math.min(window.devicePixelRatio||1,2),width=Math.max(1,Math.round(box.width*ratio)),height=Math.max(1,Math.round(box.height*ratio));
