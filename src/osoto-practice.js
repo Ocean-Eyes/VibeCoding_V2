@@ -8,9 +8,14 @@ export function cameraPose(points,aspect){
 }
 export function normalizeBody(points){
  if(!points||OSOTO_JOINTS.some(i=>!points[i]||(points[i].visibility??1)<.35||!Number.isFinite(points[i].x)||!Number.isFinite(points[i].y)))return null;
+ return normalizeGuideBody(points);
+}
+const visible=p=>p&&(p.visibility??1)>=.35&&Number.isFinite(p.x)&&Number.isFinite(p.y);
+export function normalizeGuideBody(points){
+ if(!points||[11,12,23,24].some(i=>!visible(points[i])))return null;
  const origin=mid(points[23],points[24]),shoulder=mid(points[11],points[12]),scale=Math.hypot(origin.x-shoulder.x,origin.y-shoulder.y,origin.z-shoulder.z);
- if(scale<.035)return null;
- return {origin,scale,points:points.map(p=>p?{x:(p.x-origin.x)/scale,y:(p.y-origin.y)/scale,z:Number.isFinite(p.z)?(p.z-origin.z)/scale:null}:null)};
+ if(!Number.isFinite(scale)||scale<.035)return null;
+ return {origin,scale,points:points.map(p=>p?{x:(p.x-origin.x)/scale,y:(p.y-origin.y)/scale,z:Number.isFinite(p.z)?(p.z-origin.z)/scale:null,visibility:p.visibility??1}:null)};
 }
 export function osotoPose(time){
  const b=sampleOsotoMotion(time),p=Array(33).fill(null);
@@ -24,6 +29,16 @@ export function osotoPose(time){
  return normalizeBody(p).points;
 }
 export const OSOTO_TARGETS=OSOTO_TIMES.map(osotoPose);
+export function createOsotoGuideProjection(width=300,height=420,offsetX=0){
+ const all=OSOTO_TARGETS.flat().filter(Boolean);
+ // One fixed viewport includes outstretched arms as well as all target poses.
+ // The target must not move or shrink when the tracked user changes posture.
+ const minX=Math.min(-1.85,...all.map(p=>p.x))-.15,maxX=Math.max(1.85,...all.map(p=>p.x))+.15;
+ const minY=Math.min(-2.25,...all.map(p=>p.y))-.15,maxY=Math.max(2.1,...all.map(p=>p.y))+.15;
+ const scale=Math.min((width-24)/(maxX-minX),(height-24)/(maxY-minY));
+ const ox=offsetX+width/2-(minX+maxX)*scale/2,oy=height/2-(minY+maxY)*scale/2;
+ return {scale,project:points=>points.map(p=>p?{...p,x:ox+p.x*scale,y:oy+p.y*scale}:null)};
+}
 export const OSOTO_DEMO_DURATION=14;
 // Hold each requested pose, then smoothly play the reference-based solo motion.
 const DEMO_KEYS=[[0,0],[2,0],[4,1],[5.5,1],[7.5,2],[9,2],[11.5,3],[14,3]];
@@ -65,23 +80,29 @@ export class OsotoProgress{
   return {...result,stage:this.stage,hold:this.hold,done:false};
  }
 }
-export function drawOsotoBody(ctx,p,color,bodyScale=null){
- if(!p)return;
+export function drawOsotoBody(ctx,p,color,bodyScale=null,{outline='#49371f',belt='#4c3823'}={}){
+ if(!p||[11,12,23,24].some(i=>!visible(p[i])))return;
  const scale=bodyScale??dist(mid(p[11],p[12]),mid(p[23],p[24]));
  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=color;ctx.fillStyle=color;
  for(const [a,b,width]of [[23,25,.22],[25,27,.17],[24,26,.22],[26,28,.17]]){
+  if(!visible(p[a])||!visible(p[b]))continue;
   ctx.lineWidth=scale*width;ctx.beginPath();ctx.moveTo(p[a].x,p[a].y);ctx.lineTo(p[b].x,p[b].y);ctx.stroke();
  }
  ctx.beginPath();for(const [n,i]of [11,12,24,23].entries())n?ctx.lineTo(p[i].x,p[i].y):ctx.moveTo(p[i].x,p[i].y);ctx.closePath();ctx.fill();
  // Pulling forearms are in front of the chest, not hidden behind its fill.
  for(const [a,b,width]of [[11,13,.15],[12,14,.15],[13,15,.12],[14,16,.12]]){
+  if(!visible(p[a])||!visible(p[b]))continue;
   ctx.beginPath();ctx.moveTo(p[a].x,p[a].y);ctx.lineTo(p[b].x,p[b].y);
-  ctx.strokeStyle='#49371f';ctx.lineWidth=scale*width+Math.max(1,scale*.018);ctx.stroke();
+  ctx.strokeStyle=outline;ctx.lineWidth=scale*width+Math.max(1,scale*.018);ctx.stroke();
   ctx.strokeStyle=color;ctx.lineWidth=scale*width;ctx.stroke();
  }
- const shoulders=mid(p[11],p[12]);ctx.lineWidth=scale*.16;ctx.beginPath();ctx.moveTo(shoulders.x,shoulders.y);ctx.lineTo(p[0].x,p[0].y);ctx.stroke();
- for(const i of [15,16,27,28]){ctx.beginPath();ctx.arc(p[i].x,p[i].y,scale*(i<20?.085:.10),0,Math.PI*2);ctx.fill();}
- ctx.beginPath();ctx.arc(p[0].x,p[0].y,scale*.21,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle='#4c3823';ctx.lineWidth=scale*.07;ctx.beginPath();ctx.moveTo(p[23].x,p[23].y);ctx.lineTo(p[24].x,p[24].y);ctx.stroke();
- ctx.font=`bold ${Math.max(12,scale*.16)}px sans-serif`;ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillText('L',p[27].x,p[27].y+scale*.05);ctx.fillText('R',p[28].x,p[28].y+scale*.05);ctx.restore();
+ if(visible(p[0])){
+  const shoulders=mid(p[11],p[12]);ctx.lineWidth=scale*.16;ctx.beginPath();ctx.moveTo(shoulders.x,shoulders.y);ctx.lineTo(p[0].x,p[0].y);ctx.stroke();
+  ctx.beginPath();ctx.arc(p[0].x,p[0].y,scale*.21,0,Math.PI*2);ctx.fill();
+ }
+ for(const i of [15,16,27,28])if(visible(p[i])){ctx.beginPath();ctx.arc(p[i].x,p[i].y,scale*(i<20?.085:.10),0,Math.PI*2);ctx.fill();}
+ ctx.strokeStyle=belt;ctx.lineWidth=scale*.07;ctx.beginPath();ctx.moveTo(p[23].x,p[23].y);ctx.lineTo(p[24].x,p[24].y);ctx.stroke();
+ ctx.font=`bold ${Math.max(12,scale*.16)}px sans-serif`;ctx.textAlign='center';ctx.fillStyle='#fff';
+ for(const [i,label]of [[27,'L'],[28,'R']])if(visible(p[i]))ctx.fillText(label,p[i].x,p[i].y+scale*.05);
+ ctx.restore();
 }

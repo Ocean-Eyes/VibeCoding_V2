@@ -16,7 +16,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
      self.postMessage({type:'result',points,time:data.time});
     }
    }`}));
-  const base='http://localhost:5173/dist';
+  const base=process.env.SITE_URL||'http://localhost:5174/dist';
   await page.goto(base+'/throws/o-soto-gari');await page.locator('#osoto-start').waitFor();
   assert.equal(await page.locator('#osoto-title').innerText(),'초기자세 오른발 앞');assert.equal(/Initial/i.test(await page.locator('#throw-screen').innerText()),false);
   await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.playing==='true');
@@ -33,10 +33,25 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.locator('#osoto-start').click();await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.ready==='true');assert.equal(await page.locator('#osoto-3d').isVisible(),false);assert.equal(await page.locator('#osoto-canvas').isVisible(),true);
   const guide=await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL());
   const targetBox=await page.locator('#osoto-target').boundingBox(),stageBox=await page.locator('.osoto-stage').boundingBox();
-  assert(targetBox.width<stageBox.width*.4&&targetBox.x>stageBox.x+stageBox.width*.5&&targetBox.y>stageBox.y+stageBox.height*.5);
+  assert(targetBox.width<stageBox.width*.61&&targetBox.x>stageBox.x+stageBox.width*.3&&targetBox.y>stageBox.y+stageBox.height*.5);
   await page.evaluate(()=>window.qaStage=1);await page.waitForTimeout(350);
-  assert.equal(await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL()),guide,'reference does not follow or draw the tracked user');
+  assert.notEqual(await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL()),guide,'blue character must respond to tracked posture');
+  await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.tracked==='true');
+  assert.equal(await page.locator('#osoto-target-legend').isVisible(),true);
+  const colors=await page.locator('#osoto-canvas').evaluate(c=>{
+   const rgba=c.getContext('2d').getImageData(0,0,c.width,c.height).data,count={goldLeft:0,goldRight:0,blueLeft:0,blueRight:0};
+   for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
+    const i=(y*c.width+x)*4,side=x<c.width/2?'Left':'Right';
+    if(rgba[i]===214&&rgba[i+1]===162&&rgba[i+2]===77)count['gold'+side]++;
+    if(rgba[i]===110&&rgba[i+1]===188&&rgba[i+2]===229)count['blue'+side]++;
+   }
+   return count;
+  });
+  assert(colors.goldLeft>100&&colors.blueRight>100);assert.equal(colors.goldRight,0);assert.equal(colors.blueLeft,0);
+  await page.locator('#osoto-target').screenshot({path:'.test-output/osoto/live-comparison.png'});
   await page.evaluate(()=>window.qaStage=-1);
+  await page.waitForFunction(()=>document.querySelector('#osoto-canvas').dataset.tracked==='false');
+  assert.equal(await page.locator('#osoto-canvas').evaluate(c=>c.toDataURL()),guide,'stale user character clears while target stays fixed');
   await page.screenshot({path:'.test-output/osoto/corner-guide.png',fullPage:true});
   await page.waitForTimeout(4500);assert.equal(await page.locator('#osoto-canvas').getAttribute('data-stage'),'0');
   for(let stage=0;stage<4;stage++){
@@ -51,6 +66,6 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.setViewportSize({width:390,height:844});await page.goto(base+'/throws/o-soto-gari?lang=en');await page.locator('#osoto-start').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);assert.equal(/[가-힣]/.test(await page.locator('#throw-screen').innerText()),false);
   await page.screenshot({path:'.test-output/osoto/mobile-en.png',fullPage:true});assert.deepEqual(errors,[]);
-  console.log('PASS: synthetic pose tracking, unmirrored Initial + 3 holds; default 3D/view/seek/solo/speed; 2D webcam switch and 3D return, missing/wrong pose rejection, completion, reset/stop, other throw playback, mobile English');
+  console.log('PASS: synthetic pose tracking, unmirrored Initial + 3 holds; default 3D/view/seek/solo/speed; gold target left/blue user right/tracking-loss clearing and 3D return, missing/wrong pose rejection, completion, reset/stop, other throw playback, mobile English');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

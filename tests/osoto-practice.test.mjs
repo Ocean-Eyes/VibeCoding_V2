@@ -1,7 +1,45 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {OSOTO_TARGETS,assessOsoto,OsotoProgress,cameraPose,osotoAnimation,OSOTO_DEMO_DURATION} from '../src/osoto-practice.js';
+import {normalizeGuideBody,createOsotoGuideProjection,drawOsotoBody} from '../src/osoto-practice.js';
 const observed=(stage,scale=.15,x=.5,y=.45)=>OSOTO_TARGETS[stage].map(p=>p?{x:x+p.x*scale,y:y+p.y*scale,z:p.z*scale,visibility:1}:null);
+
+test('live guide aligns translated and resized bodies to the same target without mirroring',()=>{
+ const frame=createOsotoGuideProjection();
+ for(let stage=0;stage<4;stage++)for(const [size,x,y]of [[.15,.5,.45],[.1,.65,.35],[.22,.3,.55]]){
+  const body=normalizeGuideBody(observed(stage,size,x,y)),live=frame.project(body.points),target=frame.project(OSOTO_TARGETS[stage]);
+  for(const i of [0,11,12,13,14,15,16,23,24,25,26,27,28])assert(Math.hypot(live[i].x-target[i].x,live[i].y-target[i].y)<1e-8);
+  assert(live[12].x<live[11].x,'anatomical right stays viewer-left');
+ }
+ const wrong=observed(1);wrong[16].x+=.1;
+ const live=frame.project(normalizeGuideBody(wrong).points),target=frame.project(OSOTO_TARGETS[1]);
+ assert(live[16].x>target[16].x+20,'show actual hand error instead of snapping to target');
+ assert(Math.abs(live[24].x-target[24].x)<1e-8);
+});
+
+test('matching characters share a scale and baseline in separate left and right panels',()=>{
+ const left=createOsotoGuideProjection(300,420),right=createOsotoGuideProjection(300,420,300);
+ for(let stage=0;stage<4;stage++){
+  const target=left.project(OSOTO_TARGETS[stage]),live=right.project(normalizeGuideBody(observed(stage)).points);
+  for(const i of [0,11,12,15,16,23,24,27,28]){
+   assert(Math.abs(live[i].x-target[i].x-300)<1e-8);
+   assert(Math.abs(live[i].y-target[i].y)<1e-8);
+  }
+ }
+});
+
+test('guide shows visible limbs during partial tracking and never draws a lost joint',()=>{
+ const points=observed(0);points[28].visibility=.1;
+ const body=normalizeGuideBody(points);assert(body,'visible torso can still anchor the guide');
+ assert.equal(assessOsoto(points,0).matched,false,'partial tracking cannot advance the exercise');
+ const frame=createOsotoGuideProjection(),projected=frame.project(body.points),arcs=[];
+ const ctx={save(){},restore(){},beginPath(){},closePath(){},stroke(){},fill(){},fillText(){},moveTo(x,y){assert(Number.isFinite(x)&&Number.isFinite(y))},lineTo(x,y){assert(Number.isFinite(x)&&Number.isFinite(y))},arc(x,y){arcs.push([x,y])}};
+ drawOsotoBody(ctx,projected,'#6ebce5',frame.scale);
+ assert(arcs.some(([x,y])=>x===projected[27].x&&y===projected[27].y));
+ assert(!arcs.some(([x,y])=>x===projected[28].x&&y===projected[28].y));
+ points[23].visibility=.1;assert.equal(normalizeGuideBody(points),null);
+ assert.equal(normalizeGuideBody(null),null);
+});
 for(let stage=0;stage<4;stage++)test(`stage ${stage+1}: target fits at different sizes and positions`,()=>{
  for(const [s,x,y]of [[.15,.5,.45],[.22,.35,.5],[.1,.6,.35]])assert.equal(assessOsoto(observed(stage,s,x,y),stage).matched,true);
 });
