@@ -9,7 +9,7 @@
     "test": "node scripts/test-all.mjs",
     "build": "node scripts/build.mjs",
     "test:visitors": "node --test tests/visitors.test.mjs",
-    "test:throws": "node --test tests/throw-motion.test.mjs tests/throw-playback.test.mjs tests/throw-guide.test.mjs tests/throw-contact.test.mjs tests/routes.test.mjs tests/curriculum.test.mjs tests/i18n.test.mjs tests/osoto-practice.test.mjs tests/osoto-finish-corpus.test.mjs",
+    "test:throws": "node --test tests/throw-motion.test.mjs tests/throw-playback.test.mjs tests/throw-guide.test.mjs tests/throw-practice.test.mjs tests/throw-contact.test.mjs tests/routes.test.mjs tests/curriculum.test.mjs tests/i18n.test.mjs tests/osoto-practice.test.mjs tests/osoto-finish-corpus.test.mjs",
     "test:fit": "node scripts/fit-grip.mjs",
     "test:fit:gyaku": "node scripts/fit-gyaku.mjs",
     "test:baemilgi": "node --test tests/baemilgi-counter.test.mjs tests/baemilgi-camera.test.mjs tests/baemilgi-api.test.mjs tests/baemilgi-motion.test.mjs"

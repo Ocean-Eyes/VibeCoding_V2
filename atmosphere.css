@@ -25,9 +25,9 @@ input,select{accent-color:#8b4931}select{background:#eeede6;color:var(--ink);bor
 .throw-toolbar,.belt-toolbar,.bm-stage-top,.bm-demo .bm-stage-top{background:#e4e5dc;color:#59685e;border-bottom:1px solid var(--line);letter-spacing:1px}
 .throw-toolbar button,.belt-modes button,.belt-perspective-controls button,.bm-view-tabs button{background:transparent;color:var(--muted);border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none}
 .throw-toolbar button[aria-pressed=true],.belt-modes button[aria-pressed=true],.belt-perspective-controls button[aria-pressed=true],.bm-view-tabs button[aria-pressed=true]{background:#dedbcf66;border-color:var(--accent);color:var(--accent);box-shadow:none}
-.bm-demo-caption,.bm-readout,.ground-result,.osoto-hud{background:#e1e3d9;color:var(--ink);border-top:1px solid var(--line)}
+.bm-demo-caption,.bm-readout,.ground-result,.throw-hud{background:#e1e3d9;color:var(--ink);border-top:1px solid var(--line)}
 .bm-demo-caption span,.bm-readout span,.bm-readout p{color:#59685e}
-.bm-readout strong,.ground-result strong,.osoto-hud strong{color:#895b2d}
+.bm-readout strong,.ground-result strong,.throw-hud strong{color:#895b2d}
 .bm-stage{background:var(--panel);color:var(--ink);border-color:var(--line)}
 .belt-modes,.transport,.throw-controls,.throw-scrub,.throw-timeline{background:transparent;border-color:var(--line)}
 .ground-coach li,.throw-lesson-coach li,.pose-card,.belt-steps button{background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none}
