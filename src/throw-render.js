@@ -43,10 +43,10 @@ function jacket(out,rig,color){
  ellipsoid(out,rig.at(0,.075,.16),[.042,.038,.025],[rig.right,rig.up,rig.forward],BELT);
  tube(out,rig.at(0,.06,.16),rig.at(-.09,-.11,.17),.019,.018,BELT,6);tube(out,rig.at(0,.06,.16),rig.at(.10,-.10,.17),.019,.018,BELT,6);
 }
-function hand(out,arm,rig,grasp,side){
+function hand(out,arm,rig,grasp,side,color=SKIN){
  if(grasp?.offset){
   const end=add(arm.end,mul(unit(sub(arm.end,arm.joint)),grasp.offset));
-  tube(out,arm.end,end,.026,.026,SKIN);arm={...arm,end};
+  tube(out,arm.end,end,.026,.026,color);arm={...arm,end};
  }
  if(grasp?.radius){
   // Build the grip around the outside of the held cylinder. The old fist's
@@ -54,16 +54,16 @@ function hand(out,arm,rig,grasp,side){
   const axis=grasp.axis,normal=grasp.normal,tangent=unit(cross(axis,normal));
   const radius=grasp.radius,centre=sub(arm.end,mul(normal,grasp.palmOffset??radius+.023));
   const at=(x,angle,r=radius+.009)=>add(centre,add(mul(axis,x),add(mul(normal,Math.cos(angle)*r),mul(tangent,Math.sin(angle)*r))));
-  ellipsoid(out,arm.end,[.030,.029,.019],[axis,tangent,normal],SKIN);
+  ellipsoid(out,arm.end,[.030,.029,.019],[axis,tangent,normal],color);
   for(let i=0;i<4;i++){
    const x=(i-1.5)*.013;let previous=add(arm.end,add(mul(axis,x),add(mul(normal,-.010),mul(tangent,.020))));
    for(let j=0;j<=6;j++){
     const angle=(25+j*(20*grasp.held+5))*Math.PI/180,point=at(x,angle);
-    tube(out,previous,point,.007,.0065,SKIN,8);previous=point;
+    tube(out,previous,point,.007,.0065,color,8);previous=point;
    }
   }
   let previous=add(arm.end,add(mul(axis,-.026),mul(tangent,-.015)));
-  for(let j=0;j<3;j++){const point=at(-.023,(-25-j*20)*Math.PI/180);tube(out,previous,point,.009,.008,SKIN,8);previous=point;}
+  for(let j=0;j<3;j++){const point=at(-.023,(-25-j*20)*Math.PI/180);tube(out,previous,point,.009,.008,color,8);previous=point;}
   return;
  }
  const forearm=unit(sub(arm.end,arm.joint));
@@ -78,12 +78,12 @@ function hand(out,arm,rig,grasp,side){
  if(Math.hypot(...along)<.5)along=unit(cross(rig.right,normal));
  const across=unit(cross(along,normal)),basis=[across,along,normal];
  const at=(x,y,z)=>add(arm.end,add(mul(across,x),add(mul(along,y),mul(normal,z))));
- ellipsoid(out,arm.end,[.029,.031,.020],basis,SKIN);
+ ellipsoid(out,arm.end,[.029,.031,.020],basis,color);
  // Four curled fingers and an opposing thumb surround the grasp, within the
  // conservative .052 m hand envelope used by contact QA.
- for(let i=0;i<4;i++){const x=(i-1.5)*.013,a=at(x,.012,-.006),b=at(x,.030,.008),c=at(x,.024,.030),d=at(x,.006,.041);tube(out,a,b,.008,.0075,SKIN,8);tube(out,b,c,.0075,.007,SKIN,8);tube(out,c,d,.007,.006,SKIN,8);ellipsoid(out,b,[.008,.008,.008],basis,SKIN);}
+ for(let i=0;i<4;i++){const x=(i-1.5)*.013,a=at(x,.012,-.006),b=at(x,.030,.008),c=at(x,.024,.030),d=at(x,.006,.041);tube(out,a,b,.008,.0075,color,8);tube(out,b,c,.0075,.007,color,8);tube(out,c,d,.007,.006,color,8);ellipsoid(out,b,[.008,.008,.008],basis,color);}
  const thumb=side==='right'?-1:1;
- tube(out,at(thumb*.026,-.010,0),at(thumb*.033,-.009,.023),.010,.009,SKIN,8);tube(out,at(thumb*.033,-.009,.023),at(thumb*.012,-.008,.040),.009,.007,SKIN,8);
+ tube(out,at(thumb*.026,-.010,0),at(thumb*.033,-.009,.023),.010,.009,color,8);tube(out,at(thumb*.033,-.009,.023),at(thumb*.012,-.008,.040),.009,.007,color,8);
 }
 function person(out,rig,color,performer=false,grasps=null,prefix='person'){
  out.part=prefix+'.body';
@@ -123,7 +123,7 @@ function scene(pose,solo,performerColor=WHITE,shapes=null,only=null){
     out.part='tori.'+side+'.arm';
     tube(out,arm.root,arm.joint,.055,.05,color);tube(out,arm.joint,arm.end,.05,.035,color);
     ellipsoid(out,arm.joint,[.05,.05,.05],[[1,0,0],[0,1,0],[0,0,1]],color);
-    out.part='tori.'+side+'.hand';hand(out,arm,pose.tori,pose.grips?.[side],side);
+    out.part='tori.'+side+'.hand';hand(out,arm,pose.tori,pose.grips?.[side],side,color.map(value=>Math.min(1,value*1.12)));
    }
   }else person(out,pose.tori,performerColor,true);
   return new Float32Array(out);

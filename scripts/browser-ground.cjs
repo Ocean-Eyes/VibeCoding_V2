@@ -5,14 +5,26 @@ await page.addInitScript(()=>{window.qaGroundPhase=-1;window.qaGroundId='ude-gar
 const fixture=fs.readFileSync('tests/ground-fixture.mjs','utf8').replace('export function','function');
 await page.route('**/src/tracker.js*',r=>r.fulfill({contentType:'text/javascript',body:fixture+`;
 self.onmessage=({data})=>{if(data.type==='init')self.postMessage({type:'ready'});if(data.type==='frame'){const aspect=data.bitmap.height/data.bitmap.width;data.bitmap.close();const f=data.phase<0?{points:null,hands:[]}:groundFixture(data.id,data.phase,aspect);self.postMessage({type:'result',...f,time:data.time});}};`}));
-const base='http://localhost:5173/dist';
-for(const [id,group,name]of [['ude-garami','kansetsu-waza','팔얽어비틀기'],['kesa-gatame','osaekomi-waza','곁누르기']]){
- await page.goto(base+'/katame-waza/'+group);assert.equal(await page.locator('[data-lesson="'+id+'"]').count(),1);assert.equal(await page.locator('[data-lesson="nami"]').count(),0);
- await page.locator('[data-lesson="'+id+'"]').click();await page.locator('#ground-scene').waitFor();
+const base=process.env.SITE_URL||'http://localhost:5173/dist';
+for(const [id,group,menuGroup,name]of [['ude-garami','kansetsu-waza','kansetsu','팔얽어비틀기'],['kesa-gatame','osaekomi-waza','osaekomi','곁누르기']]){
+ await page.goto(base+'/katame-waza/'+group);
+ await page.locator('[data-group="'+menuGroup+'"]').click();
+ await page.locator('#tech-list [data-lesson]').filter({hasText:name}).click();
+ await page.locator('#start').click();
+ await page.waitForURL(url=>url.pathname.endsWith('/'+group+'/'+id));
+ await page.locator('#ground-scene').waitFor();
  assert((await page.locator('#throw-screen h1').innerText()).includes(name));
  const pixels=await page.locator('#ground-scene').evaluate(c=>c.toDataURL());await page.waitForTimeout(6000);assert.notEqual(await page.locator('#ground-scene').evaluate(c=>c.toDataURL()),pixels);
  await page.locator('#ground-play').click();await page.screenshot({path:'.test-output/ground/'+id+'-demo.png',fullPage:true});
- for(const view of ['top','side','angle']){await page.locator('[data-ground-view="'+view+'"]').click();await page.waitForTimeout(100);await page.locator('#ground-scene').screenshot({path:'.test-output/ground/'+id+'-'+view+'.png'});}
+ const renderedViews=new Set();
+ for(const view of ['top','side','angle']){
+  const button=page.locator('[data-ground-view="'+view+'"]');
+  await button.click();assert.equal(await button.getAttribute('aria-pressed'),'true');
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  renderedViews.add(await page.locator('#ground-scene').evaluate(c=>c.toDataURL()));
+  await page.locator('#ground-scene').screenshot({path:'.test-output/ground/'+id+'-'+view+'.png'});
+ }
+ assert.equal(renderedViews.size,3,'every view must repaint the paused scene');
  await page.evaluate(id=>{window.qaGroundId=id;window.qaGroundPhase=-1},id);
  await page.locator('#ground-start').click();await page.waitForFunction(()=>document.querySelector('#throw-screen').dataset.groundReady==='true');
  await page.waitForTimeout(2300);assert.equal(await page.locator('#throw-screen').getAttribute('data-ground-stage'),'0');

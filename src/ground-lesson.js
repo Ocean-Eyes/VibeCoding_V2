@@ -5,6 +5,19 @@ import {GroundProgress} from './ground-practice.js';
 import {createPracticeTracker} from './practice-tracking.js';
 import {createCameraPlayback} from './camera-playback.js';
 import {connectPhoneCamera,cancelPhoneCamera,releaseCamera,onCameraEnded} from './phone-camera-host.js';
+
+const groundAngles={
+ ude:{angle:[2.7,.50],top:[0,Math.PI/2],side:[-1.1,.32]},
+ kesa:{angle:[.55,.95],top:[0,1.50],side:[1.4,.35]},
+};
+
+export function groundView(kesa,view,aspect){
+ const [yaw,pitch]=groundAngles[kesa?'kesa':'ude'][view];
+ if(kesa)return {yaw,pitch,center:[0,.30,-.02],extent:2.6};
+ // Keep the arm area legible in both the wide demo and square camera inset.
+ return {yaw,pitch,center:[-.29,.38,-.25],extent:Math.max(1.27,1.55/aspect)};
+}
+
 function drawGuide(canvas,pose){
  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,360,260);
  const project=p=>[180+p[0]*125,120+p[2]*70-p[1]*85];
@@ -34,7 +47,7 @@ export function openGroundLesson(lesson){
  const abort=new AbortController(),on=(el,event,fn)=>el.addEventListener(event,fn,{signal:abort.signal});
  let renderer;try{renderer=createThrowRenderer(scene)}catch{ $('ground-status').textContent=t('3D를 표시할 수 없습니다. 다른 브라우저로 열어 주세요.','3D is unavailable. Please use another browser.');return ()=>abort.abort();}
  let demo=true,playing=true,elapsed=0,lastTick=0,raf=0,disposed=false,stream=null,tracker=null,ready=false,busy=false,data=null,lastResult=0,lastFrame=-1,sent=0,generation=0,startAt=Infinity,initTimer,frameTimer;
- let yaw=.55,pitch=.95;
+ let view='angle',viewAspect=0,viewKey=null,camera=null;
  const playback=createCameraPlayback(video,$('ground-resume'),{onBlocked:()=>{$('ground-status').textContent=t('카메라 영상 시작을 눌러 주세요.','Tap Start camera video.');}});
  function stop(){
   generation++;clearTimeout(initTimer);clearTimeout(frameTimer);cancelPhoneCamera();playback.cancel();tracker?.terminate();tracker=null;releaseCamera(stream);stream=null;video.srcObject=null;video.hidden=true;
@@ -77,7 +90,13 @@ export function openGroundLesson(lesson){
   if(!demo&&!kesa){if(scene.parentElement!==$('ground-inset'))$('ground-inset').append(scene);}
   else if(scene.parentElement!==stageNode)stageNode.prepend(scene);
   scene.hidden=!demo&&kesa;$('ground-guide').hidden=demo||!kesa;$('ground-views').hidden=!demo&&kesa;
-  if(!scene.hidden)renderer.draw(pose,{yaw,pitch,gold:true,center:kesa?[0,.30,-.02]:[-.15,.32,-.25],extent:kesa?2.6:3.1});
+  if(!scene.hidden){
+   const aspect=scene.clientWidth/Math.max(1,scene.clientHeight)||1;
+   if(view!==viewKey||aspect!==viewAspect){
+    viewKey=view;viewAspect=aspect;camera={...groundView(kesa,view,aspect),gold:true};
+   }
+   renderer.draw(pose,camera);
+  }
   if(!demo&&kesa){drawGuide($('ground-guide-canvas'),pose);$('ground-guide-step').textContent=`${state.stage+1} / 3`;}
   $('ground-title').textContent=lesson.steps[state.stage];
   root.querySelectorAll('[data-ground-step]').forEach((el,i)=>{el.classList.toggle('current',i===state.stage);el.classList.toggle('complete',!demo&&(i<state.stage||state.done));});
@@ -92,7 +111,7 @@ export function openGroundLesson(lesson){
  on($('ground-start'),'click',()=>void start());on($('ground-phone'),'click',()=>void start(true));on($('ground-stop'),'click',stop);
  on($('ground-play'),'click',()=>{if(demo)playing=!playing;else{stop();demo=true;playing=true;elapsed=0;}});
  on($('ground-reset'),'click',()=>{game.reset();elapsed=0;startAt=ready?performance.now()+2000:Infinity;});
- root.querySelectorAll('[data-ground-view]').forEach(button=>on(button,'click',()=>{const view=button.dataset.groundView;[yaw,pitch]=view==='top'?[0,1.50]:view==='side'?[1.4,.35]:[.55,.95];root.querySelectorAll('[data-ground-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));}));
+ root.querySelectorAll('[data-ground-view]').forEach(button=>on(button,'click',()=>{view=button.dataset.groundView;root.querySelectorAll('[data-ground-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));}));
  on(document,'visibilitychange',()=>{data=null;game.hold=0;game.under=false;game.last=null;lastTick=0;});
  function cleanup(){if(disposed)return;disposed=true;stop();cancelAnimationFrame(raf);renderer.dispose();abort.abort();root.classList.remove('ground-practice','ground-kesa');}
  on(document,'judo-exit',cleanup);on(window,'pagehide',cleanup);raf=requestAnimationFrame(tick);return cleanup;

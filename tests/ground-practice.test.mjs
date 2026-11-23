@@ -5,6 +5,25 @@ import {groundFixture} from './ground-fixture.mjs';
 import {bodyShapes,bodyOverlap} from '../src/throw-body.js';
 import {groundContactShapes} from '../src/throw-render.js';
 import {GROUND_CONTACT_RATE} from '../src/ground-contact-data.js';
+import {groundView} from '../src/ground-lesson.js';
+
+test('ude keeps both reference arms and the blue right arm inside all three views',()=>{
+ const aspects=[.9,1,1.55,16/9,2.2];
+ for(let frame=0;frame<=60;frame++){
+  const pose=sampleGround('ude-garami',frame/20);
+  const meshes=groundContactShapes(pose).filter(m=>!m.id.startsWith('uke.left.'));
+  for(const view of ['angle','top','side'])for(const aspect of aspects){
+   const {yaw,pitch,center,extent}=groundView(false,view,aspect);
+   const horizontal=[Math.cos(yaw),0,-Math.sin(yaw)];
+   const vertical=[-Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch),-Math.cos(yaw)*Math.sin(pitch)];
+   for(const mesh of meshes)for(const point of mesh.points){
+    const projectedX=point.reduce((sum,v,i)=>sum+(v-center[i])*horizontal[i],0)/(extent*aspect/2);
+    const projectedY=point.reduce((sum,v,i)=>sum+(v-center[i])*vertical[i],0)/(extent/2);
+    assert(Math.abs(projectedX)<.98&&Math.abs(projectedY)<.98,`${view} ${aspect} at ${pose.time}: ${mesh.id} is clipped`);
+   }
+  }
+ }
+});
 
 test('ude releases through the same path and returns to the start without a loop jump',()=>{
  assert.equal(groundDemoTime('ude-garami',9),3);
