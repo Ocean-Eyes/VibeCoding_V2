@@ -1,6 +1,6 @@
 import {throwText as t} from './throw-lessons.js';
 import {createThrowRenderer} from './throw-render.js';
-import {sampleGround,groundDemoTime} from './ground-motion.js';
+import {sampleGround,sampleGroundRest,groundDemoFrame} from './ground-motion.js';
 import {GroundProgress} from './ground-practice.js';
 import {createPracticeTracker} from './practice-tracking.js';
 import {createCameraPlayback} from './camera-playback.js';
@@ -80,16 +80,18 @@ export function openGroundLesson(lesson){
  function tick(now){
   if(disposed)return;void infer(now);
   const dt=lastTick?Math.min(.1,(now-lastTick)/1000):0;lastTick=now;
-  if(demo&&playing&&!document.hidden)elapsed=(elapsed+dt)%(kesa?12:24);
-  const time=demo?groundDemoTime(lesson.id,elapsed):kesa?game.stage+1:game.stage===0?1:game.stage===2?3:game.under?2:1.35;
+  if(demo&&playing&&!document.hidden)elapsed+=dt;
+  const demoFrame=demo?groundDemoFrame(lesson.id,elapsed):null;
+  const time=demoFrame?.time??(kesa?game.stage+1:game.stage===0?1:game.stage===2?3:game.under?2:1.35);
   const demoStage=Math.min(2,Math.floor(time));
   const fresh=ready&&now-lastResult<350&&!document.hidden?data:null;
   const state=demo?{stage:demoStage}:game.update(fresh?.points,fresh?.hands,video.videoHeight/(video.videoWidth||1),now,ready&&now>=startAt&&!document.hidden);
-  const pose=sampleGround(lesson.id,time);
+  const pose=demoFrame?.resting?sampleGroundRest():sampleGround(lesson.id,time);
   root.classList.toggle('ground-practice',!demo);root.classList.toggle('ground-kesa',kesa);
   if(!demo&&!kesa){if(scene.parentElement!==$('ground-inset'))$('ground-inset').append(scene);}
   else if(scene.parentElement!==stageNode)stageNode.prepend(scene);
   scene.hidden=!demo&&kesa;$('ground-guide').hidden=demo||!kesa;$('ground-views').hidden=!demo&&kesa;
+  if(!kesa)scene.style.opacity=demoFrame?.opacity??1;
   if(!scene.hidden){
    const aspect=scene.clientWidth/Math.max(1,scene.clientHeight)||1;
    if(view!==viewKey||aspect!==viewAspect){

@@ -16,15 +16,30 @@ function seatedBody(pose,roll){
 }
 const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
 const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
-export function groundDemoTime(id,elapsed){
- const cycle=elapsed%(id==='ude-garami'?24:12);
- return id!=='ude-garami'||cycle<=12?Math.min(3,cycle/3):Math.max(0,3-(cycle-12)/3);
+export function groundDemoFrame(id,elapsed){
+ const cycle=elapsed%(id==='ude-garami'?13.3:12);
+ if(id!=='ude-garami')return {time:Math.min(3,cycle/3),opacity:1};
+ const fade=.30;
+ const restEnd=1.3;
+ // The first shot labels the resting silhouette. The cuts never add movement
+ // to lift/reset the mannequin or reverse the recorded demonstration.
+ if(cycle<restEnd)return {time:0,resting:true,opacity:Math.min(smooth(cycle/fade),smooth((restEnd-cycle)/fade))};
+ const motionTime=cycle-restEnd;
+ const opacity=Math.min(smooth(motionTime/fade),smooth((12-motionTime)/fade));
+ return {time:Math.max(0,Math.min(3,(motionTime-fade)/3)),opacity};
 }
 function opponent(){
  const rig=body({p:[0,.24,0],yaw:0,lean:-Math.PI/2,l:[.18,.12,.87],r:[-.18,.12,.87]});
  rig.arms.left=limb(rig.shoulders.left,[.28,.26,-.02],.33,.31,[1,.2,0]);
  rig.arms.right=limb(rig.shoulders.right,[-.26,.27,-.05],.33,.31,[0,1,0]);
  return rig;
+}
+export function sampleGroundRest(){
+ const uke=opponent();
+ const root=uke.shoulders.right,elbowHeight=.067,drop=root[1]-elbowHeight;
+ const joint=add(root,[-Math.sqrt(.33**2-drop**2),-drop,0]);
+ uke.arms.right={root,joint,end:add(joint,[0,0,-.31])};
+ return {id:'ude-garami',time:0,resting:true,ground:true,uke};
 }
 export function sampleGroundAuthored(id,time=0,rightContact=UDE_RIGHT_ELBOWS){
  const uke=opponent(),t=Math.max(0,Math.min(3,time));

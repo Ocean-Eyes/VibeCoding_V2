@@ -16,8 +16,9 @@
   Camera practice checks a left-elbow rise after the connection, not torque.
   `scripts/bake-ground-contact.mjs` selects continuous elbow paths against the
   same upper-arm, forearm, palm and finger meshes drawn by `throw-render.js`.
-  Both bone lengths remain fixed during playback and interpolation. The demo
-  releases the grip by reversing the same path instead of jumping to its start.
+  Both bone lengths remain fixed during playback and interpolation. The
+  opening shot shows the bent forearm parallel to the mat. Playback runs
+  forward and fades at the cuts between the resting shot and the demonstration.
   This is hand-position practice, not a measurement of joint torque or actual contact.
 - Kesa-gatame: https://www.youtube.com/watch?v=NDaQuJOFBYk (Kodokan / IJF Academy).
   Viewed frames at 4, 8, 13, 20, 30, and 40 seconds. Right-side seated position,

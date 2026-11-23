@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {GroundProgress} from '../src/ground-practice.js';
-import {sampleGround,groundDemoTime} from '../src/ground-motion.js';
+import {sampleGround,sampleGroundRest,groundDemoFrame} from '../src/ground-motion.js';
 import {groundFixture} from './ground-fixture.mjs';
 import {bodyShapes,bodyOverlap} from '../src/throw-body.js';
 import {groundContactShapes} from '../src/throw-render.js';
@@ -9,8 +9,8 @@ import {groundView} from '../src/ground-lesson.js';
 
 test('ude keeps both reference arms and the blue right arm inside all three views',()=>{
  const aspects=[.9,1,1.55,16/9,2.2];
- for(let frame=0;frame<=60;frame++){
-  const pose=sampleGround('ude-garami',frame/20);
+ for(let frame=-1;frame<=60;frame++){
+  const pose=frame===-1?sampleGroundRest():sampleGround('ude-garami',frame/20);
   const meshes=groundContactShapes(pose).filter(m=>!m.id.startsWith('uke.left.'));
   for(const view of ['angle','top','side'])for(const aspect of aspects){
    const {yaw,pitch,center,extent}=groundView(false,view,aspect);
@@ -25,32 +25,52 @@ test('ude keeps both reference arms and the blue right arm inside all three view
  }
 });
 
-test('ude releases through the same path and returns to the start without a loop jump',()=>{
- assert.equal(groundDemoTime('ude-garami',9),3);
- assert.equal(groundDemoTime('ude-garami',12),3);
- assert(groundDemoTime('ude-garami',15)<3);
- assert.equal(groundDemoTime('ude-garami',21),0);
- let previous=0;
- for(let i=0;i<=480;i++){
-  const time=groundDemoTime('ude-garami',i/10);
-  assert(time>=0&&time<=3);assert(Math.abs(time-previous)<=.034);
-  previous=time;
+test('ude plays the motion forward and cuts back to the resting shot at near-zero opacity',()=>{
+ let previous=groundDemoFrame('ude-garami',0),restarts=0,starts=0;
+ for(let i=1;i<=4000;i++){
+  const frame=groundDemoFrame('ude-garami',i/100);
+  assert(frame.time>=0&&frame.time<=3&&frame.opacity>=0&&frame.opacity<=1);
+  if(frame.resting&&!previous.resting){assert(previous.opacity<.01&&frame.opacity<.01);restarts++;}
+  else if(previous.resting&&!frame.resting){assert(previous.opacity<.01&&frame.opacity<.01);starts++;}
+  else assert(frame.time>=previous.time&&frame.time-previous.time<.004);
+  previous=frame;
  }
+ assert.equal(starts,3);assert.equal(restarts,3);
+ assert.deepEqual(groundDemoFrame('kesa-gatame',6),{time:2,opacity:1});
 });
 
-test('all displayed arm, palm and finger meshes clear other arms and the opponent body between contact keys',()=>{
- for(let frame=0;frame<=GROUND_CONTACT_RATE*12;frame++){
-  const time=frame/(GROUND_CONTACT_RATE*4),pose=sampleGround('ude-garami',time),shapes=groundContactShapes(pose);
-  for(const shape of shapes)assert(shape.points.flat().every(Number.isFinite),shape.id);
+test('ude resting shot shows a right angle on the mat with fixed bones and no floating forearm',()=>{
+ const pose=sampleGroundRest(),arm=pose.uke.arms.right;
+ const upper=arm.root.map((v,i)=>v-arm.joint[i]),lower=arm.end.map((v,i)=>v-arm.joint[i]);
+ assert(Math.abs(Math.hypot(...upper)-.33)<1e-8);assert(Math.abs(Math.hypot(...lower)-.31)<1e-8);
+ assert(Math.abs(upper.reduce((s,v,i)=>s+v*lower[i],0))<1e-8);assert.equal(lower[1],0);
+ const meshes=groundContactShapes(pose);
+ const right=meshes.filter(m=>m.id.startsWith('uke.right.'));
+ const left=meshes.filter(m=>m.id.startsWith('uke.left.'));
+ assert(right.length>0&&left.length>0&&meshes.length===right.length+left.length);
+ const lowest=Math.min(...right.map(m=>m.bounds[1][0]));
+ assert(lowest>=-1e-8&&lowest<.01);
+ for(const a of right)for(const b of left)assert.equal(bodyOverlap(a,b,1e-6),null);
+});
+
+test('sampled arm, palm and finger meshes clear the mat, other arms, the upper arm and the opponent body',()=>{
+ const sampleRate=GROUND_CONTACT_RATE*8;
+ const body=bodyShapes(sampleGround('ude-garami',0).uke).filter(s=>!/^arm\.|^hand\./.test(s.id));
+ for(let frame=0;frame<=sampleRate*3;frame++){
+  const time=frame/sampleRate,pose=sampleGround('ude-garami',time),shapes=groundContactShapes(pose);
+  for(const shape of shapes){
+   assert(shape.points.every(p=>p.every(Number.isFinite)),shape.id);
+   assert(shape.bounds[1][0]>=-1e-6,`${time}: ${shape.id} below mat`);
+  }
+  const limbIds=shapes.map(m=>m.id.split('.').slice(0,2).join('.'));
   for(let i=0;i<shapes.length;i++)for(let j=i+1;j<shapes.length;j++){
    const a=shapes[i],b=shapes[j];
-   // Adjacent pieces of the same arm join at their elbow/wrist. No cross-arm
-   // grip exclusion: actual curved fingers must remain outside the held mesh.
-   if(a.id.split('.').slice(0,2).join('.')===b.id.split('.').slice(0,2).join('.'))continue;
+   // Same-hand segments and the adjoining wrist share a seam. The hand
+   // and its own upper arm are separated by the entire forearm.
+   if(limbIds[i]===limbIds[j]&&!(a.id.includes('.arm.upper.')&&b.id.includes('.hand.')))continue;
    const hit=bodyOverlap(a,b,.000001);
    assert.equal(hit,null,time+': '+JSON.stringify(hit));
   }
-  const body=bodyShapes(pose.uke).filter(s=>!/^arm\.|^hand\./.test(s.id));
   for(const arm of shapes.filter(s=>s.id.startsWith('tori.')))for(const part of body){
    const hit=bodyOverlap(arm,part,.000001);assert.equal(hit,null,time+': '+JSON.stringify(hit));
   }

@@ -43,7 +43,7 @@ function jacket(out,rig,color){
  ellipsoid(out,rig.at(0,.075,.16),[.042,.038,.025],[rig.right,rig.up,rig.forward],BELT);
  tube(out,rig.at(0,.06,.16),rig.at(-.09,-.11,.17),.019,.018,BELT,6);tube(out,rig.at(0,.06,.16),rig.at(.10,-.10,.17),.019,.018,BELT,6);
 }
-function hand(out,arm,rig,grasp,side,color=SKIN){
+function hand(out,arm,rig,grasp,side,color=SKIN,reference=false){
  if(grasp?.offset){
   const end=add(arm.end,mul(unit(sub(arm.end,arm.joint)),grasp.offset));
   tube(out,arm.end,end,.026,.026,color);arm={...arm,end};
@@ -51,7 +51,25 @@ function hand(out,arm,rig,grasp,side,color=SKIN){
  if(grasp?.radius){
   // Build the grip around the outside of the held cylinder. The old fist's
   // fingertips went straight through the forearm even when the palm cleared it.
-  const axis=grasp.axis,normal=grasp.normal,tangent=unit(cross(axis,normal));
+  let axis=grasp.axis,normal=grasp.normal,tangent=unit(cross(axis,normal));
+  if(reference&&grasp.held<1){
+   // While the hand is free, orient its fingers away from its own sleeve.
+   // Blend only its orientation, without shifting the wrist or arm path.
+   const upper=sub(arm.joint,arm.root),wrist=sub(arm.end,arm.root);
+   const nearest=add(arm.root,mul(upper,Math.min(1,Math.max(0,dot(wrist,upper)/dot(upper,upper)))));
+   const separation=sub(arm.end,nearest),clearance=Math.hypot(...separation);
+   const away=unit(separation);
+   const finger=mul(normal,-1);
+   const turn=cross(finger,away);
+   const blend=Math.min(1,Math.max(0,(.14-clearance)/.038));
+   const weight=blend*blend*(3-2*blend)*(1-grasp.held);
+   const angle=Math.atan2(Math.hypot(...turn),dot(finger,away))*weight;
+   if(Math.hypot(...turn)>1e-8){
+    const rotation=unit(turn),cos=Math.cos(angle),sin=Math.sin(angle);
+    const rotate=v=>add(add(mul(v,cos),mul(cross(rotation,v),sin)),mul(rotation,dot(rotation,v)*(1-cos)));
+    axis=rotate(axis);normal=rotate(normal);tangent=rotate(tangent);
+   }
+  }
   const radius=grasp.radius,centre=sub(arm.end,mul(normal,grasp.palmOffset??radius+.023));
   const at=(x,angle,r=radius+.009)=>add(centre,add(mul(axis,x),add(mul(normal,Math.cos(angle)*r),mul(tangent,Math.sin(angle)*r))));
   ellipsoid(out,arm.end,[.030,.029,.019],[axis,tangent,normal],color);
@@ -102,8 +120,10 @@ function person(out,rig,color,performer=false,grasps=null,prefix='person'){
  ellipsoid(out,nose,[.022,.026,.025],basis,SKIN);
  for(const side of [-1,1])ellipsoid(out,add(rig.head,add(mul(rig.right,side*.041),add(mul(rig.up,.025),mul(rig.forward,.091)))),[.009,.008,.007],basis,BELT);
  for(const [side,arm] of Object.entries(rig.arms)){
+  out.part=prefix+'.'+side+'.arm.upper';
+  tube(out,arm.root,arm.joint,...BODY_SIZE.upperArm,color);
   out.part=prefix+'.'+side+'.arm';
-  tube(out,arm.root,arm.joint,...BODY_SIZE.upperArm,color);ellipsoid(out,arm.root,[.081,.081,.081],basis,color);ellipsoid(out,arm.joint,[.067,.067,.067],basis,color);
+  ellipsoid(out,arm.root,[.081,.081,.081],basis,color);ellipsoid(out,arm.joint,[.067,.067,.067],basis,color);
   const cuff=add(arm.joint,mul(sub(arm.end,arm.joint),.82));tube(out,arm.joint,cuff,...BODY_SIZE.sleeve,color);
   tube(out,cuff,arm.end,...BODY_SIZE.wrist,SKIN);
   if(performer)tube(out,add(cuff,mul(unit(sub(arm.joint,cuff)),.012)),cuff,.049,.048,side==='right'?GOLD:[.42,.73,.83]);
@@ -117,13 +137,18 @@ function scene(pose,solo,performerColor=WHITE,shapes=null,only=null){
  for(let x=-2.5;x<=2.5;x+=.5){tube(out,[x,-.002,-2.5],[x,-.002,2.5],.002,.002,[.36,.43,.40],4);tube(out,[-2.5,-.002,x],[2.5,-.002,x],.002,.002,[.36,.43,.40],4);}
  if(pose.ground){
   person(out,pose.uke,BLUE,false,pose.ukeGrips,'uke');
+  if(pose.resting)return new Float32Array(out);
   if(pose.armsOnly){
    for(const [side,arm]of Object.entries(pose.tori.arms)){
     const color=side==='right'?GOLD:[.80,.43,.33];
+    out.part='tori.'+side+'.arm.upper';
+    tube(out,arm.root,arm.joint,.055,.05,color);
     out.part='tori.'+side+'.arm';
-    tube(out,arm.root,arm.joint,.055,.05,color);tube(out,arm.joint,arm.end,.05,.035,color);
+    tube(out,arm.joint,arm.end,.05,.035,color);
     ellipsoid(out,arm.joint,[.05,.05,.05],[[1,0,0],[0,1,0],[0,0,1]],color);
-    out.part='tori.'+side+'.hand';hand(out,arm,pose.tori,pose.grips?.[side],side,color.map(value=>Math.min(1,value*1.12)));
+    out.part='tori.'+side+'.hand';
+    const grip=pose.grips?.[side];
+    hand(out,arm,pose.tori,grip,side,color.map(value=>Math.min(1,value*1.12)),true);
    }
   }else person(out,pose.tori,performerColor,true);
   return new Float32Array(out);
@@ -161,12 +186,12 @@ export function createThrowRenderer(canvas){
   draw(pose,{yaw=1.05,pitch=.22,solo=false,gold=false,center=[0,.84,0],extent:customExtent=null}={}){
    const size=canvas.getBoundingClientRect(),ratio=Math.min(window.devicePixelRatio||1,1.5),w=Math.max(1,Math.round(size.width*ratio)),h=Math.max(1,Math.round(size.height*ratio));
    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
-   const key=pose.id+':'+pose.time+':'+solo+':'+gold;if(current!==key){data=scene(pose,solo,gold?GOLD:WHITE);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);current=key;}
+   const key=pose.id+':'+pose.time+':'+solo+':'+gold+':'+!!pose.resting;if(current!==key){data=scene(pose,solo,gold?GOLD:WHITE);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);current=key;}
    const depth=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)],right=[Math.cos(yaw),0,-Math.sin(yaw)],up=cross(depth,right);
    gl.uniform3fv(uniforms.center,center);gl.uniform3fv(uniforms.cameraRight,right);gl.uniform3fv(uniforms.cameraUp,up);gl.uniform3fv(uniforms.cameraDepth,depth);
    const extent=customExtent??Math.max(2.75,3.7*h/w);gl.uniform2f(uniforms.scale,2/(extent*w/h),2/extent);
    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.drawArrays(gl.TRIANGLES,0,data.length/9);
-   canvas.dataset.time=pose.time.toFixed(4);canvas.dataset.technique=pose.id;canvas.dataset.solo=String(solo);
+   canvas.dataset.time=pose.time.toFixed(4);canvas.dataset.technique=pose.id;canvas.dataset.solo=String(solo);canvas.dataset.resting=String(!!pose.resting);
   },
   dispose(){gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);gl.getExtension('WEBGL_lose_context')?.loseContext();},
  };

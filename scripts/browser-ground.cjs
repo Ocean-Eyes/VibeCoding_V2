@@ -14,6 +14,16 @@ for(const [id,group,menuGroup,name]of [['ude-garami','kansetsu-waza','kansetsu',
  await page.waitForURL(url=>url.pathname.endsWith('/'+group+'/'+id));
  await page.locator('#ground-scene').waitFor();
  assert((await page.locator('#throw-screen h1').innerText()).includes(name));
+ if(id==='ude-garami'){
+  await page.locator('#ground-reset').click();
+  await page.waitForFunction(()=>{const scene=document.querySelector('#ground-scene');return scene.dataset.resting==='true'&&Number(scene.style.opacity)>.95;});
+  for(const view of ['top','angle']){
+   await page.locator('[data-ground-view="'+view+'"]').click();
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   await page.locator('#ground-scene').screenshot({path:'.test-output/ground/ude-garami-rest-'+view+'.png'});
+  }
+  await page.waitForFunction(()=>{const scene=document.querySelector('#ground-scene');return scene.dataset.resting==='false'&&Number(scene.dataset.time)>0;});
+ }
  const pixels=await page.locator('#ground-scene').evaluate(c=>c.toDataURL());await page.waitForTimeout(6000);assert.notEqual(await page.locator('#ground-scene').evaluate(c=>c.toDataURL()),pixels);
  await page.locator('#ground-play').click();await page.screenshot({path:'.test-output/ground/'+id+'-demo.png',fullPage:true});
  const renderedViews=new Set();
